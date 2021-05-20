@@ -1,0 +1,50 @@
+.gradle
+**/build/
+!src/**/build/
+
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+
+# Cache of project
+.gradletasknamecache
+
+# # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
+# gradle/wrapper/gradle-wrapper.properties
+
+xml
+.idea/libraries
+.idea/modules.xml
+.idea/gradle.xml
+.idea/compiler.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/.name
+.idea/artifacts/dist_auto_*
+.idea/artifacts/dist.xml
+.idea/artifacts/ideaPlugin.xml
+.idea/artifacts/kotlinc.xml
+.idea/artifacts/kotlin_compiler_jar.xml
+.idea/artifacts/kotlin_plugin_jar.xml
+.idea/artifacts/kotlin_jps_plugin_jar.xml
+.idea/artifacts/kotlin_daemon_client_jar.xml
+.idea/artifacts/kotlin_imports_dumper_compiler_plugin_jar.xml
+.idea/artifacts/kotlin_main_kts_jar.xml
+.idea/artifacts/kotlin_compiler_client_embeddable_jar.xml
+.idea/artifacts/kotlin_reflect_jar.xml
+.idea/artifacts/kotlin_stdlib_js_ir_*
+.idea/artifacts/kotlin_test_js_ir_*
+.idea/artifacts/kotlin_stdlib_wasm_*
+.idea/jarRepositories.xml
+.idea/csv-plugin.xml
+kotlin-ultimate/
+node_modules/
+.rpt2_cache/
+libraries/tools/kotlin-test-js-runner/lib/
+local.properties
+buildSrcTmp/
+distTmp/
+outTmp/
+/test.output
+/kotlin-native/dist~
