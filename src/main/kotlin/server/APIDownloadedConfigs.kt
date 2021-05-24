@@ -43,3 +43,7 @@ data class APIDynamicConfig(
     @SerializedName("value") val value: Map<String, Any>,
     @SerializedName("rule_id") val ruleID: String?,
 )
+
+data class APILoggingResponse(
+    @SerializedName("success") val success: Boolean,
+)

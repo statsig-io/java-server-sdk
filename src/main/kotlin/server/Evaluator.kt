@@ -7,7 +7,6 @@ import com.google.gson.Gson
 import org.apache.maven.artifact.versioning.ComparableVersion
 import java.math.BigInteger
 import java.security.MessageDigest
-import kotlin.collections.HashMap
 import kotlin.collections.set
 
 data class ConfigEvaluation(
@@ -22,16 +21,16 @@ class Evaluator {
     private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
     private var uaParser: UserAgentParser? = try {
         UserAgentService().loadParser(
-                listOf(
-                        BrowsCapField.BROWSER,
-                        BrowsCapField.BROWSER_VERSION,
-                        BrowsCapField.BROWSER_MAJOR_VERSION,
-                        BrowsCapField.BROWSER_MINOR_VERSION,
-                        BrowsCapField.PLATFORM,
-                        BrowsCapField.PLATFORM_VERSION
-                )
+            listOf(
+                BrowsCapField.BROWSER,
+                BrowsCapField.BROWSER_VERSION,
+                BrowsCapField.BROWSER_MAJOR_VERSION,
+                BrowsCapField.BROWSER_MINOR_VERSION,
+                BrowsCapField.PLATFORM,
+                BrowsCapField.PLATFORM_VERSION
+            )
         )
-    } catch (e : Exception) {
+    } catch (e: Exception) {
         null
     }
 
@@ -44,23 +43,24 @@ class Evaluator {
         }
     }
 
-    fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
+    fun getConfig(user: StatsigUser?, dynamicConfigName: String): ConfigEvaluation {
         if (!dynamicConfigs.containsKey(dynamicConfigName)) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false,)
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         }
-        val config = dynamicConfigs[dynamicConfigName] ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false,)
+        val config = dynamicConfigs[dynamicConfigName]
+            ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         return this.evaluate(user, config)
     }
 
-    fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
+    fun checkGate(user: StatsigUser?, gateName: String): ConfigEvaluation {
         if (!featureGates.containsKey(gateName)) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false,)
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         }
-        val config = featureGates[gateName] ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false,)
+        val config = featureGates[gateName] ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         return this.evaluate(user, config)
     }
 
-    private fun evaluate(user: StatsigUser, config: APIConfig): ConfigEvaluation {
+    private fun evaluate(user: StatsigUser?, config: APIConfig): ConfigEvaluation {
         if (!config.enabled) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue)
         }
@@ -70,7 +70,8 @@ class Evaluator {
                 return result
             }
             if (result.booleanValue) {
-                val numericRepresentation = this.getHashedValue(config.salt + '.' + rule.name + '.' + "<user_id>")
+                val userID = user?.userID ?: ""
+                val numericRepresentation = this.getHashedValue(config.salt + '.' + rule.name + '.' + userID)
                 val pass = numericRepresentation.mod(BigInteger.valueOf(10000L)) < BigInteger.valueOf(rule.passPercentage * 100L)
                 return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
             }
@@ -78,7 +79,7 @@ class Evaluator {
         return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue, "default")
     }
 
-    private fun evaluateRule(user: StatsigUser, rule: APIRule): ConfigEvaluation {
+    private fun evaluateRule(user: StatsigUser?, rule: APIRule): ConfigEvaluation {
         for (condition in rule.conditions) {
             val result = this.evaluateCondition(user, condition)
             if (result.fetchFromServer) {
@@ -91,15 +92,15 @@ class Evaluator {
         return ConfigEvaluation(fetchFromServer = false, booleanValue = true, rule.returnValue, rule.id)
     }
 
-    private fun evaluateCondition(user: StatsigUser, condition: APICondition): ConfigEvaluation {
+    private fun evaluateCondition(user: StatsigUser?, condition: APICondition): ConfigEvaluation {
         try {
             var value: String?
-            var conditionEnum : ConfigCondition? = null
+            var conditionEnum: ConfigCondition? = null
             try {
                 if (!condition.type.isNullOrEmpty()) {
                     conditionEnum = ConfigCondition.valueOf(condition.type?.toUpperCase())
                 }
-            } catch (_E : java.lang.IllegalArgumentException) {
+            } catch (_E: java.lang.IllegalArgumentException) {
                 conditionEnum = null
             }
             when (conditionEnum) {
@@ -147,12 +148,12 @@ class Evaluator {
                     return ConfigEvaluation(fetchFromServer = false, value as Int <= condition.targetValue as Int)
                 }
 
-                "version_ge" -> {
+                "version_gt" -> {
                     var sourceVersion = ComparableVersion(value)
                     var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                        false,
-                        sourceVersion.compareTo(targetVersion) > 0
+                            false,
+                            sourceVersion.compareTo(targetVersion) > 0
                     )
                 }
                 "version_gte" -> {
@@ -199,13 +200,13 @@ class Evaluator {
                 "any" -> {
                     return ConfigEvaluation(
                             fetchFromServer = false,
-                        (condition.targetValue as Array<String>).contains(value)
+                            (condition.targetValue as Array<String>).contains(value)
                     )
                 }
                 "none" -> {
                     return ConfigEvaluation(
                             fetchFromServer = false,
-                        !(condition.targetValue as Array<String>).contains(value)
+                            !(condition.targetValue as Array<String>).contains(value)
                     )
                 }
 
@@ -258,7 +259,7 @@ class Evaluator {
         }
     }
 
-    private fun getFromUserAgent(user: StatsigUser, field: String): String? {
+    private fun getFromUserAgent(user: StatsigUser?, field: String): String? {
         val ua = getFromUser(user, "userAgent") ?: return null
         val parsed = uaParser?.parse(ua as String) ?: return null
         when (field) {
@@ -277,7 +278,10 @@ class Evaluator {
         }
     }
 
-    private fun getFromUser(user : StatsigUser, field : String): String? {
+    private fun getFromUser(user: StatsigUser?, field: String): String? {
+        if (user == null) {
+            return null
+        }
         val userJson = Gson().toJsonTree(user).asJsonObject
         if (userJson[field] == null && userJson["custom"] != null) {
             return Gson().toJsonTree(userJson["custom"]).asJsonObject[field]?.asString
