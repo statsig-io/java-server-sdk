@@ -1,5 +1,6 @@
 package server
 
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 
 class ServerDriver(private val serverSecret: String, private val options: StatsigOptions = StatsigOptions()) {
@@ -8,6 +9,7 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
     private var initialized: Boolean = false
     private var logger: StatsigLogger
     private val statsigMetadata: Map<String, String> = mapOf("sdkType" to "java-server", "sdkVersion" to "1.0.0")
+    private var pollingJob: Job? = null
 
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
@@ -21,7 +23,16 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
     suspend fun initialize() {
         initialized = true
         val downloadedConfigs = network.downloadConfigSpecs()
-        configEvaluator.setDownloadedConfigs(downloadedConfigs)
+        runBlocking {
+            configEvaluator.setDownloadedConfigs(downloadedConfigs)
+        }
+
+        pollingJob = network.pollForChanges {
+            if (it == null || !it.hasUpdates) {
+                return@pollForChanges
+            }
+            configEvaluator.setDownloadedConfigs(it)
+        }
     }
 
     suspend fun checkGate(user: StatsigUser?, gateName: String): Boolean {
@@ -32,7 +43,6 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         if (result.fetchFromServer) {
             val networkResult = network.checkGate(user, gateName)
             return runBlocking {
-                println(networkResult)
                 return@runBlocking networkResult.value
             }
         }
@@ -79,5 +89,10 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
             user = user,
         )
         logger.log(event)
+    }
+
+    fun shutdown() {
+        pollingJob?.cancel()
+        logger.flush()
     }
 }

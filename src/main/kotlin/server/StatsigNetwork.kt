@@ -1,18 +1,20 @@
 package server
 
 import com.google.gson.Gson
+import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
-
+private const val POLLING_INTERVAL_MS: Long = 10000
 class StatsigNetwork(
         private val sdkKey: String,
         private val options: StatsigOptions,
         private val statsigMetadata: Map<String, String>,
 ) {
-    val json: MediaType = "application/json; charset=utf-8".toMediaType()
+    private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val httpClient: OkHttpClient
+    private var lastSyncTime: Long = 0
 
     init {
         var clientBuilder = OkHttpClient.Builder()
@@ -67,15 +69,32 @@ class StatsigNetwork(
     }
 
     suspend fun downloadConfigSpecs(): APIDownloadedConfigs {
-        val bodyJson = Gson().toJson(mapOf("statsigMetadata" to statsigMetadata))
+        val bodyJson = Gson().toJson(mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastSyncTime))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
                 .url(options.api + "/download_config_specs")
                 .post(requestBody)
                 .build()
+        var network = this
         httpClient.newCall(request).execute().use { response ->
-            return Gson().fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
+            val response = Gson().fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
+            network.lastSyncTime = response.time
+            return response
+        }
+    }
+
+    fun pollForChanges(callback: (APIDownloadedConfigs?) -> Unit): Job {
+        val network = this
+        return CoroutineScope(Dispatchers.Default).launch {
+            while (isActive) {
+                delay(POLLING_INTERVAL_MS)
+                val response = downloadConfigSpecs()
+
+                runBlocking {
+                    callback(response)
+                }
+            }
         }
     }
 
