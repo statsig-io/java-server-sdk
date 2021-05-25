@@ -23,7 +23,10 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
     suspend fun initialize() {
         initialized = true
         val downloadedConfigs = network.downloadConfigSpecs()
-        configEvaluator.setDownloadedConfigs(downloadedConfigs)
+        runBlocking {
+            configEvaluator.setDownloadedConfigs(downloadedConfigs)
+        }
+
         pollingJob = network.pollForChanges {
             if (it == null || !it.hasUpdates) {
                 return@pollForChanges

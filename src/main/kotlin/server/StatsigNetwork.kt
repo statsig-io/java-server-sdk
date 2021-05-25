@@ -6,7 +6,7 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
-private const val POLLING_INTERVAL_MS: Long = 30000
+private const val POLLING_INTERVAL_MS: Long = 10000
 class StatsigNetwork(
         private val sdkKey: String,
         private val options: StatsigOptions,
@@ -84,7 +84,7 @@ class StatsigNetwork(
         }
     }
 
-    suspend fun pollForChanges(callback: (APIDownloadedConfigs?) -> Unit): Job {
+    fun pollForChanges(callback: (APIDownloadedConfigs?) -> Unit): Job {
         val network = this
         return CoroutineScope(Dispatchers.Default).launch {
             while (isActive) {
