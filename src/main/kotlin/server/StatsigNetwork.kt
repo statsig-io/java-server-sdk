@@ -90,7 +90,7 @@ class StatsigNetwork(
             while (isActive) {
                 delay(POLLING_INTERVAL_MS)
                 val response = downloadConfigSpecs()
-
+                network.lastSyncTime = response.time
                 runBlocking {
                     callback(response)
                 }
