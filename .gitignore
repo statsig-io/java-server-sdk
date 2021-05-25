@@ -1,6 +1,7 @@
 .gradle
 **/build/
 !src/**/build/
+.gradle/**/*
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -38,6 +39,8 @@ xml
 .idea/artifacts/kotlin_stdlib_wasm_*
 .idea/jarRepositories.xml
 .idea/csv-plugin.xml
+.idea/*
+
 kotlin-ultimate/
 node_modules/
 .rpt2_cache/

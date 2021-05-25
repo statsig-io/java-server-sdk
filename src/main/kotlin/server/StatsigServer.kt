@@ -32,12 +32,24 @@ class StatsigServer {
         }
 
         @JvmStatic
-        fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
+        fun getConfigAsync(user: StatsigUser?, dynamicConfigName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
             return@future getConfig(user, dynamicConfigName)
         }
 
-        suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+        suspend fun getConfig(user: StatsigUser?, dynamicConfigName: String): DynamicConfig {
             return serverDriver.getConfig(user, dynamicConfigName)
+        }
+
+        @JvmStatic
+        @JvmOverloads
+        fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null) {
+            serverDriver.logEvent(user, eventName, value, metadata)
+        }
+
+        @JvmStatic
+        @JvmOverloads
+        fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null) {
+            serverDriver.logEvent(user, eventName, value, metadata)
         }
     }
 }

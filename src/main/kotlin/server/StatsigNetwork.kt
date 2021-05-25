@@ -6,7 +6,11 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
 
-class StatsigNetwork(private val sdkKey: String, private val options: StatsigOptions) {
+class StatsigNetwork(
+        private val sdkKey: String,
+        private val options: StatsigOptions,
+        private val statsigMetadata: Map<String, String>,
+) {
     val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val httpClient: OkHttpClient
 
@@ -24,24 +28,38 @@ class StatsigNetwork(private val sdkKey: String, private val options: StatsigOpt
         httpClient = clientBuilder.build()
     }
 
-    suspend fun checkGate(user: StatsigUser, gateName: String): APIFeatureGate {
-        val body: RequestBody = "{\"gateName\":\"gateName\"}".toRequestBody(json)
+    suspend fun checkGate(user: StatsigUser?, gateName: String): APIFeatureGate {
+        val bodyJson = Gson().toJson(
+                mapOf(
+                        "gateName" to gateName,
+                        "user" to user,
+                        "statsigMetadata" to statsigMetadata
+                )
+        )
+        val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
                 .url(options.api + "/check_gate")
-                .post(body)
+                .post(requestBody)
                 .build()
         httpClient.newCall(request).execute().use { response ->
             return Gson().fromJson(response.body?.charStream(), APIFeatureGate::class.java)
         }
     }
 
-    suspend fun getConfig(user: StatsigUser, configName: String): APIDynamicConfig {
-        val body: RequestBody = "{\"configName\":\"configName\"}".toRequestBody(json)
+    suspend fun getConfig(user: StatsigUser?, configName: String): APIDynamicConfig {
+        val bodyJson = Gson().toJson(
+                mapOf(
+                        "configName" to configName,
+                        "user" to user,
+                        "statsigMetadata" to statsigMetadata
+                )
+        )
+        val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
                 .url(options.api + "/get_config")
-                .post(body)
+                .post(requestBody)
                 .build()
         httpClient.newCall(request).execute().use { response ->
             return Gson().fromJson(response.body?.charStream(), APIDynamicConfig::class.java)
@@ -49,14 +67,28 @@ class StatsigNetwork(private val sdkKey: String, private val options: StatsigOpt
     }
 
     suspend fun downloadConfigSpecs(): APIDownloadedConfigs {
-        val body: RequestBody = "{}".toRequestBody(json)
+        val bodyJson = Gson().toJson(mapOf("statsigMetadata" to statsigMetadata))
+        val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
                 .url(options.api + "/download_config_specs")
-                .post(body)
+                .post(requestBody)
                 .build()
         httpClient.newCall(request).execute().use { response ->
             return Gson().fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
+        }
+    }
+
+    suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>): APILoggingResponse {
+        val bodyJson = Gson().toJson(mapOf("events" to events, "statsigMetadata" to statsigMetadata))
+        val requestBody: RequestBody = bodyJson.toRequestBody(json)
+
+        val request: Request = Request.Builder()
+                .url(options.api + "/log_event")
+                .post(requestBody)
+                .build()
+        httpClient.newCall(request).execute().use { response ->
+            return Gson().fromJson(response.body?.charStream(), APILoggingResponse::class.java)
         }
     }
 }
