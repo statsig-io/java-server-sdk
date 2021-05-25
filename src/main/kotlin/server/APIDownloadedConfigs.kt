@@ -6,6 +6,7 @@ data class APIDownloadedConfigs(
     @SerializedName("dynamic_configs") val dynamicConfigs: Array<APIConfig>,
     @SerializedName("feature_gates") val featureGates: Array<APIConfig>,
     @SerializedName("time") val time: Long,
+    @SerializedName("has_updates") val hasUpdates: Boolean,
 )
 
 data class APIConfig(

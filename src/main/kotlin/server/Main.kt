@@ -7,7 +7,7 @@ import kotlinx.coroutines.delay
 
 suspend fun main(args: Array<String>) {
     val initialize = CoroutineScope(Dispatchers.Default).async {
-        StatsigServer.initialize("secret-wzolRc4LHvErMJsvMTlzVEagE1YoKlm9n53OixNnLAv", StatsigOptions())
+        StatsigServer.initialize("secret-wzolRc4LHvErMJsvMTlzVEagE1YoKlm9n53OixNnLAv")
         println(StatsigServer.checkGate(StatsigUser(), "mobile_registration").toString())
         println(StatsigServer.checkGate(StatsigUser(), "i_dont_exist").toString())
         println(StatsigServer.checkGate(StatsigUser(), "always_on_gate").toString())
@@ -18,5 +18,7 @@ suspend fun main(args: Array<String>) {
         StatsigServer.logEvent(null, "tore123", i * 1.0, mapOf("test" to "test2"))
     }
 
-    delay(1000)
+    for (i in 1..120) {
+        delay(1000)
+    }
 }
