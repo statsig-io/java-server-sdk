@@ -2,6 +2,8 @@
 **/build/
 !src/**/build/
 .gradle/**/*
+.build/**/*
+.idea/**/*
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -16,30 +18,6 @@ gradle-app.setting
 # gradle/wrapper/gradle-wrapper.properties
 
 xml
-.idea/libraries
-.idea/modules.xml
-.idea/gradle.xml
-.idea/compiler.xml
-.idea/inspectionProfiles/profiles_settings.xml
-.idea/.name
-.idea/artifacts/dist_auto_*
-.idea/artifacts/dist.xml
-.idea/artifacts/ideaPlugin.xml
-.idea/artifacts/kotlinc.xml
-.idea/artifacts/kotlin_compiler_jar.xml
-.idea/artifacts/kotlin_plugin_jar.xml
-.idea/artifacts/kotlin_jps_plugin_jar.xml
-.idea/artifacts/kotlin_daemon_client_jar.xml
-.idea/artifacts/kotlin_imports_dumper_compiler_plugin_jar.xml
-.idea/artifacts/kotlin_main_kts_jar.xml
-.idea/artifacts/kotlin_compiler_client_embeddable_jar.xml
-.idea/artifacts/kotlin_reflect_jar.xml
-.idea/artifacts/kotlin_stdlib_js_ir_*
-.idea/artifacts/kotlin_test_js_ir_*
-.idea/artifacts/kotlin_stdlib_wasm_*
-.idea/jarRepositories.xml
-.idea/csv-plugin.xml
-.idea/*
 
 kotlin-ultimate/
 node_modules/
