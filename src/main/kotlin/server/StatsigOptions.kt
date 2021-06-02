@@ -8,6 +8,6 @@ package server
  * callback to initialize will fire after, at most, the time specified
  */
 class StatsigOptions(
-        var api: String = "https://api.statsig.com/v1",
-        var initTimeoutMs: Long = 3000L,
+    var api: String = "https://api.statsig.com/v1",
+    var initTimeoutMs: Long = 3000L,
 )

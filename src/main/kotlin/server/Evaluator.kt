@@ -98,7 +98,7 @@ class Evaluator {
             var conditionEnum: ConfigCondition? = null
             try {
                 if (!condition.type.isNullOrEmpty()) {
-                    conditionEnum = ConfigCondition.valueOf(condition.type?.uppercase())
+                    conditionEnum = ConfigCondition.valueOf(condition.type.uppercase())
                 }
             } catch (_E: java.lang.IllegalArgumentException) {
                 conditionEnum = null
@@ -152,61 +152,61 @@ class Evaluator {
                     var sourceVersion = ComparableVersion(value)
                     var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                            false,
-                            sourceVersion.compareTo(targetVersion) > 0
+                        false,
+                        sourceVersion.compareTo(targetVersion) > 0
                     )
                 }
                 "version_gte" -> {
                     var sourceVersion = ComparableVersion(value)
                     var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                            false,
-                            sourceVersion.compareTo(targetVersion) >= 0
+                        false,
+                        sourceVersion.compareTo(targetVersion) >= 0
                     )
                 }
                 "version_lt" -> {
                     var sourceVersion = ComparableVersion(value)
                     var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                            fetchFromServer = false,
-                            sourceVersion.compareTo(targetVersion) < 0
+                        fetchFromServer = false,
+                        sourceVersion.compareTo(targetVersion) < 0
                     )
                 }
                 "version_lte" -> {
                     var sourceVersion = ComparableVersion(value)
                     var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                            fetchFromServer = false,
-                            sourceVersion.compareTo(targetVersion) <= 0
+                        fetchFromServer = false,
+                        sourceVersion.compareTo(targetVersion) <= 0
                     )
                 }
                 "version_eq" -> {
                     var sourceVersion = ComparableVersion(value)
                     var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                            fetchFromServer = false,
-                            sourceVersion.compareTo(targetVersion) == 0
+                        fetchFromServer = false,
+                        sourceVersion.compareTo(targetVersion) == 0
                     )
                 }
                 "version_neq" -> {
                     var sourceVersion = ComparableVersion(value)
                     var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                            fetchFromServer = false,
-                            sourceVersion.compareTo(targetVersion) != 0
+                        fetchFromServer = false,
+                        sourceVersion.compareTo(targetVersion) != 0
                     )
                 }
 
                 "any" -> {
                     return ConfigEvaluation(
-                            fetchFromServer = false,
-                            (condition.targetValue as ArrayList<String>).contains(value)
+                        fetchFromServer = false,
+                        (condition.targetValue as ArrayList<String>).contains(value)
                     )
                 }
                 "none" -> {
                     return ConfigEvaluation(
-                            fetchFromServer = false,
-                            !(condition.targetValue as ArrayList<String>).contains(value)
+                        fetchFromServer = false,
+                        !(condition.targetValue as ArrayList<String>).contains(value)
                     )
                 }
 
