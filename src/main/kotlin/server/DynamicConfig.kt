@@ -146,11 +146,11 @@ class DynamicConfig(var config: Config? = null) {
         return when (this.value[key]) {
             null -> null
             is Map<*, *> -> DynamicConfig(
-                    Config(
-                            key,
-                            this.value[key] as Map<String, Any>,
-                            this.rule
-                    )
+                Config(
+                    key,
+                    this.value[key] as Map<String, Any>,
+                    this.rule
+                )
             )
             else -> null
         }

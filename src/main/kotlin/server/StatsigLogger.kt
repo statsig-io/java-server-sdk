@@ -41,13 +41,13 @@ class StatsigLogger(
 
     @Synchronized
     fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String) {
-        var event = StatsigEvent(GATE_EXPOSURE_EVENT, eventValue=null, mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID), user, statsigMetadata)
+        var event = StatsigEvent(GATE_EXPOSURE_EVENT, eventValue = null, mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID), user, statsigMetadata)
         log(event)
     }
 
     @Synchronized
     fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String) {
-        var event = StatsigEvent(CONFIG_EXPOSURE_EVENT, eventValue=null, mapOf("config" to configName, "ruleID" to ruleID), user, statsigMetadata)
+        var event = StatsigEvent(CONFIG_EXPOSURE_EVENT, eventValue = null, mapOf("config" to configName, "ruleID" to ruleID), user, statsigMetadata)
         log(event)
     }
 
