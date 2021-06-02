@@ -39,13 +39,14 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling checkGate")
         }
-        val result = configEvaluator.checkGate(user, gateName)
+        var result : ConfigEvaluation = configEvaluator.checkGate(user, gateName)
         if (result.fetchFromServer) {
             val networkResult = network.checkGate(user, gateName)
-            return runBlocking {
-                return@runBlocking networkResult.value
+            result = runBlocking {
+                return@runBlocking networkResult
             }
         }
+        logger.logGateExposure(user, gateName, result.booleanValue, result.ruleID ?: "")
         return result.booleanValue
     }
 
@@ -53,11 +54,14 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling checkGate")
         }
-        val result = configEvaluator.getConfig(user, dynamicConfigName)
+        var result : ConfigEvaluation = configEvaluator.getConfig(user, dynamicConfigName)
         if (result.fetchFromServer) {
             val networkResult = network.getConfig(user, dynamicConfigName)
-            return DynamicConfig(Config(networkResult.name, networkResult.value, networkResult.ruleID))
+            result = runBlocking {
+                return@runBlocking networkResult
+            }
         }
+        logger.logConfigExposure(user, dynamicConfigName, result.ruleID ?: "")
         return DynamicConfig(Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID))
     }
 

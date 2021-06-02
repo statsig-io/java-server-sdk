@@ -42,9 +42,5 @@ data class APIFeatureGate(
 data class APIDynamicConfig(
     @SerializedName("name") val name: String,
     @SerializedName("value") val value: Map<String, Any>,
-    @SerializedName("rule_id") val ruleID: String?,
-)
-
-data class APILoggingResponse(
-    @SerializedName("success") val success: Boolean,
+    @SerializedName("rule_id") val ruleID: String? = "",
 )

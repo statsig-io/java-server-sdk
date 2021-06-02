@@ -5,6 +5,7 @@ import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.google.gson.GsonBuilder
 
 private const val POLLING_INTERVAL_MS: Long = 10000
 class StatsigNetwork(
@@ -30,7 +31,7 @@ class StatsigNetwork(
         httpClient = clientBuilder.build()
     }
 
-    suspend fun checkGate(user: StatsigUser?, gateName: String): APIFeatureGate {
+    suspend fun checkGate(user: StatsigUser?, gateName: String): ConfigEvaluation {
         val bodyJson = Gson().toJson(
                 mapOf(
                         "gateName" to gateName,
@@ -45,11 +46,12 @@ class StatsigNetwork(
                 .post(requestBody)
                 .build()
         httpClient.newCall(request).execute().use { response ->
-            return Gson().fromJson(response.body?.charStream(), APIFeatureGate::class.java)
+            val apiGate = Gson().fromJson(response.body?.charStream(), APIFeatureGate::class.java)
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = apiGate.value, apiGate.value.toString(), apiGate.ruleID)
         }
     }
 
-    suspend fun getConfig(user: StatsigUser?, configName: String): APIDynamicConfig {
+    suspend fun getConfig(user: StatsigUser?, configName: String): ConfigEvaluation {
         val bodyJson = Gson().toJson(
                 mapOf(
                         "configName" to configName,
@@ -64,7 +66,8 @@ class StatsigNetwork(
                 .post(requestBody)
                 .build()
         httpClient.newCall(request).execute().use { response ->
-            return Gson().fromJson(response.body?.charStream(), APIDynamicConfig::class.java)
+            val apiConfig = Gson().fromJson(response.body?.charStream(), APIDynamicConfig::class.java)
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = false, apiConfig.value, apiConfig.ruleID)
         }
     }
 
@@ -98,7 +101,7 @@ class StatsigNetwork(
         }
     }
 
-    suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>): APILoggingResponse {
+    suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>) {
         val bodyJson = Gson().toJson(mapOf("events" to events, "statsigMetadata" to statsigMetadata))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
@@ -106,8 +109,6 @@ class StatsigNetwork(
                 .url(options.api + "/log_event")
                 .post(requestBody)
                 .build()
-        httpClient.newCall(request).execute().use { response ->
-            return Gson().fromJson(response.body?.charStream(), APILoggingResponse::class.java)
-        }
+        httpClient.newCall(request).execute()
     }
 }
