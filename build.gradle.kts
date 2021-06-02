@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation(kotlin("test-junit"))
+    testImplementation("junit:junit:4.13")
     implementation("com.google.code.gson:gson:2.8.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.0")

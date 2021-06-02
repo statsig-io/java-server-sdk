@@ -91,6 +91,9 @@ class DynamicConfig(var config: Config? = null) {
         if (value[key] is Int) {
             return value[key] as Int
         }
+        if (value[key] is Double) {
+            return (value[key] as Double).toInt()
+        }
         return default
     }
 

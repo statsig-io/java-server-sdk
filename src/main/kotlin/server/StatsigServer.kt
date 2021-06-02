@@ -10,6 +10,7 @@ class StatsigServer {
         private lateinit var serverDriver: ServerDriver
 
         @JvmStatic
+        @JvmOverloads
         fun initializeAsync(serverSecret: String, options: StatsigOptions = StatsigOptions()): CompletableFuture<Unit> = GlobalScope.future {
             initialize(serverSecret, options)
         }
@@ -23,11 +24,11 @@ class StatsigServer {
         }
 
         @JvmStatic
-        fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> = GlobalScope.future {
+        fun checkGateAsync(user: StatsigUser?, gateName: String): CompletableFuture<Boolean> = GlobalScope.future {
             return@future checkGate(user, gateName)
         }
 
-        suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
+        suspend fun checkGate(user: StatsigUser?, gateName: String): Boolean {
             return serverDriver.checkGate(user, gateName)
         }
 

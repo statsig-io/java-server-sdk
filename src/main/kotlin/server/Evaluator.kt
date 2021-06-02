@@ -45,10 +45,10 @@ class Evaluator {
 
     fun getConfig(user: StatsigUser?, dynamicConfigName: String): ConfigEvaluation {
         if (!dynamicConfigs.containsKey(dynamicConfigName)) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = false, mapOf<String, Any>())
         }
         val config = dynamicConfigs[dynamicConfigName]
-            ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+            ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false, mapOf<String, Any>())
         return this.evaluate(user, config)
     }
 
@@ -98,7 +98,7 @@ class Evaluator {
             var conditionEnum: ConfigCondition? = null
             try {
                 if (!condition.type.isNullOrEmpty()) {
-                    conditionEnum = ConfigCondition.valueOf(condition.type?.toUpperCase())
+                    conditionEnum = ConfigCondition.valueOf(condition.type?.uppercase())
                 }
             } catch (_E: java.lang.IllegalArgumentException) {
                 conditionEnum = null
@@ -136,16 +136,16 @@ class Evaluator {
             }
             when (condition.operator) {
                 "gt" -> {
-                    return ConfigEvaluation(fetchFromServer = false, value as Int > condition.targetValue as Int)
+                    return ConfigEvaluation(fetchFromServer = false, value.toDouble() > condition.targetValue as Int)
                 }
                 "gte" -> {
-                    return ConfigEvaluation(fetchFromServer = false, value as Int >= condition.targetValue as Int)
+                    return ConfigEvaluation(fetchFromServer = false, value.toDouble() >= condition.targetValue as Int)
                 }
                 "lt" -> {
-                    return ConfigEvaluation(fetchFromServer = false, (value as Int) < condition.targetValue as Int)
+                    return ConfigEvaluation(fetchFromServer = false, value.toDouble() < condition.targetValue as Int)
                 }
                 "lte" -> {
-                    return ConfigEvaluation(fetchFromServer = false, value as Int <= condition.targetValue as Int)
+                    return ConfigEvaluation(fetchFromServer = false, value.toDouble() <= condition.targetValue as Int)
                 }
 
                 "version_gt" -> {
@@ -200,39 +200,51 @@ class Evaluator {
                 "any" -> {
                     return ConfigEvaluation(
                             fetchFromServer = false,
-                            (condition.targetValue as Array<String>).contains(value)
+                            (condition.targetValue as ArrayList<String>).contains(value)
                     )
                 }
                 "none" -> {
                     return ConfigEvaluation(
                             fetchFromServer = false,
-                            !(condition.targetValue as Array<String>).contains(value)
+                            !(condition.targetValue as ArrayList<String>).contains(value)
                     )
                 }
 
                 "str_starts_with_any" -> {
-                    for (match in condition.targetValue as Array<String>) {
-                        if (value.startsWith(match)) {
-                            return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                    if (condition.targetValue is ArrayList<*>) {
+                        for (match in condition.targetValue as ArrayList<String>) {
+                            if (value.startsWith(match)) {
+                                return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                            }
                         }
+                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                     }
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                    val singleTarget = (condition.targetValue as String)
+                    return ConfigEvaluation(fetchFromServer = false, booleanValue = value.startsWith(singleTarget))
                 }
                 "str_ends_with_any" -> {
-                    for (match in condition.targetValue as Array<String>) {
-                        if (value.endsWith(match)) {
-                            return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                    if (condition.targetValue is ArrayList<*>) {
+                        for (match in condition.targetValue as ArrayList<String>) {
+                            if (value.endsWith(match)) {
+                                return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                            }
                         }
+                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                     }
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                    val singleTarget = (condition.targetValue as String)
+                    return ConfigEvaluation(fetchFromServer = false, booleanValue = value.endsWith(singleTarget))
                 }
                 "str_contains_any" -> {
-                    for (match in condition.targetValue as Array<String>) {
-                        if (value.contains(match)) {
-                            return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                    if (condition.targetValue is ArrayList<*>) {
+                        for (match in condition.targetValue as ArrayList<String>) {
+                            if (value.contains(match)) {
+                                return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                            }
                         }
+                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                     }
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                    val singleTarget = (condition.targetValue as String)
+                    return ConfigEvaluation(fetchFromServer = false, booleanValue = value.contains(singleTarget))
                 }
                 "str_matches" -> {
                     if (value.matches(Regex(condition.targetValue as String))) {
@@ -261,10 +273,10 @@ class Evaluator {
 
     private fun getFromUserAgent(user: StatsigUser?, field: String): String? {
         val ua = getFromUser(user, "userAgent") ?: return null
-        val parsed = uaParser?.parse(ua as String) ?: return null
+        val parsed = uaParser?.parse(ua) ?: return null
         when (field) {
             "os_name" -> {
-                if (parsed.platform.toLowerCase().startsWith("win")) {
+                if (parsed.platform.lowercase().startsWith("win")) {
                     return "Windows"
                 }
                 return parsed.platform
