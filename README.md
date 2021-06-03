@@ -22,7 +22,5 @@ initialize.await()
 
 // Now you can check gates, get configs, log events
 
-for (i in 1..501) {
-    StatsigServer.logEvent(null, "tore123", i * 1.0, mapOf("test" to "test2"))
-}
+StatsigServer.logEvent(null, "<event_name>", i * 1.0, mapOf("test" to "test2"))
 ```
