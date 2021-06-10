@@ -306,7 +306,10 @@ class Evaluator {
         val md = MessageDigest.getInstance("SHA-256")
         val inputBytes = input.toByteArray()
         val bytes = md.digest(inputBytes)
-        return BigInteger(1, bytes)
+        if (bytes.size < 8) {
+            return BigInteger(1, bytes)
+        }
+        return BigInteger(1, bytes.sliceArray(0..7))
     }
 }
 
