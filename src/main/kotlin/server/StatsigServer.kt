@@ -52,5 +52,10 @@ class StatsigServer {
         fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null) {
             serverDriver.logEvent(user, eventName, value, metadata)
         }
+
+        @JvmStatic
+        fun shutdown() {
+            serverDriver.shutdown()
+        }
     }
 }
