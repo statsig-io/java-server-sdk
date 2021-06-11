@@ -1,10 +1,8 @@
-import org.junit.Assert;
 import org.junit.Test;
 import server.DynamicConfig;
 import server.StatsigServer;
 import server.StatsigUser;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.*;

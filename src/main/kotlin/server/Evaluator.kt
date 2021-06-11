@@ -113,7 +113,14 @@ class Evaluator {
                     return checkGate(user, condition.targetValue as String)
                 }
                 ConfigCondition.IP_BASED -> {
-                    return ConfigEvaluation(fetchFromServer = true)
+                    value = getFromUser(user, condition.field)
+                    if (value == null) {
+                        if (getFromUser(user, "ip") == null) {
+                            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                        } else {
+                            return ConfigEvaluation(fetchFromServer = true)
+                        }
+                    }
                 }
                 ConfigCondition.UA_BASED -> {
                     value = getFromUser(user, condition.field)
@@ -295,10 +302,12 @@ class Evaluator {
             return null
         }
         val userJson = Gson().toJsonTree(user).asJsonObject
-        if (userJson[field] == null && userJson["custom"] != null) {
+        if (userJson[field] != null) {
+            return userJson[field].asString
+        } else if (userJson["custom"] != null) {
             return Gson().toJsonTree(userJson["custom"]).asJsonObject[field]?.asString
         } else {
-            return userJson[field]?.asString
+            return null
         }
     }
 
