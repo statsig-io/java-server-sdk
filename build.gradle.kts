@@ -3,10 +3,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.5.0"
     idea
+    maven
 }
 
 group = "com.statsig"
-version = "0.2.1"
+version = "0.2.2"
 
 repositories {
     mavenCentral()
