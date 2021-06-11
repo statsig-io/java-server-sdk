@@ -3,6 +3,7 @@ import server.DynamicConfig;
 import server.StatsigServer;
 import server.StatsigUser;
 
+import java.util.Collections;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.*;
@@ -43,6 +44,15 @@ public class StatsigTest {
             user.setEmail("tore@statsig.com");
             checkEmailGateFuture = StatsigServer.checkGateAsync(user, "test_email");
             assertTrue(checkEmailGateFuture.get());
+
+            user.setUserID("123");
+            user.setCustom(Collections.singletonMap("country", "US"));
+            Future<Boolean> usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertFalse(usCountryGateFuture.get());
+
+            user.setUserID("456");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertTrue(usCountryGateFuture.get());
 
             Future<DynamicConfig> checkOsConfig = StatsigServer.getConfigAsync(user, "operating_system_config");
             DynamicConfig config = checkOsConfig.get();
