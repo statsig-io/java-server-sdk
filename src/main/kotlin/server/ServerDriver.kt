@@ -142,6 +142,6 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
     }
 
     fun getExperimentAsync(user: StatsigUser?, experimentName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
-        return@future getConfig(user, experimentName)
+        return@future getExperiment(user, experimentName)
     }
 }
