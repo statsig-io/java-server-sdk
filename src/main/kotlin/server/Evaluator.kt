@@ -315,13 +315,12 @@ class Evaluator {
     }
 
     private fun getFromEnvironment(user: StatsigUser?, field: String): String? {
-        val userJson = Gson().toJsonTree(user).asJsonObject
-        if (userJson["statsigEnvironment"] != null) {
-            val environment = userJson["statsigEnvironment"].asJsonObject
-            if (environment[field] != null) {
-                return environment[field].asString
+        if (user?.statsigEnvironment != null) {
+            if (user.statsigEnvironment!![field] != null) {
+                return user.statsigEnvironment!![field]
+            } else if (user.statsigEnvironment!![field.lowercase()] != null) {
+                return user.statsigEnvironment!![field.lowercase()]
             }
-            return environment[field.lowercase()]?.asString
         }
         return null
     }
