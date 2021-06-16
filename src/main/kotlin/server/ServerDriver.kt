@@ -35,6 +35,13 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         }
     }
 
+    suspend fun getExperiment(user: StatsigUser?, experimentName: String): DynamicConfig {
+        if (!initialized) {
+            throw IllegalStateException("Must initialize before calling getExperiment")
+        }
+        return getConfig(user, experimentName);
+    }
+
     suspend fun checkGate(user: StatsigUser?, gateName: String): Boolean {
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling checkGate")
@@ -52,7 +59,7 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
 
     suspend fun getConfig(user: StatsigUser?, dynamicConfigName: String): DynamicConfig {
         if (!initialized) {
-            throw IllegalStateException("Must initialize before calling checkGate")
+            throw IllegalStateException("Must initialize before calling getConfig")
         }
         var result: ConfigEvaluation = configEvaluator.getConfig(user, dynamicConfigName)
         if (result.fetchFromServer) {
