@@ -42,6 +42,15 @@ class StatsigServer {
         }
 
         @JvmStatic
+        fun getExperimentAsync(user: StatsigUser?, experimentName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
+            return@future getExperiment(user, experimentName)
+        }
+
+        suspend fun getExperiment(user: StatsigUser?, experimentName: String): DynamicConfig {
+            return serverDriver.getExperiment(user, experimentName)
+        }
+
+        @JvmStatic
         @JvmOverloads
         fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null) {
             serverDriver.logEvent(user, eventName, value, metadata)
