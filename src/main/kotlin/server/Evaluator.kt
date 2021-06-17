@@ -141,7 +141,7 @@ class Evaluator {
                     return ConfigEvaluation(fetchFromServer = true)
                 }
             }
-            if (value == null || condition.targetValue == null) {
+            if (value == null) {
                 return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
             }
             when (condition.operator) {
@@ -210,13 +210,13 @@ class Evaluator {
                 "any" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        (condition.targetValue as ArrayList<String>).contains(value)
+                        containsCaseInsensitive(condition.targetValue, value)
                     )
                 }
                 "none" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        !(condition.targetValue as ArrayList<String>).contains(value)
+                        !containsCaseInsensitive(condition.targetValue, value)
                     )
                 }
 
@@ -279,6 +279,22 @@ class Evaluator {
         } catch (_e: IllegalArgumentException) {
             return ConfigEvaluation(true)
         }
+    }
+
+
+    private fun containsCaseInsensitive(targets: Any, value: String): Boolean {
+        if (targets is String) {
+            return targets.lowercase() == value.lowercase()
+        }
+        if (targets is Iterable<*>) {
+            for (option in targets) {
+                if (option is String && option.lowercase() == value.lowercase()) {
+                    return true
+                }
+            }
+        }
+
+        return false
     }
 
     private fun getFromUserAgent(user: StatsigUser?, field: String): String? {
