@@ -62,7 +62,7 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
     }
 
     private fun normalizeUser(user: StatsigUser?): StatsigUser? {
-        var normalizedUser : StatsigUser? = user
+        var normalizedUser = user
         if (user == null && options.getEnvironment() != null) {
             normalizedUser = StatsigUser()
         }
