@@ -255,9 +255,9 @@ class Evaluator {
                 "str_starts_with_any" -> {
                     val strValue = getValueAsString(value)
                         ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    if (condition.targetValue is ArrayList<*>) {
-                        for (match in condition.targetValue as ArrayList<String>) {
-                            if (strValue.startsWith(match)) {
+                    if (condition.targetValue is Iterable<*>) {
+                        for (match in condition.targetValue) {
+                            if (strValue.startsWith(match as String)) {
                                 return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
                             }
                         }
@@ -269,9 +269,9 @@ class Evaluator {
                 "str_ends_with_any" -> {
                     val strValue = getValueAsString(value)
                         ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    if (condition.targetValue is ArrayList<*>) {
-                        for (match in condition.targetValue as ArrayList<String>) {
-                            if (strValue.endsWith(match)) {
+                    if (condition.targetValue is Iterable<*>) {
+                        for (match in condition.targetValue) {
+                            if (strValue.endsWith(match as String)) {
                                 return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
                             }
                         }
@@ -283,9 +283,9 @@ class Evaluator {
                 "str_contains_any" -> {
                     val strValue = getValueAsString(value)
                         ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    if (condition.targetValue is ArrayList<*>) {
-                        for (match in condition.targetValue as ArrayList<String>) {
-                            if (strValue.contains(match)) {
+                    if (condition.targetValue is Iterable<*>) {
+                        for (match in condition.targetValue) {
+                            if (strValue.contains(match as String)) {
                                 return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
                             }
                         }
