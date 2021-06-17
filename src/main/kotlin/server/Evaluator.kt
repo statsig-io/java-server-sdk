@@ -6,6 +6,8 @@ import com.blueconic.browscap.UserAgentService
 import com.google.gson.Gson
 import org.apache.maven.artifact.versioning.ComparableVersion
 import java.math.BigInteger
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.security.MessageDigest
 import kotlin.collections.set
 
@@ -72,7 +74,7 @@ class Evaluator {
             if (result.booleanValue) {
                 val userID = user?.userID ?: ""
                 val numericRepresentation = this.getHashedValue(config.salt + '.' + rule.name + '.' + userID)
-                val pass = numericRepresentation.mod(BigInteger.valueOf(10000L)) < BigInteger.valueOf(rule.passPercentage * 100L)
+                val pass = numericRepresentation.mod(10000UL) < rule.passPercentage.toULong().times(100UL)
                 return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
             }
         }
@@ -403,14 +405,11 @@ class Evaluator {
         return null
     }
 
-    private fun getHashedValue(input: String): BigInteger {
+    private fun getHashedValue(input: String): ULong {
         val md = MessageDigest.getInstance("SHA-256")
         val inputBytes = input.toByteArray()
         val bytes = md.digest(inputBytes)
-        if (bytes.size < 8) {
-            return BigInteger(1, bytes)
-        }
-        return BigInteger(1, bytes.sliceArray(0..7))
+        return ByteBuffer.wrap(bytes).long.toULong()
     }
 }
 

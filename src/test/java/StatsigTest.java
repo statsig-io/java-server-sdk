@@ -49,7 +49,35 @@ public class StatsigTest {
             Future<Boolean> usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
             assertFalse(usCountryGateFuture.get());
 
+            user.setUserID("123");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertFalse(usCountryGateFuture.get());
+
+            user.setUserID("1");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertFalse(usCountryGateFuture.get());
+
+            user.setUserID("2");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertFalse(usCountryGateFuture.get());
+
+            user.setUserID("789");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertFalse(usCountryGateFuture.get());
+
             user.setUserID("4");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertTrue(usCountryGateFuture.get());
+
+            user.setUserID("6");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertTrue(usCountryGateFuture.get());
+
+            user.setUserID("8");
+            usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
+            assertTrue(usCountryGateFuture.get());
+
+            user.setUserID("12345");
             usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
             assertTrue(usCountryGateFuture.get());
 
