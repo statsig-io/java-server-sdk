@@ -134,6 +134,9 @@ class Evaluator {
                 ConfigCondition.CURRENT_TIME -> {
                     value = System.currentTimeMillis().toString()
                 }
+                ConfigCondition.ENVIRONMENT_FIELD -> {
+                    value = getFromEnvironment(user, condition.field)
+                }
                 else -> {
                     return ConfigEvaluation(fetchFromServer = true)
                 }
@@ -311,6 +314,17 @@ class Evaluator {
         }
     }
 
+    private fun getFromEnvironment(user: StatsigUser?, field: String): String? {
+        if (user?.statsigEnvironment != null) {
+            if (user.statsigEnvironment!![field] != null) {
+                return user.statsigEnvironment!![field]
+            } else if (user.statsigEnvironment!![field.lowercase()] != null) {
+                return user.statsigEnvironment!![field.lowercase()]
+            }
+        }
+        return null
+    }
+
     private fun getHashedValue(input: String): BigInteger {
         val md = MessageDigest.getInstance("SHA-256")
         val inputBytes = input.toByteArray()
@@ -330,4 +344,5 @@ enum class ConfigCondition {
     UA_BASED,
     USER_FIELD,
     CURRENT_TIME,
+    ENVIRONMENT_FIELD,
 }

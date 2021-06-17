@@ -1,7 +1,5 @@
 import org.junit.Test;
-import server.DynamicConfig;
-import server.StatsigServer;
-import server.StatsigUser;
+import server.*;
 
 import java.util.Collections;
 import java.util.concurrent.Future;
@@ -50,7 +48,7 @@ public class StatsigTest {
             Future<Boolean> usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
             assertFalse(usCountryGateFuture.get());
 
-            user.setUserID("456");
+            user.setUserID("4");
             usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
             assertTrue(usCountryGateFuture.get());
 
@@ -60,6 +58,26 @@ public class StatsigTest {
             assertEquals(13, config.getInt("num", 7));
             assertEquals(13.0, config.getDouble("num", 7.0), 0);
             assertEquals("hello", config.getString("str", ""));
+        } catch (Exception e) {
+            fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void testEnvironment() {
+        try {
+            StatsigOptions options = new StatsigOptions();
+            options.setTier(Tier.DEVELOPMENT);
+            ServerDriver driver = new ServerDriver("secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW", options);
+            driver.initializeAsync().get();
+            Future<Boolean> environmentGate = driver.checkGateAsync(null, "test_environment_tier");
+            assertTrue(environmentGate.get());
+
+            options.setTier(Tier.PRODUCTION);
+            driver = new ServerDriver("secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW", options);
+            driver.initializeAsync().get();
+            environmentGate = driver.checkGateAsync(null, "test_environment_tier");
+            assertFalse(environmentGate.get());
         } catch (Exception e) {
             fail(e.getMessage());
         }
