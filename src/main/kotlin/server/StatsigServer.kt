@@ -9,12 +9,6 @@ class StatsigServer {
 
         private lateinit var serverDriver: ServerDriver
 
-        @JvmStatic
-        @JvmOverloads
-        fun initializeAsync(serverSecret: String, options: StatsigOptions = StatsigOptions()): CompletableFuture<Unit> = GlobalScope.future {
-            initialize(serverSecret, options)
-        }
-
         suspend fun initialize(serverSecret: String, options: StatsigOptions = StatsigOptions()) {
             if (this::serverDriver.isInitialized) {
                 return
@@ -23,30 +17,15 @@ class StatsigServer {
             serverDriver.initialize()
         }
 
-        @JvmStatic
-        fun checkGateAsync(user: StatsigUser?, gateName: String): CompletableFuture<Boolean> = GlobalScope.future {
-            return@future checkGate(user, gateName)
-        }
-
-        suspend fun checkGate(user: StatsigUser?, gateName: String): Boolean {
+        suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
             return serverDriver.checkGate(user, gateName)
         }
 
-        @JvmStatic
-        fun getConfigAsync(user: StatsigUser?, dynamicConfigName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
-            return@future getConfig(user, dynamicConfigName)
-        }
-
-        suspend fun getConfig(user: StatsigUser?, dynamicConfigName: String): DynamicConfig {
+        suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
             return serverDriver.getConfig(user, dynamicConfigName)
         }
 
-        @JvmStatic
-        fun getExperimentAsync(user: StatsigUser?, experimentName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
-            return@future getExperiment(user, experimentName)
-        }
-
-        suspend fun getExperiment(user: StatsigUser?, experimentName: String): DynamicConfig {
+        suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
             return serverDriver.getExperiment(user, experimentName)
         }
 
@@ -65,6 +44,27 @@ class StatsigServer {
         @JvmStatic
         fun shutdown() {
             serverDriver.shutdown()
+        }
+
+        @JvmStatic
+        @JvmOverloads
+        fun initializeAsync(serverSecret: String, options: StatsigOptions = StatsigOptions()): CompletableFuture<Unit> = GlobalScope.future {
+            initialize(serverSecret, options)
+        }
+
+        @JvmStatic
+        fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> = GlobalScope.future {
+            return@future checkGate(user, gateName)
+        }
+
+        @JvmStatic
+        fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
+            return@future getConfig(user, dynamicConfigName)
+        }
+
+        @JvmStatic
+        fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
+            return@future getExperiment(user, experimentName)
         }
     }
 }
