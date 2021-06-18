@@ -5,9 +5,7 @@ import com.blueconic.browscap.UserAgentParser
 import com.blueconic.browscap.UserAgentService
 import com.google.gson.Gson
 import org.apache.maven.artifact.versioning.ComparableVersion
-import java.math.BigInteger
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.security.MessageDigest
 import kotlin.collections.set
 
@@ -73,7 +71,7 @@ class Evaluator {
             }
             if (result.booleanValue) {
                 val userID = user?.userID ?: ""
-                val pass = computeUserHashBucket(config.salt + '.' + rule.name + '.' + userID) < rule.passPercentage.toULong().times(100UL)
+                val pass = computeUserHashBucket(config.salt + '.' + rule.id + '.' + userID) < rule.passPercentage.toULong().times(100UL)
                 return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
             }
         }
@@ -419,15 +417,11 @@ class Evaluator {
     }
 
     private fun computeUserHashBucket(input: String): ULong {
-        val hash = getHashedValue(input)
-        return hash.mod(10000UL)
-    }
-
-    private fun getHashedValue(input: String): ULong {
         val md = MessageDigest.getInstance("SHA-256")
         val inputBytes = input.toByteArray()
         val bytes = md.digest(inputBytes)
-        return ByteBuffer.wrap(bytes).long.toULong()
+        val hash = ByteBuffer.wrap(bytes).long.toULong()
+        return hash.mod(10000UL)
     }
 }
 
