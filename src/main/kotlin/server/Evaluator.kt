@@ -73,8 +73,7 @@ class Evaluator {
             }
             if (result.booleanValue) {
                 val userID = user?.userID ?: ""
-                val numericRepresentation = this.getHashedValue(config.salt + '.' + rule.name + '.' + userID)
-                val pass = numericRepresentation.mod(10000UL) < rule.passPercentage.toULong().times(100UL)
+                val pass = computeUserHashBucket(config.salt + '.' + rule.name + '.' + userID) < rule.passPercentage.toULong().times(100UL)
                 return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
             }
         }
@@ -138,6 +137,11 @@ class Evaluator {
                 }
                 ConfigCondition.ENVIRONMENT_FIELD -> {
                     value = getFromEnvironment(user, condition.field)
+                }
+                ConfigCondition.USER_BUCKET -> {
+                    val salt = getValueAsString(condition.additionalValues["salt"])
+                    val userID = user?.userID ?: ""
+                    value = computeUserHashBucket("$salt.$userID").toDouble()
                 }
                 else -> {
                     return ConfigEvaluation(fetchFromServer = true)
@@ -330,6 +334,9 @@ class Evaluator {
         if (input is String) {
             return input
         }
+        if (input is Number) {
+            return input.toString()
+        }
         return input as? String
     }
 
@@ -339,6 +346,12 @@ class Evaluator {
         }
         if (input is String) {
             return input.toDoubleOrNull()
+        }
+        if (input is Number) {
+            return input.toDouble()
+        }
+        if (input is ULong) {
+            return input.toDouble()
         }
         return input as? Double
     }
@@ -405,6 +418,11 @@ class Evaluator {
         return null
     }
 
+    private fun computeUserHashBucket(input: String): ULong {
+        val hash = getHashedValue(input)
+        return hash.mod(10000UL)
+    }
+
     private fun getHashedValue(input: String): ULong {
         val md = MessageDigest.getInstance("SHA-256")
         val inputBytes = input.toByteArray()
@@ -422,4 +440,5 @@ enum class ConfigCondition {
     USER_FIELD,
     CURRENT_TIME,
     ENVIRONMENT_FIELD,
+    USER_BUCKET,
 }
