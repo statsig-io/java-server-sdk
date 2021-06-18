@@ -31,6 +31,7 @@ data class APICondition(
     @SerializedName("targetValue") val targetValue: Any,
     @SerializedName("operator") val operator: String,
     @SerializedName("field") val field: String,
+    @SerializedName("additionalValues") val additionalValues: Map<String, Any>
 )
 
 data class APIFeatureGate(
