@@ -43,7 +43,7 @@ class Evaluator {
         }
     }
 
-    fun getConfig(user: StatsigUser?, dynamicConfigName: String): ConfigEvaluation {
+    fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
         if (!dynamicConfigs.containsKey(dynamicConfigName)) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false, mapOf<String, Any>())
         }
@@ -52,7 +52,7 @@ class Evaluator {
         return this.evaluate(user, config)
     }
 
-    fun checkGate(user: StatsigUser?, gateName: String): ConfigEvaluation {
+    fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
         if (!featureGates.containsKey(gateName)) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         }
@@ -60,7 +60,7 @@ class Evaluator {
         return this.evaluate(user, config)
     }
 
-    private fun evaluate(user: StatsigUser?, config: APIConfig): ConfigEvaluation {
+    private fun evaluate(user: StatsigUser, config: APIConfig): ConfigEvaluation {
         if (!config.enabled) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue)
         }
@@ -70,15 +70,14 @@ class Evaluator {
                 return result
             }
             if (result.booleanValue) {
-                val userID = user?.userID ?: ""
-                val pass = computeUserHashBucket(config.salt + '.' + rule.id + '.' + userID) < rule.passPercentage.toULong().times(100UL)
+                val pass = computeUserHashBucket(config.salt + '.' + rule.id + '.' + user.userID) < rule.passPercentage.toULong().times(100UL)
                 return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
             }
         }
         return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue, "default")
     }
 
-    private fun evaluateRule(user: StatsigUser?, rule: APIRule): ConfigEvaluation {
+    private fun evaluateRule(user: StatsigUser, rule: APIRule): ConfigEvaluation {
         for (condition in rule.conditions) {
             val result = this.evaluateCondition(user, condition)
             if (result.fetchFromServer) {
@@ -91,7 +90,7 @@ class Evaluator {
         return ConfigEvaluation(fetchFromServer = false, booleanValue = true, rule.returnValue, rule.id)
     }
 
-    private fun evaluateCondition(user: StatsigUser?, condition: APICondition): ConfigEvaluation {
+    private fun evaluateCondition(user: StatsigUser, condition: APICondition): ConfigEvaluation {
         try {
             var value: Any?
             var conditionEnum: ConfigCondition? = null
@@ -138,7 +137,7 @@ class Evaluator {
                 }
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues["salt"])
-                    val userID = user?.userID ?: ""
+                    val userID = user.userID
                     value = computeUserHashBucket("$salt.$userID").toDouble()
                 }
                 else -> {
@@ -356,7 +355,7 @@ class Evaluator {
 
     private fun containsCaseInsensitive(targets: Any, value: String?): Boolean {
         if (value == null) {
-            return targets == null
+            return false
         }
         if (targets is String) {
             return targets.lowercase() == value.lowercase()
@@ -372,7 +371,7 @@ class Evaluator {
         return false
     }
 
-    private fun getFromUserAgent(user: StatsigUser?, field: String): String? {
+    private fun getFromUserAgent(user: StatsigUser, field: String): String? {
         val ua = getFromUser(user, "userAgent") ?: return null
         val parsed = uaParser?.parse(ua) ?: return null
         when (field) {
@@ -391,10 +390,7 @@ class Evaluator {
         }
     }
 
-    private fun getFromUser(user: StatsigUser?, field: String): String? {
-        if (user == null) {
-            return null
-        }
+    private fun getFromUser(user: StatsigUser, field: String): String? {
         val userJson = Gson().toJsonTree(user).asJsonObject
         if (userJson[field] != null) {
             return userJson[field].asString
@@ -405,13 +401,14 @@ class Evaluator {
         }
     }
 
-    private fun getFromEnvironment(user: StatsigUser?, field: String): String? {
-        if (user?.statsigEnvironment != null) {
-            if (user.statsigEnvironment!![field] != null) {
-                return user.statsigEnvironment!![field]
-            } else if (user.statsigEnvironment!![field.lowercase()] != null) {
-                return user.statsigEnvironment!![field.lowercase()]
-            }
+    private fun getFromEnvironment(user: StatsigUser, field: String): String? {
+        if (user.statsigEnvironment == null) {
+            return null
+        }
+        if (user.statsigEnvironment!![field] != null) {
+            return user.statsigEnvironment!![field]
+        } else if (user.statsigEnvironment!![field.lowercase()] != null) {
+            return user.statsigEnvironment!![field.lowercase()]
         }
         return null
     }
