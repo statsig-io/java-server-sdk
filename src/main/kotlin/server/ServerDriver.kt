@@ -38,14 +38,7 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         }
     }
 
-    suspend fun getExperiment(user: StatsigUser?, experimentName: String): DynamicConfig {
-        if (!initialized) {
-            throw IllegalStateException("Must initialize before calling getExperiment")
-        }
-        return getConfig(user, experimentName);
-    }
-
-    suspend fun checkGate(user: StatsigUser?, gateName: String): Boolean {
+    suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling checkGate")
         }
@@ -61,16 +54,7 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         return result.booleanValue
     }
 
-    private fun normalizeUser(user: StatsigUser?): StatsigUser? {
-        var normalizedUser = user
-        if (user == null && options.getEnvironment() != null) {
-            normalizedUser = StatsigUser()
-        }
-        normalizedUser?.statsigEnvironment = options.getEnvironment()
-        return normalizedUser
-    }
-
-    suspend fun getConfig(user: StatsigUser?, dynamicConfigName: String): DynamicConfig {
+    suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling getConfig")
         }
@@ -84,6 +68,13 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         }
         logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
         return DynamicConfig(Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID))
+    }
+
+    suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
+        if (!initialized) {
+            throw IllegalStateException("Must initialize before calling getExperiment")
+        }
+        return getConfig(user, experimentName);
     }
 
     fun logEvent(
@@ -123,6 +114,15 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         logger.flush()
     }
 
+    private fun normalizeUser(user: StatsigUser?): StatsigUser? {
+        var normalizedUser = user
+        if (user == null && options.getEnvironment() != null) {
+            normalizedUser = StatsigUser("")
+        }
+        normalizedUser?.statsigEnvironment = options.getEnvironment()
+        return normalizedUser
+    }
+
     /**
      * Async methods expose functionality in a friendly way to Java (via CompleteableFutures in Java 8)
      * Below is, essentially, the "Java" API, which calls into the kotlin implementation above
@@ -133,15 +133,15 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         return@future initialize()
     }
 
-    fun checkGateAsync(user: StatsigUser?, gateName: String): CompletableFuture<Boolean> = GlobalScope.future {
+    fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> = GlobalScope.future {
         return@future checkGate(user, gateName)
     }
 
-    fun getConfigAsync(user: StatsigUser?, configName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
+    fun getConfigAsync(user: StatsigUser, configName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
         return@future getConfig(user, configName)
     }
 
-    fun getExperimentAsync(user: StatsigUser?, experimentName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
+    fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
         return@future getExperiment(user, experimentName)
     }
 }

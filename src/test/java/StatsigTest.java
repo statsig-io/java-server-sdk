@@ -27,16 +27,16 @@ public class StatsigTest {
             Future initFuture = StatsigServer.initializeAsync("secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW");
             initFuture.get();
 
-            Future<Boolean> noGateFuture = StatsigServer.checkGateAsync(null, "i_do_not_exist");
+            Future<Boolean> noGateFuture = StatsigServer.checkGateAsync(new StatsigUser(""), "i_do_not_exist");
             assertFalse(noGateFuture.get());
 
-            Future<DynamicConfig> noConfigFuture = StatsigServer.getConfigAsync(null, "i_do_not_exist");
+            Future<DynamicConfig> noConfigFuture = StatsigServer.getConfigAsync(new StatsigUser(""), "i_do_not_exist");
             assertTrue(noConfigFuture.get().getValue().isEmpty());
 
-            Future<Boolean> checkPublicGateFuture = StatsigServer.checkGateAsync(null, "test_public");
+            Future<Boolean> checkPublicGateFuture = StatsigServer.checkGateAsync(new StatsigUser(""), "test_public");
             assertEquals(true, checkPublicGateFuture.get());
 
-            StatsigUser user = new StatsigUser();
+            StatsigUser user = new StatsigUser("123");
             Future<Boolean> checkEmailGateFuture = StatsigServer.checkGateAsync(user, "test_email");
             assertFalse(checkEmailGateFuture.get());
 
@@ -99,13 +99,13 @@ public class StatsigTest {
             options.setTier(Tier.DEVELOPMENT);
             ServerDriver driver = new ServerDriver("secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW", options);
             driver.initializeAsync().get();
-            Future<Boolean> environmentGate = driver.checkGateAsync(null, "test_environment_tier");
+            Future<Boolean> environmentGate = driver.checkGateAsync(new StatsigUser(""), "test_environment_tier");
             assertTrue(environmentGate.get());
 
             options.setTier(Tier.PRODUCTION);
             driver = new ServerDriver("secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW", options);
             driver.initializeAsync().get();
-            environmentGate = driver.checkGateAsync(null, "test_environment_tier");
+            environmentGate = driver.checkGateAsync(new StatsigUser(""), "test_environment_tier");
             assertFalse(environmentGate.get());
         } catch (Exception e) {
             fail(e.getMessage());

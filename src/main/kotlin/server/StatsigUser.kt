@@ -6,7 +6,7 @@ import com.google.gson.annotations.SerializedName
  * An object of properties relating to the current user
  * Provide as many as possible to take advantage of advanced conditions in the Statsig console
  * A dictionary of additional fields can be provided under the "custom" field
- * @property userID a unique identifier for the user
+ * @property userID - REQUIRED - a unique identifier for the user.  Why is this required?  See https://docs.statsig.com/messages/serverRequiredUserID/
  * @property email an email associated with the current user
  * @property ip the ip address of the requests for the user
  * @property userAgent the user agent of the requests for this user
@@ -17,7 +17,7 @@ import com.google.gson.annotations.SerializedName
  */
 data class StatsigUser(
     @SerializedName("userID")
-    var userID: String? = null,
+    var userID: String,
 ) {
     @SerializedName("email")
     var email: String? = null
