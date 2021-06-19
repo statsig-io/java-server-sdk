@@ -11,6 +11,7 @@ version = "0.2.2"
 
 repositories {
     mavenCentral()
+    maven { setUrl("https://jitpack.io") }
 }
 
 dependencies {
@@ -21,6 +22,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.9.1")
     implementation("com.blueconic:browscap-java:1.3.6")
     implementation("org.apache.maven:maven-artifact:3.8.1")
+    implementation("com.github.statsig-io:ip3country-kotlin:0.1.0")
 }
 
 tasks.test {
