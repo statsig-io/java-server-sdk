@@ -4,6 +4,7 @@ import com.blueconic.browscap.BrowsCapField
 import com.blueconic.browscap.UserAgentParser
 import com.blueconic.browscap.UserAgentService
 import com.google.gson.Gson
+import ip3country.CountryLookup
 import org.apache.maven.artifact.versioning.ComparableVersion
 import java.nio.ByteBuffer
 import java.security.MessageDigest
@@ -32,6 +33,10 @@ class Evaluator {
         )
     } catch (e: Exception) {
         null
+    }
+
+    init {
+        CountryLookup.initialize()
     }
 
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs) {
@@ -113,10 +118,11 @@ class Evaluator {
                 ConfigCondition.IP_BASED -> {
                     value = getFromUser(user, condition.field)
                     if (value == null) {
-                        if (getFromUser(user, "ip") == null) {
+                        val ipString = getFromUser(user, "ip")
+                        if (ipString == null) {
                             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                         } else {
-                            return ConfigEvaluation(fetchFromServer = true)
+                            value = CountryLookup.lookupIPString(ipString)
                         }
                     }
                 }
