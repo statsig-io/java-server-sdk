@@ -188,63 +188,51 @@ class Evaluator {
                 }
 
                 "version_gt" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    var sourceVersion = ComparableVersion(strValue)
-                    var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
                         false,
-                        sourceVersion.compareTo(targetVersion) > 0
+                        compareVersions(value, condition.targetValue as String) { v1: ComparableVersion, v2: ComparableVersion ->
+                            v1 > v2
+                        }
                     )
                 }
                 "version_gte" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    var sourceVersion = ComparableVersion(strValue)
-                    var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
                         false,
-                        sourceVersion.compareTo(targetVersion) >= 0
+                        compareVersions(value, condition.targetValue as String) { v1: ComparableVersion, v2: ComparableVersion ->
+                            v1 >= v2
+                        }
                     )
                 }
                 "version_lt" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    var sourceVersion = ComparableVersion(strValue)
-                    var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        sourceVersion.compareTo(targetVersion) < 0
+                        false,
+                        compareVersions(value, condition.targetValue as String) { v1: ComparableVersion, v2: ComparableVersion ->
+                            v1 < v2
+                        }
                     )
                 }
                 "version_lte" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    var sourceVersion = ComparableVersion(strValue)
-                    var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        sourceVersion.compareTo(targetVersion) <= 0
+                        false,
+                        compareVersions(value, condition.targetValue as String) { v1: ComparableVersion, v2: ComparableVersion ->
+                            v1 <= v2
+                        }
                     )
                 }
                 "version_eq" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    var sourceVersion = ComparableVersion(strValue)
-                    var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        sourceVersion.compareTo(targetVersion) == 0
+                        false,
+                        compareVersions(value, condition.targetValue as String) { v1: ComparableVersion, v2: ComparableVersion ->
+                            v1 == v2
+                        }
                     )
                 }
                 "version_neq" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    var sourceVersion = ComparableVersion(strValue)
-                    var targetVersion = ComparableVersion(condition.targetValue as String)
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        sourceVersion.compareTo(targetVersion) != 0
+                        false,
+                        compareVersions(value, condition.targetValue as String) { v1: ComparableVersion, v2: ComparableVersion ->
+                            v1 != v2
+                        }
                     )
                 }
 
@@ -328,6 +316,29 @@ class Evaluator {
         } catch (_e: IllegalArgumentException) {
             return ConfigEvaluation(true)
         }
+    }
+
+    private fun compareVersions(version1: Any?, version2: Any?, compare: (v1: ComparableVersion, v2: ComparableVersion) -> Boolean): Boolean {
+        var version1Str = getValueAsString(version1)
+        var version2Str = getValueAsString(version2)
+
+        if (version1Str == null || version2Str == null) {
+            return false
+        }
+
+        val dashIndex1 = version1Str.indexOf('-');
+        if (dashIndex1 > 0) {
+            version1Str = version1Str.substring(0, dashIndex1)
+        }
+
+        val dashIndex2 = version2Str.indexOf('-');
+        if (dashIndex2 > 0) {
+            version2Str = version2Str.substring(0, dashIndex2)
+        }
+
+        var v1 = ComparableVersion(version1Str)
+        var v2 = ComparableVersion(version2Str)
+        return compare(v1, v2)
     }
 
     private fun getValueAsString(input: Any?): String? {
