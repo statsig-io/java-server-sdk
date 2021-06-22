@@ -81,6 +81,7 @@ public class StatsigTest {
             usCountryGateFuture = StatsigServer.checkGateAsync(user, "test_country_partial");
             assertTrue(usCountryGateFuture.get());
 
+
             Future<DynamicConfig> checkOsConfig = StatsigServer.getConfigAsync(user, "operating_system_config");
             DynamicConfig config = checkOsConfig.get();
             assertTrue(config.getBoolean("bool", false));
@@ -107,6 +108,82 @@ public class StatsigTest {
             driver.initializeAsync().get();
             environmentGate = driver.checkGateAsync(new StatsigUser(""), "test_environment_tier");
             assertFalse(environmentGate.get());
+        } catch (Exception e) {
+            fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void testVersionCompare() {
+        try {
+            ServerDriver driver = new ServerDriver("secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW", new StatsigOptions());
+            driver.initializeAsync().get();
+            StatsigUser user = new StatsigUser("123");
+
+            Future<Boolean> versionGate;
+            user.setClientVersion("1");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertTrue(versionGate.get());
+
+            user.setClientVersion("1.0");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertTrue(versionGate.get());
+
+            user.setClientVersion("1.2");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertTrue(versionGate.get());
+
+            user.setClientVersion("1.2.3");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertTrue(versionGate.get());
+
+            user.setClientVersion("1.2.3.3");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertTrue(versionGate.get());
+
+            user.setClientVersion("1.2.3.3.1");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertTrue(versionGate.get());
+
+            user.setClientVersion("1.2.3-alpha");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertTrue(versionGate.get());
+
+            user.setClientVersion("2");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("2.0");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("1.3");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("1.2.4");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("1.2.4-alpha");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("1.2.3.4");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("1.2.3.5");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("1.2.3.4.1");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
+
+            user.setClientVersion("1.2.3.10");
+            versionGate = driver.checkGateAsync(user, "test_version");
+            assertFalse(versionGate.get());
         } catch (Exception e) {
             fail(e.getMessage());
         }
