@@ -14,6 +14,7 @@ class StatsigNetwork(
     private val statsigMetadata: Map<String, String>,
 ) {
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
+    private val clientTimeHeaderKey = "STATSIG-CLIENT-TIME"
     private val httpClient: OkHttpClient
     private var lastSyncTime: Long = 0
 
@@ -42,6 +43,7 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
+            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/check_gate")
             .post(requestBody)
             .build()
@@ -62,6 +64,7 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
+            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/get_config")
             .post(requestBody)
             .build()
@@ -76,6 +79,7 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
+            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/download_config_specs")
             .post(requestBody)
             .build()
@@ -106,6 +110,7 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
+            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/log_event")
             .post(requestBody)
             .build()

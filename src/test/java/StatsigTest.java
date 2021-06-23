@@ -121,67 +121,67 @@ public class StatsigTest {
             StatsigUser user = new StatsigUser("123");
 
             Future<Boolean> versionGate;
-            user.setClientVersion("1");
+            user.setAppVersion("1");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertTrue(versionGate.get());
 
-            user.setClientVersion("1.0");
+            user.setAppVersion("1.0");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertTrue(versionGate.get());
 
-            user.setClientVersion("1.2");
+            user.setAppVersion("1.2");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertTrue(versionGate.get());
 
-            user.setClientVersion("1.2.3");
+            user.setAppVersion("1.2.3");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertTrue(versionGate.get());
 
-            user.setClientVersion("1.2.3.3");
+            user.setAppVersion("1.2.3.3");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertTrue(versionGate.get());
 
-            user.setClientVersion("1.2.3.3.1");
+            user.setAppVersion("1.2.3.3.1");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertTrue(versionGate.get());
 
-            user.setClientVersion("1.2.3-alpha");
+            user.setAppVersion("1.2.3-alpha");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertTrue(versionGate.get());
 
-            user.setClientVersion("2");
+            user.setAppVersion("2");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("2.0");
+            user.setAppVersion("2.0");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("1.3");
+            user.setAppVersion("1.3");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("1.2.4");
+            user.setAppVersion("1.2.4");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("1.2.4-alpha");
+            user.setAppVersion("1.2.4-alpha");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("1.2.3.4");
+            user.setAppVersion("1.2.3.4");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("1.2.3.5");
+            user.setAppVersion("1.2.3.5");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("1.2.3.4.1");
+            user.setAppVersion("1.2.3.4.1");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
 
-            user.setClientVersion("1.2.3.10");
+            user.setAppVersion("1.2.3.10");
             versionGate = driver.checkGateAsync(user, "test_version");
             assertFalse(versionGate.get());
         } catch (Exception e) {
