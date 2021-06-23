@@ -14,6 +14,7 @@ class StatsigNetwork(
     private val statsigMetadata: Map<String, String>,
 ) {
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
+    private val clientTimeHeaderKey = "STATSIG-CLIENT-TIME"
     private val httpClient: OkHttpClient
     private var lastSyncTime: Long = 0
 
@@ -23,7 +24,8 @@ class StatsigNetwork(
         clientBuilder.addInterceptor(Interceptor {
             var original = it.request()
             var request = original.newBuilder()
-                .header("STATSIG-API-KEY", sdkKey)
+                .addHeader("STATSIG-API-KEY", sdkKey)
+                .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
                 .method(original.method, original.body)
                 .build()
             it.proceed(request)
