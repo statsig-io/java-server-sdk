@@ -24,7 +24,8 @@ class StatsigNetwork(
         clientBuilder.addInterceptor(Interceptor {
             var original = it.request()
             var request = original.newBuilder()
-                .header("STATSIG-API-KEY", sdkKey)
+                .addHeader("STATSIG-API-KEY", sdkKey)
+                .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
                 .method(original.method, original.body)
                 .build()
             it.proceed(request)
@@ -43,7 +44,6 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
-            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/check_gate")
             .post(requestBody)
             .build()
@@ -64,7 +64,6 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
-            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/get_config")
             .post(requestBody)
             .build()
@@ -79,7 +78,6 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
-            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/download_config_specs")
             .post(requestBody)
             .build()
@@ -110,7 +108,6 @@ class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
-            .addHeader(clientTimeHeaderKey, System.currentTimeMillis().toString())
             .url(options.api + "/log_event")
             .post(requestBody)
             .build()
