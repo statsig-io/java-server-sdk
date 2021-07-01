@@ -74,7 +74,7 @@ class Evaluator {
                 return result
             }
             if (result.booleanValue) {
-                val pass = computeUserHashBucket(config.salt + '.' + rule.id + '.' + user.userID) < rule.passPercentage.toULong().times(100UL)
+                val pass = computeUserHash(config.salt + '.' + rule.id + '.' + user.userID).mod(10000UL) < rule.passPercentage.toULong().times(100UL)
                 return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
             }
         }
@@ -143,7 +143,7 @@ class Evaluator {
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues["salt"])
                     val userID = user.userID
-                    value = computeUserHashBucket("$salt.$userID").toDouble()
+                    value = computeUserHash("$salt.$userID").mod(1000UL).toDouble()
                 }
                 else -> {
                     return ConfigEvaluation(fetchFromServer = true)
@@ -455,12 +455,11 @@ class Evaluator {
         return null
     }
 
-    private fun computeUserHashBucket(input: String): ULong {
+    private fun computeUserHash(input: String): ULong {
         val md = MessageDigest.getInstance("SHA-256")
         val inputBytes = input.toByteArray()
         val bytes = md.digest(inputBytes)
-        val hash = ByteBuffer.wrap(bytes).long.toULong()
-        return hash.mod(10000UL)
+        return ByteBuffer.wrap(bytes).long.toULong()
     }
 }
 
