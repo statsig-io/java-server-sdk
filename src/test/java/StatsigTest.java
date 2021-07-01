@@ -188,4 +188,31 @@ public class StatsigTest {
             fail(e.getMessage());
         }
     }
+
+    @Test
+    public void testPartialGate() {
+        try {
+            ServerDriver driver = new ServerDriver("secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW", new StatsigOptions());
+            driver.initializeAsync().get();
+
+            Future<Boolean> gate;
+            StatsigUser user = new StatsigUser("17");
+            gate = driver.checkGateAsync(user, "test_small_pass_gate");
+            assertTrue(gate.get());
+
+            user.setUserID("30");
+            gate = driver.checkGateAsync(user, "test_small_pass_gate");
+            assertTrue(gate.get());
+
+            user.setUserID("60");
+            gate = driver.checkGateAsync(user, "test_small_pass_gate");
+            assertTrue(gate.get());
+
+            user.setUserID("16");
+            gate = driver.checkGateAsync(user, "test_small_pass_gate");
+            assertFalse(gate.get());
+        } catch (Exception e) {
+            fail(e.getMessage());
+        }
+    }
 }
