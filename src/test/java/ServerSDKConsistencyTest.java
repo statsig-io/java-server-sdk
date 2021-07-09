@@ -15,7 +15,7 @@ public class ServerSDKConsistencyTest {
     @Test
     public void getEnv() {
         String key = System.getenv("test_api_key");
-        assertTrue(key == "123");
+        assertTrue(key == "secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW");
     }
 
     @Test
