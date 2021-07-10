@@ -22,20 +22,19 @@ public class ServerSDKConsistencyTest {
 
     @Before
     public void setUp() throws Exception {
-        System.out.println("!!!!!!!!!!!!!");
         String secret = System.getenv("test_api_key");
-        System.out.println("secret is: " + secret == null ? "null" : secret);
 
-        StringBuilder sb = new StringBuilder();
-        Map<String, String> env = System.getenv();
-        for (String key : env.keySet()) {
-            sb.append(key + ": " + env.get(key)  + "\n");
-        }
-        System.out.println(sb.toString());
-        if (sb.toString() != null) {
-            throw new Exception(sb.toString());
-        }
 
+//        StringBuilder sb = new StringBuilder();
+//        Map<String, String> env = System.getenv();
+//        for (String key : env.keySet()) {
+//            sb.append(key + ": " + env.get(key)  + "\n");
+//        }
+//        System.out.println(sb.toString());
+//        if (sb.toString() != null) {
+//            throw new Exception(sb.toString());
+//        }
+secret = "secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW";
         if (secret == null || secret.length() == 0) {
             try {
                 secret = Files.readString(Paths.get(
