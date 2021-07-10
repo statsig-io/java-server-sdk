@@ -12,14 +12,14 @@ public class StatsigTest {
     @Test
     public void testInitialize() {
         try {
-            Future initFuture = StatsigServer.initializeAsync("");
-            initFuture.get();
+            ServerDriver driver = new ServerDriver("", new StatsigOptions());
+            driver.initializeAsync().get();
             fail("Should throw an exception for invalid server secret");
         } catch (Exception e) {}
 
         try {
-            Future initFuture = StatsigServer.initializeAsync("client-123");
-            initFuture.get();
+            ServerDriver driver = new ServerDriver("client-123", new StatsigOptions());
+            driver.initializeAsync().get();
             fail("Should throw an exception for invalid server secret");
         } catch (Exception e) {}
 
