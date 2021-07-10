@@ -23,18 +23,6 @@ public class ServerSDKConsistencyTest {
     @Before
     public void setUp() throws Exception {
         String secret = System.getenv("test_api_key");
-
-
-//        StringBuilder sb = new StringBuilder();
-//        Map<String, String> env = System.getenv();
-//        for (String key : env.keySet()) {
-//            sb.append(key + ": " + env.get(key)  + "\n");
-//        }
-//        System.out.println(sb.toString());
-//        if (sb.toString() != null) {
-//            throw new Exception(sb.toString());
-//        }
-secret = "secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW";
         if (secret == null || secret.length() == 0) {
             try {
                 secret = Files.readString(Paths.get(
@@ -46,27 +34,27 @@ secret = "secret-9IWfdzNwExEYHEW4YfOQcFZ4xreZyFkbOXHaNbPsMwW";
                         "only test failing, please proceed to submit a pull request. If you are a Statsig employee," +
                         "chat with jkw.");
             }
-
-            HttpClient httpClient = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.statsig.com/v1/rulesets_e2e_test"))
-                    .headers("STATSIG-API-KEY", secret, "Content-Type", "application/json; charset=UTF-8")
-                    .POST(HttpRequest.BodyPublishers.ofString("{}"))
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            prodTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-
-            request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://latest.api.statsig.com/v1/rulesets_e2e_test"))
-                    .headers("STATSIG-API-KEY", secret, "Content-Type", "application/json; charset=UTF-8")
-                    .POST(HttpRequest.BodyPublishers.ofString("{}"))
-                    .build();
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-
-            Future initFuture = StatsigServer.initializeAsync(secret);
-            initFuture.get();
         }
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.statsig.com/v1/rulesets_e2e_test"))
+                .headers("STATSIG-API-KEY", secret, "Content-Type", "application/json; charset=UTF-8")
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        prodTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
+
+        request = HttpRequest.newBuilder()
+                .uri(URI.create("https://latest.api.statsig.com/v1/rulesets_e2e_test"))
+                .headers("STATSIG-API-KEY", secret, "Content-Type", "application/json; charset=UTF-8")
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                .build();
+        response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
+
+        Future initFuture = StatsigServer.initializeAsync(secret);
+        initFuture.get();
     }
 
     public void testConsistency(APITestDataSet[] data) throws ExecutionException, InterruptedException {
