@@ -1,6 +1,5 @@
-package server
-
 import com.google.gson.annotations.SerializedName
+import server.StatsigUser
 
 data class APIEvaluationConsistencyTestData(
     @SerializedName("data") val data: Array<APITestDataSet>
