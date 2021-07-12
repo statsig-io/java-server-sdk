@@ -351,7 +351,7 @@ class Evaluator {
         return ConfigEvaluation(fetchFromServer = false, booleanValue = compare(firstDate, secondDate))
     }
 
-    private fun getDate(input: Any): Date? {
+    private fun getDate(input: Any?): Date? {
         if (input == null) {
             return null
         }
