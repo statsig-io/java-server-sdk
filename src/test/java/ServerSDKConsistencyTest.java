@@ -51,9 +51,8 @@ public class ServerSDKConsistencyTest {
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
                 .build();
         response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
 
-        StatsigOptions options = new StatsigOptions();
+        stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
         Future initFuture = StatsigServer.initializeAsync(secret);
         initFuture.get();
     }
