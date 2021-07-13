@@ -355,32 +355,27 @@ class Evaluator {
         if (input == null) {
             return null
         }
-        if (input is Number) {
-            var epoch = input.toLong()
-            if ((epoch.toString()).length < 11) {
+        return try {
+            var epoch = if (input is String) {
+                parseLong(input)
+            } else if (input is Number) {
+                input.toLong()
+            } else {
+                return null
+            }
+            if (epoch.toString().length < 11) {
                 // epoch in seconds (milliseconds would be before 1970)
                 epoch *= 1000
             }
-            return Date(epoch)
-        } else if (input is String) {
-            return try {
-                val ta = DateTimeFormatter.ISO_INSTANT.parse(input)
+            Date(epoch)
+        } catch (e: Exception) {
+            try {
+                val ta = DateTimeFormatter.ISO_INSTANT.parse(input as String)
                 val i = Instant.from(ta)
                 Date.from(i)
             } catch (e: Exception) {
-                try {
-                    var epoch = parseLong(input)
-                    if (input.length < 11) {
-                        // epoch in seconds (milliseconds would be before 1970)
-                        epoch *= 1000
-                    }
-                    Date(epoch)
-                } catch (e: Exception) {
-                    null
-                }
+                null
             }
-        } else {
-            return null
         }
     }
 
