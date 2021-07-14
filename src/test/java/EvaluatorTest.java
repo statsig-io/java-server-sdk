@@ -5,6 +5,9 @@ import static org.junit.Assert.*;
 
 import com.google.gson.Gson;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 public class EvaluatorTest {
 
     private static String CONFIG_SPEC = "{\"dynamic_configs\":[{\"name\":\"operating_system_config\",\"type\":\"dynamic_config\",\"salt\":\"35bc682e-975a-4ccf-ae51-e38b18132959\",\"enabled\":true,\"defaultValue\":{\"num\":13,\"bool\":true,\"str\":\"hello\",\"arr\":[\"hi\",\"there\"]},\"rules\":[]}],\"feature_gates\":[{\"name\":\"test_public\",\"type\":\"feature_gate\",\"salt\":\"64fa52a6-4195-4658-b124-aa0be3ff8860\",\"enabled\":true,\"defaultValue\":false,\"rules\":[{\"name\":\"6X3qJgyfwA81IJ2dxI7lYp\",\"passPercentage\":100,\"conditions\":[{\"type\":\"public\",\"targetValue\":null,\"operator\":null,\"field\":null,\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"6X3qJgyfwA81IJ2dxI7lYp\"}]},{\"name\":\"test_email\",\"type\":\"feature_gate\",\"salt\":\"44827b9b-c6dd-49f7-9017-f4ae2a09ef32\",\"enabled\":true,\"defaultValue\":false,\"rules\":[{\"name\":\"2D8ddk1zZqqaFbBjkOmCA3\",\"passPercentage\":100,\"conditions\":[{\"type\":\"user_field\",\"targetValue\":[\"@statsig.com\",\"@statsig.io\"],\"operator\":\"str_contains_any\",\"field\":\"email\",\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"2D8ddk1zZqqaFbBjkOmCA3\"}]},{\"name\":\"test_country\",\"type\":\"feature_gate\",\"salt\":\"6418e4dd-db03-4f40-8f34-4c7b82ecea08\",\"enabled\":true,\"defaultValue\":false,\"rules\":[{\"name\":\"1yhP7ww1Ot82rjqi1kh4eR\",\"passPercentage\":100,\"conditions\":[{\"type\":\"ip_based\",\"targetValue\":[\"US\",\"CA\"],\"operator\":\"any\",\"field\":\"country\",\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"1yhP7ww1Ot82rjqi1kh4eR\"}]},{\"name\":\"test_ua\",\"type\":\"feature_gate\",\"salt\":\"7b6c5d9a-3eac-4cb5-a9af-4d06a028e9df\",\"enabled\":true,\"defaultValue\":false,\"rules\":[{\"name\":\"7CRdApC3iHXzDFisD1d4bH\",\"passPercentage\":100,\"conditions\":[{\"type\":\"ua_based\",\"targetValue\":[\"iOS\"],\"operator\":\"any\",\"field\":\"os_name\",\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"7CRdApC3iHXzDFisD1d4bH\"},{\"name\":\"7CRdArh5L073X4Qoe98HuJ\",\"passPercentage\":100,\"conditions\":[{\"type\":\"ua_based\",\"targetValue\":[\"Chrome\"],\"operator\":\"any\",\"field\":\"browser_name\",\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"7CRdArh5L073X4Qoe98HuJ\"}]},{\"name\":\"test_country_partial\",\"type\":\"feature_gate\",\"salt\":\"884c77e0-04ec-40cd-ba96-71a0bf232896\",\"enabled\":true,\"defaultValue\":false,\"rules\":[{\"name\":\"7MaaS2nqRxuY3ovw5cOG3D\",\"passPercentage\":50,\"conditions\":[{\"type\":\"ip_based\",\"targetValue\":[\"US\"],\"operator\":\"any\",\"field\":\"country\",\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"7MaaS2nqRxuY3ovw5cOG3D\"}]},{\"name\":\"test_environment_tier\",\"type\":\"feature_gate\",\"salt\":\"51e3cfd7-2fc6-485d-a794-73303aef3813\",\"enabled\":true,\"defaultValue\":false,\"rules\":[{\"name\":\"uUegaWiu32iB1ShHaCxkv\",\"passPercentage\":100,\"conditions\":[{\"type\":\"environment_field\",\"targetValue\":[\"staging\",\"development\"],\"operator\":\"any\",\"field\":\"tier\",\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"uUegaWiu32iB1ShHaCxkv\"}]},{\"name\":\"test_version\",\"type\":\"feature_gate\",\"salt\":\"086df540-5c55-4c14-9fdb-b869f41712e0\",\"enabled\":true,\"defaultValue\":false,\"rules\":[{\"name\":\"5T0pMvNgNMVlysjjTaMfCy\",\"passPercentage\":100,\"conditions\":[{\"type\":\"user_field\",\"targetValue\":\"1.2.3.4\",\"operator\":\"version_lt\",\"field\":\"clientVersion\",\"additionalValues\":{}}],\"returnValue\":true,\"id\":\"5T0pMvNgNMVlysjjTaMfCy\"}]}],\"has_updates\":true,\"time\":1624069244242}";
@@ -33,5 +36,51 @@ public class EvaluatorTest {
         evaluation = eval.checkGate(user, "test_country_partial");
         assertFalse(evaluation.getBooleanValue());
         assertFalse(evaluation.getFetchFromServer());
+    }
+
+    private class CaseSensitiveTestCase {
+        public String name;
+        public Object first;
+        public String second;
+        public boolean ignoreCase;
+        public boolean expectedResult;
+
+        public CaseSensitiveTestCase (String name, Object one, String two, boolean ignoreCase, boolean result) {
+            this.name = name;
+            this.first = one;
+            this.second = two;
+            this.ignoreCase = ignoreCase;
+            this.expectedResult = result;
+        }
+    }
+
+    private CaseSensitiveTestCase[] testCases = new CaseSensitiveTestCase[]{
+        new CaseSensitiveTestCase("case insensitive matching strings", "my_string", "my_string", true, true),
+        new CaseSensitiveTestCase("case insensitive nonmatching strings", "my_strinG", "my_string", true, true),
+        new CaseSensitiveTestCase("case insensitive matching strings in array", new String[]{"my_string"}, "my_string", true, true),
+        new CaseSensitiveTestCase("case insensitive nonmatching strings in array", new String[]{"my_strinG"}, "my_string", true, true),
+
+        new CaseSensitiveTestCase("case sensitive matching strings", "my_string", "my_string", false, true),
+        new CaseSensitiveTestCase("case sensitive nonmatching strings", "my_strinG", "my_string", false, false),
+        new CaseSensitiveTestCase("case sensitive matching strings in array", new String[]{"my_string"}, "my_string", false, true),
+        new CaseSensitiveTestCase("case sensitive nonmatching strings in array", new String[]{"my_strinG"}, "my_string", false, false),
+    };
+
+    @Test
+    public void testCaseSensitivity() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Evaluator eval = new Evaluator();
+        Method privateContainsMethod = Evaluator.class.
+            getDeclaredMethod("contains", Object.class, String.class, boolean.class);
+
+        privateContainsMethod.setAccessible(true);
+
+        for (CaseSensitiveTestCase testCase : this.testCases) {
+            boolean result = (boolean) privateContainsMethod.invoke(eval, testCase.first, testCase.second, testCase.ignoreCase);
+            if (testCase.expectedResult) {
+                assertTrue(testCase.name, result);
+            } else {
+                assertFalse(testCase.name, result);
+            }
+        }
     }
 }
