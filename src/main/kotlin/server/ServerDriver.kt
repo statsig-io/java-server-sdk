@@ -7,9 +7,6 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 import java.util.Properties
 
-
-
-
 class ServerDriver(private val serverSecret: String, private val options: StatsigOptions = StatsigOptions()) {
     private val network: StatsigNetwork
     private var configEvaluator: Evaluator
