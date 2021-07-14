@@ -1,7 +1,13 @@
 name: Java CI
 
-on: [push]
-
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 16 * * *'
+    
 jobs:
   build:
     runs-on: ubuntu-latest
