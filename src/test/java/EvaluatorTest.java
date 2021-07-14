@@ -1,8 +1,6 @@
 import org.junit.Test;
 import server.*;
 
-import java.util.concurrent.Future;
-
 import static org.junit.Assert.*;
 
 import com.google.gson.Gson;

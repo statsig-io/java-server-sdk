@@ -5,9 +5,15 @@ import com.blueconic.browscap.UserAgentParser
 import com.blueconic.browscap.UserAgentService
 import com.google.gson.Gson
 import ip3country.CountryLookup
+import java.lang.Long.parseLong
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+import java.util.*
+import kotlin.collections.HashMap
 import kotlin.collections.set
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
 
 data class ConfigEvaluation(
     val fetchFromServer: Boolean = false,
@@ -306,7 +312,26 @@ class Evaluator {
                     return ConfigEvaluation(fetchFromServer = false, value != condition.targetValue)
                 }
 
-                // TODO dates
+                "before" -> {
+                    return compareDates({a: Date, b: Date ->
+                        return@compareDates a.before(b)
+                    }, value, condition.targetValue)
+                }
+                "after" -> {
+                    return compareDates({a: Date, b: Date ->
+                        return@compareDates a.after(b)
+                    }, value, condition.targetValue)
+                }
+                "on" -> {
+                    return compareDates({a: Date, b: Date ->
+                        val firstCalendar = Calendar.getInstance()
+                        val secondCalendar = Calendar.getInstance()
+                        firstCalendar.time = a
+                        secondCalendar.time = b
+                        return@compareDates firstCalendar[Calendar.YEAR] == secondCalendar[Calendar.YEAR] &&
+                            firstCalendar[Calendar.DAY_OF_YEAR] == secondCalendar[Calendar.DAY_OF_YEAR]
+                    }, value, condition.targetValue)
+                }
 
                 else -> {
                     return ConfigEvaluation(fetchFromServer = true)
@@ -314,6 +339,43 @@ class Evaluator {
             }
         } catch (_e: IllegalArgumentException) {
             return ConfigEvaluation(true)
+        }
+    }
+
+    private fun compareDates(compare: (a: Date, b: Date) -> Boolean, a: Any, b: Any): ConfigEvaluation {
+        val firstDate = getDate(a)
+        val secondDate = getDate(b)
+        if (firstDate == null || secondDate == null) {
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+        }
+        return ConfigEvaluation(fetchFromServer = false, booleanValue = compare(firstDate, secondDate))
+    }
+
+    private fun getDate(input: Any?): Date? {
+        if (input == null) {
+            return null
+        }
+        return try {
+            var epoch = if (input is String) {
+                parseLong(input)
+            } else if (input is Number) {
+                input.toLong()
+            } else {
+                return null
+            }
+            if (epoch.toString().length < 11) {
+                // epoch in seconds (milliseconds would be before 1970)
+                epoch *= 1000
+            }
+            Date(epoch)
+        } catch (e: Exception) {
+            try {
+                val ta = DateTimeFormatter.ISO_INSTANT.parse(input as String)
+                val i = Instant.from(ta)
+                Date.from(i)
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 

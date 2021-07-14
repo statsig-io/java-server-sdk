@@ -1,6 +1,7 @@
 package server
 
 import com.google.gson.annotations.SerializedName
+import java.lang.StringBuilder
 
 /**
  * An object of properties relating to the current user
@@ -42,4 +43,46 @@ data class StatsigUser(
 
     @SerializedName("statsigEnvironment")
     internal var statsigEnvironment: Map<String, String>? = null
+
+    override fun toString(): String {
+        val sb = StringBuilder()
+        sb.append("StatsigUser {\n")
+        sb.append("\tuserID: ")
+        sb.append(userID)
+        sb.append("\n")
+
+        sb.append("\temail: ")
+        sb.append(email)
+        sb.append("\n")
+
+        sb.append("\tip: ")
+        sb.append(ip)
+        sb.append("\n")
+
+        sb.append("\tuserAgent: ")
+        sb.append(userAgent)
+        sb.append("\n")
+
+        sb.append("\tcountry: ")
+        sb.append(country)
+        sb.append("\n")
+
+        sb.append("\tlocale: ")
+        sb.append(locale)
+        sb.append("\n")
+
+        sb.append("\tappVersion: ")
+        sb.append(appVersion)
+        sb.append("\n")
+
+        sb.append("\tcustom: ")
+        sb.append(custom)
+        sb.append("\n")
+
+        sb.append("\tstatsigEnvironment: ")
+        sb.append(statsigEnvironment)
+        sb.append("\n}")
+
+        return sb.toString()
+    }
 }

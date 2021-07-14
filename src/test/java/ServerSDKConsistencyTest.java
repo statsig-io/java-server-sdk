@@ -51,8 +51,8 @@ public class ServerSDKConsistencyTest {
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
                 .build();
         response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
 
+        stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
         Future initFuture = StatsigServer.initializeAsync(secret);
         initFuture.get();
     }
@@ -62,13 +62,13 @@ public class ServerSDKConsistencyTest {
             StatsigUser user = d.getUser();
             for (Map.Entry<String, Boolean> entry : d.getGates().entrySet()) {
                 Future<Boolean> gate = StatsigServer.checkGateAsync(user, entry.getKey());
-                assertEquals(gate.get(), entry.getValue());
+                assertEquals(entry.getKey() + " for " + user.toString(), entry.getValue(), gate.get());
             }
 
             for (Map.Entry<String, APIConfigData> entry : d.getConfigs().entrySet()) {
                 Future<DynamicConfig> sdkConfig = StatsigServer.getConfigAsync(user, entry.getKey());
-                assertTrue(sdkConfig.get().getValue().equals(entry.getValue().getValue()));
-                assertTrue(sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
+                assertTrue("Config value mismatch for " + entry.getKey()+ " for " + user.toString(), sdkConfig.get().getValue().equals(entry.getValue().getValue()));
+                assertTrue("RuleID mismatch for " + entry.getKey() + " for " + user.toString(), sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
             }
         }
     }
