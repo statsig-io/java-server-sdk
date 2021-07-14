@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.language.jvm.tasks.ProcessResources
 
 plugins {
     kotlin("jvm") version "1.5.0"
@@ -7,7 +8,6 @@ plugins {
 }
 
 group = "com.statsig"
-version = "0.2.2"
 
 repositories {
     mavenCentral()
@@ -26,6 +26,16 @@ dependencies {
 
 tasks.test {
     useJUnit()
+}
+
+configure<ProcessResources>("processResources") {
+    filesMatching("statsigsdk.properties") {
+        expand(project.properties)
+    }
+}
+
+inline fun <reified C> Project.configure(name: String, configuration: C.() -> Unit) {
+    (this.tasks.getByName(name) as C).configuration()
 }
 
 tasks.withType<KotlinCompile>() {

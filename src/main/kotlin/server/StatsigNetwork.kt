@@ -14,7 +14,6 @@ class StatsigNetwork(
     private val statsigMetadata: Map<String, String>,
 ) {
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
-    private val clientTimeHeaderKey = "STATSIG-CLIENT-TIME"
     private val httpClient: OkHttpClient
     private var lastSyncTime: Long = 0
 
@@ -111,6 +110,7 @@ class StatsigNetwork(
             .url(options.api + "/log_event")
             .post(requestBody)
             .build()
+
         httpClient.newCall(request).execute()
     }
 }

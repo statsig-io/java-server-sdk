@@ -5,19 +5,31 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
+import java.util.Properties
+
+
+
 
 class ServerDriver(private val serverSecret: String, private val options: StatsigOptions = StatsigOptions()) {
     private val network: StatsigNetwork
     private var configEvaluator: Evaluator
     private var initialized: Boolean = false
     private var logger: StatsigLogger
-    private val statsigMetadata: Map<String, String> = mapOf("sdkType" to "java-server", "sdkVersion" to "1.0.0")
+    private val statsigMetadata: Map<String, String>
     private var pollingJob: Job? = null
 
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
             throw IllegalArgumentException("Statsig Server SDKs must be initialized with a secret key")
         }
+        var version = "0.3.0+"
+        try {
+            val properties = Properties()
+            properties.load(ServerDriver::class.java.getResourceAsStream("/statsigsdk.properties"))
+            version = properties.getProperty("version")
+        } catch (e: Exception) {}
+        statsigMetadata = mapOf("sdkType" to "java-server", "sdkVersion" to version)
+
         network = StatsigNetwork(serverSecret, options, statsigMetadata)
         configEvaluator = Evaluator()
         logger = StatsigLogger(network, statsigMetadata)

@@ -1,4 +1,5 @@
 import com.google.gson.Gson;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import server.*;
@@ -55,6 +56,11 @@ public class ServerSDKConsistencyTest {
         stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
         Future initFuture = StatsigServer.initializeAsync(secret);
         initFuture.get();
+    }
+
+    @After
+    public void tearDown() {
+        StatsigServer.shutdown();
     }
 
     public void testConsistency(APITestDataSet[] data) throws ExecutionException, InterruptedException {
