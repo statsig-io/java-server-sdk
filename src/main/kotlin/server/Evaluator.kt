@@ -254,13 +254,13 @@ class Evaluator {
                     )
                 }
 
-                "any_cs" -> {
+                "any_case_sensitive" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
                         contains(condition.targetValue, getValueAsString(value), ignoreCase = false)
                     )
                 }
-                "none_cs" -> {
+                "none_case_sensitive" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
                         !contains(condition.targetValue, getValueAsString(value), ignoreCase = false)
