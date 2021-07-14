@@ -244,13 +244,26 @@ class Evaluator {
                 "any" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        containsCaseInsensitive(condition.targetValue, getValueAsString(value))
+                        contains(condition.targetValue, getValueAsString(value), ignoreCase = true)
                     )
                 }
                 "none" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        !containsCaseInsensitive(condition.targetValue, getValueAsString(value))
+                        !contains(condition.targetValue, getValueAsString(value), ignoreCase = true)
+                    )
+                }
+
+                "any_cs" -> {
+                    return ConfigEvaluation(
+                        fetchFromServer = false,
+                        contains(condition.targetValue, getValueAsString(value), ignoreCase = false)
+                    )
+                }
+                "none_cs" -> {
+                    return ConfigEvaluation(
+                        fetchFromServer = false,
+                        !contains(condition.targetValue, getValueAsString(value), ignoreCase = false)
                     )
                 }
 
@@ -457,16 +470,22 @@ class Evaluator {
         return input as? Double
     }
 
-    private fun containsCaseInsensitive(targets: Any, value: String?): Boolean {
+    private fun contains(targets: Any, value: String?, ignoreCase: Boolean): Boolean {
         if (value == null) {
             return false
         }
         if (targets is String) {
-            return targets.lowercase() == value.lowercase()
+            return targets.equals(value, ignoreCase)
         }
         if (targets is Iterable<*>) {
             for (option in targets) {
-                if (option is String && option.lowercase() == value.lowercase()) {
+                if ((option as String).equals(value, ignoreCase)) {
+                    return true
+                }
+            }
+        } else if (targets is Array<*>){
+            for (option in targets.iterator()) {
+                if ((option as String).equals(value, ignoreCase)) {
                     return true
                 }
             }
