@@ -110,7 +110,6 @@ class StatsigNetwork(
             .url(options.api + "/log_event")
             .post(requestBody)
             .build()
-
         httpClient.newCall(request).execute()
     }
 }
