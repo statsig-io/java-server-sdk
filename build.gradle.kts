@@ -20,8 +20,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.0")
     implementation("com.squareup.okhttp3:okhttp:4.9.1")
-    implementation("com.blueconic:browscap-java:1.3.6")
     implementation("com.github.statsig-io:ip3country-kotlin:0.1.0")
+    implementation("com.github.ua-parser:uap-java:1.5.2")
 }
 
 tasks.test {
