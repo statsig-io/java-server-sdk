@@ -55,13 +55,8 @@ public class EvaluatorTest {
     }
 
     private CaseSensitiveTestCase[] testCases = new CaseSensitiveTestCase[]{
-        new CaseSensitiveTestCase("case insensitive matching strings", "my_string", "my_string", true, true),
-        new CaseSensitiveTestCase("case insensitive nonmatching strings", "my_strinG", "my_string", true, true),
         new CaseSensitiveTestCase("case insensitive matching strings in array", new String[]{"my_string"}, "my_string", true, true),
         new CaseSensitiveTestCase("case insensitive nonmatching strings in array", new String[]{"my_strinG"}, "my_string", true, true),
-
-        new CaseSensitiveTestCase("case sensitive matching strings", "my_string", "my_string", false, true),
-        new CaseSensitiveTestCase("case sensitive nonmatching strings", "my_strinG", "my_string", false, false),
         new CaseSensitiveTestCase("case sensitive matching strings in array", new String[]{"my_string"}, "my_string", false, true),
         new CaseSensitiveTestCase("case sensitive nonmatching strings in array", new String[]{"my_strinG"}, "my_string", false, false),
     };
@@ -70,7 +65,7 @@ public class EvaluatorTest {
     public void testCaseSensitivity() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Evaluator eval = new Evaluator();
         Method privateContainsMethod = Evaluator.class.
-            getDeclaredMethod("contains", Object.class, String.class, boolean.class);
+            getDeclaredMethod("contains", Object.class, Object.class, boolean.class);
 
         privateContainsMethod.setAccessible(true);
 

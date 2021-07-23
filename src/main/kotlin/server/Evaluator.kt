@@ -1,19 +1,16 @@
 package server
 
-import com.blueconic.browscap.BrowsCapField
-import com.blueconic.browscap.UserAgentParser
-import com.blueconic.browscap.UserAgentService
 import com.google.gson.Gson
 import ip3country.CountryLookup
+import ua_parser.Client
+import ua_parser.Parser
 import java.lang.Long.parseLong
 import java.nio.ByteBuffer
 import java.security.MessageDigest
-import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.set
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
+import java.util.*
+import kotlin.collections.set
 
 data class ConfigEvaluation(
     val fetchFromServer: Boolean = false,
@@ -25,20 +22,7 @@ data class ConfigEvaluation(
 class Evaluator {
     private var featureGates: MutableMap<String, APIConfig> = HashMap()
     private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
-    private var uaParser: UserAgentParser? = try {
-        UserAgentService().loadParser(
-            listOf(
-                BrowsCapField.BROWSER,
-                BrowsCapField.BROWSER_VERSION,
-                BrowsCapField.BROWSER_MAJOR_VERSION,
-                BrowsCapField.BROWSER_MINOR_VERSION,
-                BrowsCapField.PLATFORM,
-                BrowsCapField.PLATFORM_VERSION
-            )
-        )
-    } catch (e: Exception) {
-        null
-    }
+    private var uaParser: Parser = Parser()
 
     init {
         CountryLookup.initialize()
@@ -244,26 +228,26 @@ class Evaluator {
                 "any" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        contains(condition.targetValue, getValueAsString(value), ignoreCase = true)
+                        contains(condition.targetValue, value, ignoreCase = true)
                     )
                 }
                 "none" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        !contains(condition.targetValue, getValueAsString(value), ignoreCase = true)
+                        !contains(condition.targetValue, value, ignoreCase = true)
                     )
                 }
 
                 "any_case_sensitive" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        contains(condition.targetValue, getValueAsString(value), ignoreCase = false)
+                        contains(condition.targetValue, value, ignoreCase = false)
                     )
                 }
                 "none_case_sensitive" -> {
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        !contains(condition.targetValue, getValueAsString(value), ignoreCase = false)
+                        !contains(condition.targetValue, value, ignoreCase = false)
                     )
                 }
 
@@ -470,24 +454,22 @@ class Evaluator {
         return input as? Double
     }
 
-    private fun contains(targets: Any, value: String?, ignoreCase: Boolean): Boolean {
-        if (value == null) {
+    private fun contains(targets: Any, value: Any, ignoreCase: Boolean): Boolean {
+        var iterable: Iterable<*>;
+        if (targets is Iterable<*>) {
+            iterable = targets
+        } else if (targets is Array<*>) {
+            iterable = targets.asIterable()
+        } else {
             return false
         }
-        if (targets is String) {
-            return targets.equals(value, ignoreCase)
-        }
-        if (targets is Iterable<*>) {
-            for (option in targets) {
-                if ((option as String).equals(value, ignoreCase)) {
-                    return true
-                }
+
+        for (option in iterable) {
+            if ((option is String) && (value is String) && option.equals(value, ignoreCase)) {
+                return true
             }
-        } else if (targets is Array<*>){
-            for (option in targets.iterator()) {
-                if ((option as String).equals(value, ignoreCase)) {
-                    return true
-                }
+            if (option == value) {
+                return true
             }
         }
 
@@ -496,17 +478,20 @@ class Evaluator {
 
     private fun getFromUserAgent(user: StatsigUser, field: String): String? {
         val ua = getFromUser(user, "userAgent") ?: return null
-        val parsed = uaParser?.parse(ua) ?: return null
-        when (field) {
-            "os_name" -> {
-                if (parsed.platform.lowercase().startsWith("win")) {
-                    return "Windows"
-                }
-                return parsed.platform
-            }
-            "os_version" -> return parsed.platformVersion
-            "browser_name" -> return parsed.browser
-            "browser_version" -> return parsed.browserMajorVersion
+        val c: Client = uaParser.parse(ua)
+        when (field.toLowerCase()) {
+            "os_name", "osname" -> return c.os.family
+            "os_version", "osversion" -> return arrayOf(
+                if (c.os.major.isNullOrBlank()) "0" else c.os.major,
+                if (c.os.minor.isNullOrBlank()) "0" else c.os.minor,
+                if (c.os.patch.isNullOrBlank()) "0" else c.os.patch,
+            ).joinToString(".")
+            "browser_name", "browsername" -> return c.userAgent.family
+            "browser_version", "browserversion" -> return arrayOf(
+                if (c.userAgent.major.isNullOrBlank()) "0" else c.userAgent.major,
+                if (c.userAgent.minor.isNullOrBlank()) "0" else c.userAgent.minor,
+                if (c.userAgent.patch.isNullOrBlank()) "0" else c.userAgent.patch,
+            ).joinToString(".")
             else -> {
                 return null
             }
