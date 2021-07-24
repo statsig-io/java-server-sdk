@@ -1,5 +1,7 @@
 # Statsig Java (Kotlin) Server SDK
 
+[![Test](https://github.com/statsig-io/private-java-server-sdk/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/statsig-io/private-java-server-sdk/actions/workflows/build-and-test.yml)
+
 This SDK is intended for use by Java/Kotlin in multi-user/server side environments.
 
 ```java
