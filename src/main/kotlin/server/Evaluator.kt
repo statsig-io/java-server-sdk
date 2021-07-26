@@ -107,7 +107,7 @@ class Evaluator {
                 ConfigCondition.IP_BASED -> {
                     value = getFromUser(user, condition.field)
                     if (value == null) {
-                        val ipString = getFromUser(user, "ip")
+                        val ipString = getFromUser(user, "ip").toString()
                         if (ipString == null) {
                             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                         } else {
@@ -478,7 +478,7 @@ class Evaluator {
 
     private fun getFromUserAgent(user: StatsigUser, field: String): String? {
         val ua = getFromUser(user, "userAgent") ?: return null
-        val c: Client = uaParser.parse(ua)
+        val c: Client = uaParser.parse(ua.toString())
         when (field.toLowerCase()) {
             "os_name", "osname" -> return c.os.family
             "os_version", "osversion" -> return arrayOf(
@@ -498,27 +498,25 @@ class Evaluator {
         }
     }
 
-    private fun getFromUser(user: StatsigUser, field: String): String? {
-        val userJson = Gson().toJsonTree(user).asJsonObject
-        if (userJson[field] != null) {
-            return userJson[field].asString
-        } else if (userJson["custom"] != null) {
-            return Gson().toJsonTree(userJson["custom"]).asJsonObject[field]?.asString
-        } else {
-            return null
+    private fun getFromUser(user: StatsigUser, field: String): Any? {
+        var value: Any? = null
+        when (field.toLowerCase()) {
+            "userid", "user_id" -> value = user.userID
+            "email" -> value = user.email
+            "ip", "ipaddress", "ip_address" -> value = user.ip
+            "useragent", "user_agent" -> value = user.userAgent
+            "country" -> value = user.country
+            "locale" -> value = user.locale
+            "appversion", "app_version" -> value = user.appVersion
         }
+        if ((value == null || value == "") && user.custom != null) {
+            value = user.custom?.get(field) ?: user.custom?.get(field.toLowerCase())
+        }
+        return value
     }
 
     private fun getFromEnvironment(user: StatsigUser, field: String): String? {
-        if (user.statsigEnvironment == null) {
-            return null
-        }
-        if (user.statsigEnvironment!![field] != null) {
-            return user.statsigEnvironment!![field]
-        } else if (user.statsigEnvironment!![field.lowercase()] != null) {
-            return user.statsigEnvironment!![field.lowercase()]
-        }
-        return null
+        return user.statsigEnvironment?.get(field) ?: user.statsigEnvironment?.get(field.toLowerCase())
     }
 
     private fun computeUserHash(input: String): ULong {
