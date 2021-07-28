@@ -64,7 +64,8 @@ class Evaluator {
                 return result
             }
             if (result.booleanValue) {
-                val pass = computeUserHash(config.salt + '.' + rule.id + '.' + user.userID).mod(10000UL) < rule.passPercentage.toULong().times(100UL)
+                val pass = computeUserHash(config.salt + '.' + (rule.salt ?: rule.id) + '.' + user.userID)
+                    .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
                 return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
             }
         }

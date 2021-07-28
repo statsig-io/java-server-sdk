@@ -23,6 +23,7 @@ data class APIRule(
     @SerializedName("passPercentage") val passPercentage: Int,
     @SerializedName("returnValue") val returnValue: Any,
     @SerializedName("id") val id: String,
+    @SerializedName("salt") val salt: String?,
     @SerializedName("conditions") val conditions: Array<APICondition>,
 )
 
