@@ -122,7 +122,7 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
 
     fun shutdown() {
         pollingJob?.cancel()
-        logger.flush()
+        logger.flush(true)
     }
 
     private fun normalizeUser(user: StatsigUser?): StatsigUser {

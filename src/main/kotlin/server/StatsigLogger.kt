@@ -14,7 +14,7 @@ class StatsigLogger(
 ) {
 
     private var events: MutableList<StatsigEvent> = ArrayList()
-    private var timer: Job? = null
+    private var timer: Job
 
     init {
         timer = GlobalScope.launch {
@@ -48,11 +48,13 @@ class StatsigLogger(
     }
 
     @Synchronized
-    fun flush() {
+    fun flush(isClosing: Boolean = false) {
+        if (isClosing) {
+            timer.cancel()
+        }
         if (events.size == 0) {
             return
         }
-        timer?.cancel()
 
         val flushEvents: MutableList<StatsigEvent> = ArrayList(this.events.size)
         flushEvents.addAll(this.events)
