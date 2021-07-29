@@ -1,9 +1,6 @@
 package server
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 const val MAX_EVENTS: Int = 500
 const val FLUSH_TIMER_MS: Long = 60000
@@ -17,9 +14,16 @@ class StatsigLogger(
 ) {
 
     private var events: MutableList<StatsigEvent> = ArrayList()
-    private var gateExposures: MutableSet<String> = HashSet()
-    private var configExposures: MutableSet<String> = HashSet()
-    private var timer: Job? = null
+    private var timer: Job
+
+    init {
+        timer = GlobalScope.launch {
+            while (isActive) {
+                delay(FLUSH_TIMER_MS)
+                flush()
+            }
+        }
+    }
 
     @Synchronized
     fun log(event: StatsigEvent) {
@@ -28,14 +32,6 @@ class StatsigLogger(
         if (events.size >= MAX_EVENTS) {
             flush()
             return
-        }
-
-        if (events.size == 1) {
-            val logger = this
-            timer = GlobalScope.launch {
-                delay(FLUSH_TIMER_MS)
-                logger.flush()
-            }
         }
     }
 
@@ -52,11 +48,13 @@ class StatsigLogger(
     }
 
     @Synchronized
-    fun flush() {
-        if (events.size == 0 || timer == null) {
+    fun flush(isClosing: Boolean = false) {
+        if (isClosing) {
+            timer.cancel()
+        }
+        if (events.size == 0) {
             return
         }
-        timer?.cancel()
 
         val flushEvents: MutableList<StatsigEvent> = ArrayList(this.events.size)
         flushEvents.addAll(this.events)

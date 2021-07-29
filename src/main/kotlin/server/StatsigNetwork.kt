@@ -5,14 +5,28 @@ import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.lang.Exception
 
 private const val POLLING_INTERVAL_MS: Long = 10000
+private const val BACKOFF_MULTIPLIER: Int = 10
+private const val MS_IN_S: Long = 1000
 
 class StatsigNetwork(
     private val sdkKey: String,
     private val options: StatsigOptions,
     private val statsigMetadata: Map<String, String>,
+    private val backoffMultiplier: Int = BACKOFF_MULTIPLIER
 ) {
+    private val retryCodes: Set<Int> = setOf(
+        408,
+        500,
+        502,
+        503,
+        504,
+        522,
+        524,
+        599
+    )
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val httpClient: OkHttpClient
     private var lastSyncTime: Long = 0
@@ -72,7 +86,7 @@ class StatsigNetwork(
         }
     }
 
-    suspend fun downloadConfigSpecs(): APIDownloadedConfigs {
+    suspend fun downloadConfigSpecs(): APIDownloadedConfigs? {
         val bodyJson = Gson().toJson(mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastSyncTime))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
@@ -81,11 +95,18 @@ class StatsigNetwork(
             .post(requestBody)
             .build()
         var network = this
-        httpClient.newCall(request).execute().use { response ->
-            val response = Gson().fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
-            network.lastSyncTime = response.time
-            return response
-        }
+        try {
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use
+                }
+                val configs = Gson().fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
+                network.lastSyncTime = configs.time
+                return configs
+            }
+        } catch (e: Exception) {}
+
+        return null
     }
 
     fun pollForChanges(callback: (APIDownloadedConfigs?) -> Unit): Job {
@@ -94,15 +115,26 @@ class StatsigNetwork(
             while (isActive) {
                 delay(POLLING_INTERVAL_MS)
                 val response = downloadConfigSpecs()
-                network.lastSyncTime = response.time
-                runBlocking {
-                    callback(response)
+                if (response != null) {
+                    network.lastSyncTime = response.time
+                    runBlocking {
+                        callback(response)
+                    }
                 }
             }
         }
     }
 
     suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>) {
+        CoroutineScope(Dispatchers.Default).launch {
+            retryPostLogs(events, statsigMetadata, 5, 1)
+        }
+    }
+
+    suspend fun retryPostLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>, retries: Int, backoff: Int) {
+        if (events.isEmpty()) {
+            return
+        }
         val bodyJson = Gson().toJson(mapOf("events" to events, "statsigMetadata" to statsigMetadata))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
@@ -110,6 +142,19 @@ class StatsigNetwork(
             .url(options.api + "/log_event")
             .post(requestBody)
             .build()
-        httpClient.newCall(request).execute()
+        try {
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                response.close()
+                return
+            } else if (!retryCodes.contains(response.code) || retries == 0) {
+                response.close()
+                return
+            }
+            response.close()
+        } catch (e: Exception) {}
+
+        delay(backoff * MS_IN_S)
+        retryPostLogs(events, statsigMetadata, retries - 1, backoff * backoffMultiplier)
     }
 }
