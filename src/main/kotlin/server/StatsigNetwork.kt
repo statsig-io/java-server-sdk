@@ -127,7 +127,7 @@ class StatsigNetwork(
 
     suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>) {
         CoroutineScope(Dispatchers.Default).launch {
-            retryPostLogs(events, statsigMetadata, 4, 10)
+            retryPostLogs(events, statsigMetadata, 5, 1)
         }
     }
 
