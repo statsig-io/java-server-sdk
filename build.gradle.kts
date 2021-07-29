@@ -16,6 +16,9 @@ repositories {
 
 dependencies {
     testImplementation("junit:junit:4.13")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.9.1")
+    testImplementation("io.mockk:mockk:1.10.6")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.1")
     implementation("com.google.code.gson:gson:2.8.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.0")

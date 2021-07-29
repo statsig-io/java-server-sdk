@@ -36,7 +36,9 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         initialized = true
         val downloadedConfigs = network.downloadConfigSpecs()
         runBlocking {
-            configEvaluator.setDownloadedConfigs(downloadedConfigs)
+            if (downloadedConfigs != null) {
+                configEvaluator.setDownloadedConfigs(downloadedConfigs)
+            }
         }
 
         pollingJob = network.pollForChanges {
