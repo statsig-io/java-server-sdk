@@ -5,6 +5,7 @@ import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.lang.Exception
 
 private const val POLLING_INTERVAL_MS: Long = 10000
 private const val BACKOFF_MULTIPLIER: Int = 10
@@ -94,14 +95,17 @@ class StatsigNetwork(
             .post(requestBody)
             .build()
         var network = this
-        httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                return@use
+        try {
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@use
+                }
+                val configs = Gson().fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
+                network.lastSyncTime = configs.time
+                return configs
             }
-            val response = Gson().fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
-            network.lastSyncTime = response.time
-            return response
-        }
+        } catch (e: Exception) {}
+
         return null
     }
 
@@ -138,16 +142,19 @@ class StatsigNetwork(
             .url(options.api + "/log_event")
             .post(requestBody)
             .build()
-        val response = httpClient.newCall(request).execute()
-        if (response.isSuccessful) {
+        try {
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                response.close()
+                return
+            } else if (!retryCodes.contains(response.code) || retries == 0) {
+                response.close()
+                return
+            }
             response.close()
-            return
-        } else if (!retryCodes.contains(response.code) || retries == 0) {
-            response.close()
-            return
-        }
+        } catch (e: Exception) {}
+
         delay(backoff * MS_IN_S)
-        response.close()
         retryPostLogs(events, statsigMetadata, retries - 1, backoff * backoffMultiplier)
     }
 }
