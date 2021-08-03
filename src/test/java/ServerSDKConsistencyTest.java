@@ -28,7 +28,7 @@ public class ServerSDKConsistencyTest {
             try {
                 secret = Files.readString(Paths.get(
                         Paths.get("").toAbsolutePath()
-                                + "/../ops/secrets/prod_keys/statsig-rulesets-eval-consistency-test-secret.key"),
+                                + "/../../ops/secrets/prod_keys/statsig-rulesets-eval-consistency-test-secret.key"),
                         StandardCharsets.US_ASCII);
             } catch (Exception e) {
                 throw new Exception("THIS TEST IS EXPECTED TO FAIL FOR NON-STATSIG EMPLOYEES! If this is the" +
@@ -73,6 +73,11 @@ public class ServerSDKConsistencyTest {
 
             for (Map.Entry<String, APIConfigData> entry : d.getConfigs().entrySet()) {
                 Future<DynamicConfig> sdkConfig = StatsigServer.getConfigAsync(user, entry.getKey());
+                System.out.println(entry.getKey());
+                System.out.println(sdkConfig.get().getValue());
+                System.out.println(entry.getValue().getValue());
+                System.out.println(sdkConfig.get().getRuleID());
+                System.out.println(entry.getValue().getRuleID());
                 assertTrue("Config value mismatch for " + entry.getKey()+ " for " + user.toString(), sdkConfig.get().getValue().equals(entry.getValue().getValue()));
                 assertTrue("RuleID mismatch for " + entry.getKey() + " for " + user.toString(), sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
             }

@@ -66,7 +66,11 @@ class Evaluator {
             if (result.booleanValue) {
                 val pass = computeUserHash(config.salt + '.' + (rule.salt ?: rule.id) + '.' + user.userID)
                     .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
-                return ConfigEvaluation(false, pass, config.defaultValue, rule.id)
+                var configValue = config.defaultValue
+                if (pass) {
+                    configValue = rule.returnValue
+                }
+                return ConfigEvaluation(false, pass, configValue, rule.id)
             }
         }
         return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue, "default")
@@ -140,9 +144,7 @@ class Evaluator {
                     return ConfigEvaluation(fetchFromServer = true)
                 }
             }
-            if (value == null) {
-                return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-            }
+
             when (condition.operator) {
                 "gt" -> {
                     val doubleValue = getValueAsDouble(value)
@@ -340,7 +342,10 @@ class Evaluator {
         }
     }
 
-    private fun compareDates(compare: (a: Date, b: Date) -> Boolean, a: Any, b: Any): ConfigEvaluation {
+    private fun compareDates(compare: (a: Date, b: Date) -> Boolean, a: Any?, b: Any?): ConfigEvaluation {
+        if (a == null || b == null) {
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+        }
         val firstDate = getDate(a)
         val secondDate = getDate(b)
         if (firstDate == null || secondDate == null) {
@@ -455,7 +460,10 @@ class Evaluator {
         return input as? Double
     }
 
-    private fun contains(targets: Any, value: Any, ignoreCase: Boolean): Boolean {
+    private fun contains(targets: Any?, value: Any?, ignoreCase: Boolean): Boolean {
+        if (targets == null || value == null) {
+            return false
+        }
         var iterable: Iterable<*>;
         if (targets is Iterable<*>) {
             iterable = targets
