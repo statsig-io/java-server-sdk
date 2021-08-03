@@ -66,11 +66,7 @@ class Evaluator {
             if (result.booleanValue) {
                 val pass = computeUserHash(config.salt + '.' + (rule.salt ?: rule.id) + '.' + user.userID)
                     .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
-                var configValue = config.defaultValue
-                if (pass) {
-                    configValue = rule.returnValue
-                }
-                return ConfigEvaluation(false, pass, configValue, rule.id)
+                return ConfigEvaluation(false, pass, if (pass) rule.returnValue else config.defaultValue, rule.id)
             }
         }
         return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue, "default")
