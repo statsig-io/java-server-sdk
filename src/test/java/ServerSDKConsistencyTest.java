@@ -37,10 +37,6 @@ public class ServerSDKConsistencyTest {
         }
     }
 
-    @After
-    public void tearDown() {
-    }
-
     public void testConsistency(String api) throws Exception {
         System.out.println("Testing for " + api);
         HttpClient httpClient = HttpClient.newHttpClient();
