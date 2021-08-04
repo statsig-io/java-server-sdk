@@ -7,6 +7,9 @@ enum class Tier {
 }
 
 private const val TIER_KEY: String = "tier"
+private const val DEFAULT_API_URL_BASE: String = "https://api.statsig.com/v1"
+private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
+
 
 /**
  * An object of properties for initializing the sdk with advanced options
@@ -16,9 +19,13 @@ private const val TIER_KEY: String = "tier"
  * callback to initialize will fire after, at most, the time specified
  */
 class StatsigOptions(
-    var api: String = "https://api.statsig.com/v1",
-    var initTimeoutMs: Long = 3000L,
+    var api: String = DEFAULT_API_URL_BASE,
+    var initTimeoutMs: Long? = DEFAULT_INIT_TIME_OUT_MS,
 ) {
+    constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
+
+    constructor(initTimeoutMs: Long) : this(DEFAULT_API_URL_BASE, initTimeoutMs)
+
     private var environment : MutableMap<String, String>? = null;
 
     fun setTier(tier : Tier) {
