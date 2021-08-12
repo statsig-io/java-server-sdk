@@ -1,4 +1,4 @@
-package server
+package com.statsig.sdk
 
 enum class Tier {
     PRODUCTION,

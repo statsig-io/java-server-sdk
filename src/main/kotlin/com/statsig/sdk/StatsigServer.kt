@@ -1,4 +1,4 @@
-package server
+package com.statsig.sdk
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.future.future
@@ -13,7 +13,7 @@ class StatsigServer {
             if (this::serverDriver.isInitialized) {
                 return
             }
-            this.serverDriver = ServerDriver(serverSecret, options)
+            serverDriver = ServerDriver(serverSecret, options)
             serverDriver.initialize()
         }
 

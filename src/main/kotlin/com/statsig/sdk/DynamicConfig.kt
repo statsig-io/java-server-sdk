@@ -1,4 +1,4 @@
-package server
+package com.statsig.sdk
 
 data class Config(
     val name: String,

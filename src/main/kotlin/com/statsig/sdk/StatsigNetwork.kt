@@ -1,4 +1,4 @@
-package server
+package com.statsig.sdk
 
 import com.google.gson.Gson
 import kotlinx.coroutines.*
