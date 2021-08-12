@@ -1,4 +1,4 @@
-package server
+package com.statsig.sdk
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -19,7 +19,7 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
             throw IllegalArgumentException("Statsig Server SDKs must be initialized with a secret key")
         }
-        var version = "0.4.0+"
+        var version = "0.5.0+"
         try {
             val properties = Properties()
             properties.load(ServerDriver::class.java.getResourceAsStream("/statsigsdk.properties"))

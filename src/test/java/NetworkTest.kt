@@ -1,3 +1,6 @@
+import com.statsig.sdk.StatsigEvent
+import com.statsig.sdk.StatsigNetwork
+import com.statsig.sdk.StatsigOptions
 import io.mockk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.resetMain
@@ -9,7 +12,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import server.*
 import java.util.concurrent.Executors
 
 class NetworkTest {

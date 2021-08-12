@@ -1,6 +1,5 @@
-package server
+package com.statsig.sdk
 
-import com.google.gson.Gson
 import ip3country.CountryLookup
 import ua_parser.Client
 import ua_parser.Parser

@@ -1,8 +1,10 @@
 import com.google.gson.Gson;
-import org.junit.After;
+import com.statsig.sdk.DynamicConfig;
+import com.statsig.sdk.ServerDriver;
+import com.statsig.sdk.StatsigOptions;
+import com.statsig.sdk.StatsigUser;
 import org.junit.Before;
 import org.junit.Test;
-import server.*;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -12,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.*;

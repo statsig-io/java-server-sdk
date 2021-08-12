@@ -1,5 +1,8 @@
+import com.statsig.sdk.APIDownloadedConfigs;
+import com.statsig.sdk.ConfigEvaluation;
+import com.statsig.sdk.Evaluator;
+import com.statsig.sdk.StatsigUser;
 import org.junit.Test;
-import server.*;
 
 import static org.junit.Assert.*;
 
