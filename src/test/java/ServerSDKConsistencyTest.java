@@ -18,12 +18,11 @@ import java.util.concurrent.Future;
 import static org.junit.Assert.*;
 
 public class ServerSDKConsistencyTest {
-    APITestDataSet[] prodTestData;
-    APITestDataSet[] stagingTestData;
+    String secret;
 
     @Before
     public void setUp() throws Exception {
-        String secret = System.getenv("test_api_key");
+        secret = System.getenv("test_api_key");
         if (secret == null || secret.length() == 0) {
             try {
                 secret = Files.readString(Paths.get(
@@ -36,43 +35,32 @@ public class ServerSDKConsistencyTest {
                         "chat with jkw.");
             }
         }
+    }
 
+    public void testConsistency(String api) throws Exception {
+        System.out.println("Testing for " + api);
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.statsig.com/v1/rulesets_e2e_test"))
+                .uri(URI.create(api + "/rulesets_e2e_test"))
                 .headers("STATSIG-API-KEY", secret, "Content-Type", "application/json; charset=UTF-8")
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        prodTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
 
-        request = HttpRequest.newBuilder()
-                .uri(URI.create("https://latest.api.statsig.com/v1/rulesets_e2e_test"))
-                .headers("STATSIG-API-KEY", secret, "Content-Type", "application/json; charset=UTF-8")
-                .POST(HttpRequest.BodyPublishers.ofString("{}"))
-                .build();
-        response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        stagingTestData = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-        Future initFuture = StatsigServer.initializeAsync(secret);
+        APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
+        ServerDriver driver = new ServerDriver(secret, new StatsigOptions(api));
+        Future initFuture = driver.initializeAsync();
         initFuture.get();
-    }
 
-    @After
-    public void tearDown() {
-        StatsigServer.shutdown();
-    }
-
-    public void testConsistency(APITestDataSet[] data) throws ExecutionException, InterruptedException {
         for (APITestDataSet d: data) {
             StatsigUser user = d.getUser();
             for (Map.Entry<String, Boolean> entry : d.getGates().entrySet()) {
-                Future<Boolean> gate = StatsigServer.checkGateAsync(user, entry.getKey());
+                Future<Boolean> gate = driver.checkGateAsync(user, entry.getKey());
                 assertEquals(entry.getKey() + " for " + user.toString(), entry.getValue(), gate.get());
             }
 
             for (Map.Entry<String, APIConfigData> entry : d.getConfigs().entrySet()) {
-                Future<DynamicConfig> sdkConfig = StatsigServer.getConfigAsync(user, entry.getKey());
+                Future<DynamicConfig> sdkConfig = driver.getConfigAsync(user, entry.getKey());
                 assertTrue("Config value mismatch for " + entry.getKey()+ " for " + user.toString(), sdkConfig.get().getValue().equals(entry.getValue().getValue()));
                 assertTrue("RuleID mismatch for " + entry.getKey() + " for " + user.toString(), sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
             }
@@ -80,12 +68,27 @@ public class ServerSDKConsistencyTest {
     }
 
     @Test
-    public void testProdConsistency() throws ExecutionException, InterruptedException {
-        testConsistency(prodTestData);
+    public void testProd() throws Exception {
+        testConsistency("https://api.statsig.com/v1");
     }
 
     @Test
-    public void testStagingConsistency() throws ExecutionException, InterruptedException {
-        testConsistency(stagingTestData);
+    public void testStaging() throws Exception {
+        testConsistency("https://latest.api.statsig.com/v1");
+    }
+
+    @Test
+    public void testUSWest() throws Exception {
+        testConsistency("https://us-west-2.api.statsig.com/v1");
+    }
+
+    @Test
+    public void testUSEast() throws Exception {
+        testConsistency("https://us-east-2.api.statsig.com/v1");
+    }
+
+    @Test
+    public void testAPSouth() throws Exception {
+        testConsistency("https://ap-south-1.api.statsig.com/v1");
     }
 }
