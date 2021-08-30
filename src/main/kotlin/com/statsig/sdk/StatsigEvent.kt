@@ -10,8 +10,7 @@ data class StatsigEvent(
     @SerializedName("statsigMetadata") val statsigMetadata: Map<String, String>? = null,
 ) {
     init {
-        user = user?.copy()
-        // We need to remove private attributes when logging events
-        user?.privateAttributes = null
+        // We need to use a special copy of the user object that strips out private attributes for logging purposes
+        user = user?.getCopyForLogging()
     }
 }
