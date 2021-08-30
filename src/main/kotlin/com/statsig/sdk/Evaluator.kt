@@ -516,6 +516,9 @@ class Evaluator {
         if ((value == null || value == "") && user.custom != null) {
             value = user.custom?.get(field) ?: user.custom?.get(field.toLowerCase())
         }
+        if ((value == null || value == "") && user.privateAttributes != null) {
+            value = user.privateAttributes?.get(field) ?: user.privateAttributes?.get(field.toLowerCase())
+        }
         return value
     }
 
