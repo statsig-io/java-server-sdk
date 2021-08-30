@@ -15,6 +15,7 @@ import java.lang.StringBuilder
  * @property locale the locale for the user
  * @property appVersion the current version of the app
  * @property custom any additional custom user attributes for custom conditions in the console
+ * @property privateAttributes any user attributes that should be used in evaluation only and removed in any logs.
  */
 data class StatsigUser(
     @SerializedName("userID")
@@ -41,8 +42,27 @@ data class StatsigUser(
     @SerializedName("custom")
     var custom: Map<String, Any>? = null
 
+    @SerializedName("privateAttributes")
+    var privateAttributes: Map<String, Any>? = null
+
     @SerializedName("statsigEnvironment")
     internal var statsigEnvironment: Map<String, String>? = null
+
+    internal fun getCopyForLogging(): StatsigUser {
+        val userCopy = StatsigUser(userID)
+        userCopy.email = email
+        userCopy.ip = ip
+        userCopy.userAgent = userAgent
+        userCopy.country = country
+        userCopy.locale = locale
+        userCopy.appVersion = appVersion
+        userCopy.custom = custom
+        userCopy.statsigEnvironment = statsigEnvironment
+        // DO NOT copy privateAttributes to the logging copy!
+        userCopy.privateAttributes = null
+
+        return userCopy
+    }
 
     override fun toString(): String {
         val sb = StringBuilder()
@@ -82,6 +102,10 @@ data class StatsigUser(
         sb.append("\tstatsigEnvironment: ")
         sb.append(statsigEnvironment)
         sb.append("\n}")
+
+        sb.append("\tprivateAttributes: ")
+        sb.append(privateAttributes)
+        sb.append("\n")
 
         return sb.toString()
     }
