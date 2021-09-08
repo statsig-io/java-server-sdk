@@ -60,8 +60,9 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
             result = runBlocking {
                 return@runBlocking networkResult
             }
+        } else {
+            logger.logGateExposure(normalizedUser, gateName, result.booleanValue, result.ruleID ?: "")
         }
-        logger.logGateExposure(normalizedUser, gateName, result.booleanValue, result.ruleID ?: "")
         return result.booleanValue
     }
 
@@ -76,8 +77,9 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
             result = runBlocking {
                 return@runBlocking networkResult
             }
+        } else {
+            logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
         }
-        logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
         return DynamicConfig(Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID))
     }
 
