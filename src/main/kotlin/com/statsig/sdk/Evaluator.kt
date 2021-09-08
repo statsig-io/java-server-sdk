@@ -278,18 +278,10 @@ class Evaluator {
                     return ConfigEvaluation(fetchFromServer = false, booleanValue = strValue.endsWith(singleTarget))
                 }
                 "str_contains_any" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    if (condition.targetValue is Iterable<*>) {
-                        for (match in condition.targetValue) {
-                            if (strValue.contains(match as String)) {
-                                return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
-                            }
-                        }
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    }
-                    val singleTarget = (condition.targetValue as String)
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = strValue.contains(singleTarget))
+                    return ConfigEvaluation(fetchFromServer = false, booleanValue = arrayContainsStr(condition.targetValue, value))
+                }
+                "str_contains_none" -> {
+                    return ConfigEvaluation(fetchFromServer = false, booleanValue = !arrayContainsStr(condition.targetValue, value))
                 }
                 "str_matches" -> {
                     val strValue = getValueAsString(value)
@@ -335,6 +327,20 @@ class Evaluator {
         } catch (_e: IllegalArgumentException) {
             return ConfigEvaluation(true)
         }
+    }
+
+    private fun arrayContainsStr(array: Any?, value: Any?): Boolean {
+        val strValue = getValueAsString(value)
+            ?: return false
+        if (array !is Iterable<*>) {
+            return false
+        }
+        for (match in array) {
+            if (strValue.contains(match as String, true)) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun compareDates(compare: (a: Date, b: Date) -> Boolean, a: Any?, b: Any?): ConfigEvaluation {
