@@ -1,8 +1,6 @@
 package com.statsig.sdk
 
 import ip3country.CountryLookup
-import ua_parser.Client
-import ua_parser.Parser
 import java.lang.Long.parseLong
 import java.nio.ByteBuffer
 import java.security.MessageDigest
@@ -10,12 +8,14 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.collections.set
+import ua_parser.Client
+import ua_parser.Parser
 
 data class ConfigEvaluation(
-    val fetchFromServer: Boolean = false,
-    val booleanValue: Boolean = false,
-    val jsonValue: Any? = null,
-    val ruleID: String? = null,
+        val fetchFromServer: Boolean = false,
+        val booleanValue: Boolean = false,
+        val jsonValue: Any? = null,
+        val ruleID: String? = null,
 )
 
 class Evaluator {
@@ -38,10 +38,19 @@ class Evaluator {
 
     fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
         if (!dynamicConfigs.containsKey(dynamicConfigName)) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false, mapOf<String, Any>())
+            return ConfigEvaluation(
+                    fetchFromServer = false,
+                    booleanValue = false,
+                    mapOf<String, Any>()
+            )
         }
-        val config = dynamicConfigs[dynamicConfigName]
-            ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false, mapOf<String, Any>())
+        val config =
+                dynamicConfigs[dynamicConfigName]
+                        ?: return ConfigEvaluation(
+                                fetchFromServer = false,
+                                booleanValue = false,
+                                mapOf<String, Any>()
+                        )
         return this.evaluate(user, config)
     }
 
@@ -49,13 +58,19 @@ class Evaluator {
         if (!featureGates.containsKey(gateName)) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         }
-        val config = featureGates[gateName] ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+        val config =
+                featureGates[gateName]
+                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         return this.evaluate(user, config)
     }
 
     private fun evaluate(user: StatsigUser, config: APIConfig): ConfigEvaluation {
         if (!config.enabled) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue)
+            return ConfigEvaluation(
+                    fetchFromServer = false,
+                    booleanValue = false,
+                    config.defaultValue
+            )
         }
         for (rule in config.rules) {
             val result = this.evaluateRule(user, rule)
@@ -63,12 +78,29 @@ class Evaluator {
                 return result
             }
             if (result.booleanValue) {
-                val pass = computeUserHash(config.salt + '.' + (rule.salt ?: rule.id) + '.' + user.userID)
-                    .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
-                return ConfigEvaluation(false, pass, if (pass) rule.returnValue else config.defaultValue, rule.id)
+                val pass =
+                        computeUserHash(
+                                        config.salt +
+                                                '.' +
+                                                (rule.salt ?: rule.id) +
+                                                '.' +
+                                                user.userID
+                                )
+                                .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
+                return ConfigEvaluation(
+                        false,
+                        pass,
+                        if (pass) rule.returnValue else config.defaultValue,
+                        rule.id
+                )
             }
         }
-        return ConfigEvaluation(fetchFromServer = false, booleanValue = false, config.defaultValue, "default")
+        return ConfigEvaluation(
+                fetchFromServer = false,
+                booleanValue = false,
+                config.defaultValue,
+                "default"
+        )
     }
 
     private fun evaluateRule(user: StatsigUser, rule: APIRule): ConfigEvaluation {
@@ -78,10 +110,20 @@ class Evaluator {
                 return result
             }
             if (!result.booleanValue) {
-                return ConfigEvaluation(fetchFromServer = false, booleanValue = false, rule.returnValue, rule.id)
+                return ConfigEvaluation(
+                        fetchFromServer = false,
+                        booleanValue = false,
+                        rule.returnValue,
+                        rule.id
+                )
             }
         }
-        return ConfigEvaluation(fetchFromServer = false, booleanValue = true, rule.returnValue, rule.id)
+        return ConfigEvaluation(
+                fetchFromServer = false,
+                booleanValue = true,
+                rule.returnValue,
+                rule.id
+        )
     }
 
     private fun evaluateCondition(user: StatsigUser, condition: APICondition): ConfigEvaluation {
@@ -96,10 +138,15 @@ class Evaluator {
                 conditionEnum = null
             }
             when (conditionEnum) {
-                ConfigCondition.PUBLIC -> return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                ConfigCondition.PUBLIC ->
+                        return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
                 ConfigCondition.FAIL_GATE -> {
                     val result = this.checkGate(user, condition.targetValue as String)
-                    return ConfigEvaluation(result.fetchFromServer, !result.booleanValue, result.jsonValue)
+                    return ConfigEvaluation(
+                            result.fetchFromServer,
+                            !result.booleanValue,
+                            result.jsonValue
+                    )
                 }
                 ConfigCondition.PASS_GATE -> {
                     return checkGate(user, condition.targetValue as String)
@@ -147,7 +194,10 @@ class Evaluator {
                     if (doubleValue == null || doubleTargetValue == null) {
                         return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                     }
-                    return ConfigEvaluation(fetchFromServer = false, doubleValue > doubleTargetValue)
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            doubleValue > doubleTargetValue
+                    )
                 }
                 "gte" -> {
                     val doubleValue = getValueAsDouble(value)
@@ -155,7 +205,10 @@ class Evaluator {
                     if (doubleValue == null || doubleTargetValue == null) {
                         return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                     }
-                    return ConfigEvaluation(fetchFromServer = false, doubleValue >= doubleTargetValue)
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            doubleValue >= doubleTargetValue
+                    )
                 }
                 "lt" -> {
                     val doubleValue = getValueAsDouble(value)
@@ -163,7 +216,10 @@ class Evaluator {
                     if (doubleValue == null || doubleTargetValue == null) {
                         return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                     }
-                    return ConfigEvaluation(fetchFromServer = false, doubleValue < doubleTargetValue)
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            doubleValue < doubleTargetValue
+                    )
                 }
                 "lte" -> {
                     val doubleValue = getValueAsDouble(value)
@@ -171,155 +227,187 @@ class Evaluator {
                     if (doubleValue == null || doubleTargetValue == null) {
                         return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                     }
-                    return ConfigEvaluation(fetchFromServer = false, doubleValue <= doubleTargetValue)
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            doubleValue <= doubleTargetValue
+                    )
                 }
-
                 "version_gt" -> {
                     return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
-                            versionCompare(v1, v2) > 0
-                        }
+                            false,
+                            versionCompareHelper(value, condition.targetValue as String) {
+                                    v1: String,
+                                    v2: String ->
+                                versionCompare(v1, v2) > 0
+                            }
                     )
                 }
                 "version_gte" -> {
                     return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
-                            versionCompare(v1, v2) >= 0
-                        }
+                            false,
+                            versionCompareHelper(value, condition.targetValue as String) {
+                                    v1: String,
+                                    v2: String ->
+                                versionCompare(v1, v2) >= 0
+                            }
                     )
                 }
                 "version_lt" -> {
                     return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
-                            versionCompare(v1, v2) < 0
-                        }
+                            false,
+                            versionCompareHelper(value, condition.targetValue as String) {
+                                    v1: String,
+                                    v2: String ->
+                                versionCompare(v1, v2) < 0
+                            }
                     )
                 }
                 "version_lte" -> {
                     return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
-                            versionCompare(v1, v2) <= 0
-                        }
+                            false,
+                            versionCompareHelper(value, condition.targetValue as String) {
+                                    v1: String,
+                                    v2: String ->
+                                versionCompare(v1, v2) <= 0
+                            }
                     )
                 }
                 "version_eq" -> {
                     return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
-                            versionCompare(v1, v2) == 0
-                        }
+                            false,
+                            versionCompareHelper(value, condition.targetValue as String) {
+                                    v1: String,
+                                    v2: String ->
+                                versionCompare(v1, v2) == 0
+                            }
                     )
                 }
                 "version_neq" -> {
                     return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
-                            versionCompare(v1, v2) != 0
-                        }
+                            false,
+                            versionCompareHelper(value, condition.targetValue as String) {
+                                    v1: String,
+                                    v2: String ->
+                                versionCompare(v1, v2) != 0
+                            }
                     )
                 }
-
                 "any" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        contains(condition.targetValue, value, ignoreCase = true)
+                            fetchFromServer = false,
+                            matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.equals(b, true)
+                            },
                     )
                 }
                 "none" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        !contains(condition.targetValue, value, ignoreCase = true)
+                            fetchFromServer = false,
+                            !matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.equals(b, true)
+                            },
                     )
                 }
-
                 "any_case_sensitive" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        contains(condition.targetValue, value, ignoreCase = false)
+                            fetchFromServer = false,
+                            matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.equals(b, false)
+                            },
                     )
                 }
                 "none_case_sensitive" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
-                        !contains(condition.targetValue, value, ignoreCase = false)
+                            fetchFromServer = false,
+                            !matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.equals(b, false)
+                            },
                     )
                 }
-
                 "str_starts_with_any" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    if (condition.targetValue is Iterable<*>) {
-                        for (match in condition.targetValue) {
-                            if (strValue.startsWith(match as String)) {
-                                return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
-                            }
-                        }
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    }
-                    val singleTarget = (condition.targetValue as String)
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = strValue.startsWith(singleTarget))
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.startsWith(b, true)
+                            },
+                    )
                 }
                 "str_ends_with_any" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    if (condition.targetValue is Iterable<*>) {
-                        for (match in condition.targetValue) {
-                            if (strValue.endsWith(match as String)) {
-                                return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
-                            }
-                        }
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    }
-                    val singleTarget = (condition.targetValue as String)
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = strValue.endsWith(singleTarget))
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.endsWith(b, true)
+                            },
+                    )
                 }
                 "str_contains_any" -> {
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = arrayContainsStr(condition.targetValue, value))
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.contains(b, true)
+                            },
+                    )
                 }
                 "str_contains_none" -> {
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = !arrayContainsStr(condition.targetValue, value))
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            !matchStringInArray(value, condition.targetValue) { a, b ->
+                                a.contains(b, true)
+                            },
+                    )
                 }
                 "str_matches" -> {
-                    val strValue = getValueAsString(value)
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-                    if (strValue.matches(Regex(condition.targetValue as String))) {
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
-                    }
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                    val strValue =
+                            getValueAsString(value)
+                                    ?: return ConfigEvaluation(
+                                            fetchFromServer = false,
+                                            booleanValue = false
+                                    )
+                    return ConfigEvaluation(
+                            fetchFromServer = false,
+                            booleanValue = strValue.matches(Regex(condition.targetValue as String))
+                    )
                 }
-
                 "eq" -> {
                     return ConfigEvaluation(fetchFromServer = false, value == condition.targetValue)
                 }
                 "neq" -> {
                     return ConfigEvaluation(fetchFromServer = false, value != condition.targetValue)
                 }
-
                 "before" -> {
-                    return compareDates({a: Date, b: Date ->
-                        return@compareDates a.before(b)
-                    }, value, condition.targetValue)
+                    return compareDates(
+                            { a: Date, b: Date ->
+                                return@compareDates a.before(b)
+                            },
+                            value,
+                            condition.targetValue
+                    )
                 }
                 "after" -> {
-                    return compareDates({a: Date, b: Date ->
-                        return@compareDates a.after(b)
-                    }, value, condition.targetValue)
+                    return compareDates(
+                            { a: Date, b: Date ->
+                                return@compareDates a.after(b)
+                            },
+                            value,
+                            condition.targetValue
+                    )
                 }
                 "on" -> {
-                    return compareDates({a: Date, b: Date ->
-                        val firstCalendar = Calendar.getInstance()
-                        val secondCalendar = Calendar.getInstance()
-                        firstCalendar.time = a
-                        secondCalendar.time = b
-                        return@compareDates firstCalendar[Calendar.YEAR] == secondCalendar[Calendar.YEAR] &&
-                            firstCalendar[Calendar.DAY_OF_YEAR] == secondCalendar[Calendar.DAY_OF_YEAR]
-                    }, value, condition.targetValue)
+                    return compareDates(
+                            { a: Date, b: Date ->
+                                val firstCalendar = Calendar.getInstance()
+                                val secondCalendar = Calendar.getInstance()
+                                firstCalendar.time = a
+                                secondCalendar.time = b
+                                return@compareDates firstCalendar[Calendar.YEAR] ==
+                                        secondCalendar[Calendar.YEAR] &&
+                                        firstCalendar[Calendar.DAY_OF_YEAR] ==
+                                                secondCalendar[Calendar.DAY_OF_YEAR]
+                            },
+                            value,
+                            condition.targetValue
+                    )
                 }
-
                 else -> {
                     return ConfigEvaluation(fetchFromServer = true)
                 }
@@ -329,21 +417,35 @@ class Evaluator {
         }
     }
 
-    private fun arrayContainsStr(array: Any?, value: Any?): Boolean {
-        val strValue = getValueAsString(value)
-            ?: return false
-        if (array !is Iterable<*>) {
-            return false
-        }
-        for (match in array) {
-            if (strValue.contains(match as String, true)) {
+    private fun matchStringInArray(
+            value: Any?,
+            target: Any?,
+            compare: (value: String, target: String) -> Boolean
+    ): Boolean {
+        var strValue = getValueAsString(value) ?: return false
+        var iterable =
+                if (target is Iterable<*>) {
+                    target
+                } else if (target is Array<*>) {
+                    target.asIterable()
+                } else {
+                    return false
+                }
+
+        for (match in iterable) {
+            val strMatch = getValueAsString(match) ?: continue
+            if (compare(strValue, strMatch)) {
                 return true
             }
         }
         return false
     }
 
-    private fun compareDates(compare: (a: Date, b: Date) -> Boolean, a: Any?, b: Any?): ConfigEvaluation {
+    private fun compareDates(
+            compare: (a: Date, b: Date) -> Boolean,
+            a: Any?,
+            b: Any?
+    ): ConfigEvaluation {
         if (a == null || b == null) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         }
@@ -352,7 +454,10 @@ class Evaluator {
         if (firstDate == null || secondDate == null) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         }
-        return ConfigEvaluation(fetchFromServer = false, booleanValue = compare(firstDate, secondDate))
+        return ConfigEvaluation(
+                fetchFromServer = false,
+                booleanValue = compare(firstDate, secondDate)
+        )
     }
 
     private fun getDate(input: Any?): Date? {
@@ -360,13 +465,14 @@ class Evaluator {
             return null
         }
         return try {
-            var epoch = if (input is String) {
-                parseLong(input)
-            } else if (input is Number) {
-                input.toLong()
-            } else {
-                return null
-            }
+            var epoch =
+                    if (input is String) {
+                        parseLong(input)
+                    } else if (input is Number) {
+                        input.toLong()
+                    } else {
+                        return null
+                    }
             if (epoch.toString().length < 11) {
                 // epoch in seconds (milliseconds would be before 1970)
                 epoch *= 1000
@@ -407,7 +513,11 @@ class Evaluator {
         return 0
     }
 
-    private fun versionCompareHelper(version1: Any?, version2: Any?, compare: (v1: String, v2: String) -> Boolean): Boolean {
+    private fun versionCompareHelper(
+            version1: Any?,
+            version2: Any?,
+            compare: (v1: String, v2: String) -> Boolean
+    ): Boolean {
         var version1Str = getValueAsString(version1)
         var version2Str = getValueAsString(version2)
 
@@ -415,12 +525,12 @@ class Evaluator {
             return false
         }
 
-        val dashIndex1 = version1Str.indexOf('-');
+        val dashIndex1 = version1Str.indexOf('-')
         if (dashIndex1 > 0) {
             version1Str = version1Str.substring(0, dashIndex1)
         }
 
-        val dashIndex2 = version2Str.indexOf('-');
+        val dashIndex2 = version2Str.indexOf('-')
         if (dashIndex2 > 0) {
             version2Str = version2Str.substring(0, dashIndex2)
         }
@@ -439,10 +549,7 @@ class Evaluator {
         if (input is String) {
             return input
         }
-        if (input is Number) {
-            return input.toString()
-        }
-        return input as? String
+        return input.toString()
     }
 
     private fun getValueAsDouble(input: Any?): Double? {
@@ -465,7 +572,7 @@ class Evaluator {
         if (targets == null || value == null) {
             return false
         }
-        var iterable: Iterable<*>;
+        var iterable: Iterable<*>
         if (targets is Iterable<*>) {
             iterable = targets
         } else if (targets is Array<*>) {
@@ -491,17 +598,24 @@ class Evaluator {
         val c: Client = uaParser.parse(ua.toString())
         when (field.toLowerCase()) {
             "os_name", "osname" -> return c.os.family
-            "os_version", "osversion" -> return arrayOf(
-                if (c.os.major.isNullOrBlank()) "0" else c.os.major,
-                if (c.os.minor.isNullOrBlank()) "0" else c.os.minor,
-                if (c.os.patch.isNullOrBlank()) "0" else c.os.patch,
-            ).joinToString(".")
+            "os_version", "osversion" ->
+                    return arrayOf(
+                                    if (c.os.major.isNullOrBlank()) "0" else c.os.major,
+                                    if (c.os.minor.isNullOrBlank()) "0" else c.os.minor,
+                                    if (c.os.patch.isNullOrBlank()) "0" else c.os.patch,
+                            )
+                            .joinToString(".")
             "browser_name", "browsername" -> return c.userAgent.family
-            "browser_version", "browserversion" -> return arrayOf(
-                if (c.userAgent.major.isNullOrBlank()) "0" else c.userAgent.major,
-                if (c.userAgent.minor.isNullOrBlank()) "0" else c.userAgent.minor,
-                if (c.userAgent.patch.isNullOrBlank()) "0" else c.userAgent.patch,
-            ).joinToString(".")
+            "browser_version", "browserversion" ->
+                    return arrayOf(
+                                    if (c.userAgent.major.isNullOrBlank()) "0"
+                                    else c.userAgent.major,
+                                    if (c.userAgent.minor.isNullOrBlank()) "0"
+                                    else c.userAgent.minor,
+                                    if (c.userAgent.patch.isNullOrBlank()) "0"
+                                    else c.userAgent.patch,
+                            )
+                            .joinToString(".")
             else -> {
                 return null
             }
@@ -523,13 +637,16 @@ class Evaluator {
             value = user.custom?.get(field) ?: user.custom?.get(field.toLowerCase())
         }
         if ((value == null || value == "") && user.privateAttributes != null) {
-            value = user.privateAttributes?.get(field) ?: user.privateAttributes?.get(field.toLowerCase())
+            value =
+                    user.privateAttributes?.get(field)
+                            ?: user.privateAttributes?.get(field.toLowerCase())
         }
         return value
     }
 
     private fun getFromEnvironment(user: StatsigUser, field: String): String? {
-        return user.statsigEnvironment?.get(field) ?: user.statsigEnvironment?.get(field.toLowerCase())
+        return user.statsigEnvironment?.get(field)
+                ?: user.statsigEnvironment?.get(field.toLowerCase())
     }
 
     private fun computeUserHash(input: String): ULong {

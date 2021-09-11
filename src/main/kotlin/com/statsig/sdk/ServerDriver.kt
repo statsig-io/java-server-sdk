@@ -1,13 +1,16 @@
 package com.statsig.sdk
 
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
-import java.util.concurrent.CompletableFuture
-import java.util.Properties
 
-class ServerDriver(private val serverSecret: String, private val options: StatsigOptions = StatsigOptions()) {
+class ServerDriver(
+        private val serverSecret: String,
+        private val options: StatsigOptions = StatsigOptions()
+) {
     private val network: StatsigNetwork
     private var configEvaluator: Evaluator
     private var initialized: Boolean = false
@@ -17,9 +20,11 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
 
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
-            throw IllegalArgumentException("Statsig Server SDKs must be initialized with a secret key")
+            throw IllegalArgumentException(
+                    "Statsig Server SDKs must be initialized with a secret key"
+            )
         }
-        var version = "0.7.0+"
+        var version = "0.7.1+"
         try {
             val properties = Properties()
             properties.load(ServerDriver::class.java.getResourceAsStream("/statsigsdk.properties"))
@@ -41,12 +46,13 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
             }
         }
 
-        pollingJob = network.pollForChanges {
-            if (it == null || !it.hasUpdates) {
-                return@pollForChanges
-            }
-            configEvaluator.setDownloadedConfigs(it)
-        }
+        pollingJob =
+                network.pollForChanges {
+                    if (it == null || !it.hasUpdates) {
+                        return@pollForChanges
+                    }
+                    configEvaluator.setDownloadedConfigs(it)
+                }
     }
 
     suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
@@ -57,11 +63,17 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
         if (result.fetchFromServer) {
             val networkResult = network.checkGate(normalizedUser, gateName)
-            result = runBlocking {
-                return@runBlocking networkResult
-            }
+            result =
+                    runBlocking {
+                        return@runBlocking networkResult
+                    }
         } else {
-            logger.logGateExposure(normalizedUser, gateName, result.booleanValue, result.ruleID ?: "")
+            logger.logGateExposure(
+                    normalizedUser,
+                    gateName,
+                    result.booleanValue,
+                    result.ruleID ?: ""
+            )
         }
         return result.booleanValue
     }
@@ -74,51 +86,56 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
         var result: ConfigEvaluation = configEvaluator.getConfig(normalizedUser, dynamicConfigName)
         if (result.fetchFromServer) {
             val networkResult = network.getConfig(normalizedUser, dynamicConfigName)
-            result = runBlocking {
-                return@runBlocking networkResult
-            }
+            result =
+                    runBlocking {
+                        return@runBlocking networkResult
+                    }
         } else {
             logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
         }
-        return DynamicConfig(Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID))
+        return DynamicConfig(
+                Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID)
+        )
     }
 
     suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling getExperiment")
         }
-        return getConfig(user, experimentName);
+        return getConfig(user, experimentName)
     }
 
     fun logEvent(
-        user: StatsigUser?,
-        eventName: String,
-        value: Double,
-        metadata: Map<String, String>? = null,
+            user: StatsigUser?,
+            eventName: String,
+            value: Double,
+            metadata: Map<String, String>? = null,
     ) {
         var normalizedUser = normalizeUser(user)
-        val event = StatsigEvent(
-            eventName = eventName,
-            eventValue = value,
-            eventMetadata = metadata,
-            user = normalizedUser,
-        )
+        val event =
+                StatsigEvent(
+                        eventName = eventName,
+                        eventValue = value,
+                        eventMetadata = metadata,
+                        user = normalizedUser,
+                )
         logger.log(event)
     }
 
     fun logEvent(
-        user: StatsigUser?,
-        eventName: String,
-        value: String? = null,
-        metadata: Map<String, String>? = null,
+            user: StatsigUser?,
+            eventName: String,
+            value: String? = null,
+            metadata: Map<String, String>? = null,
     ) {
         var normalizedUser = normalizeUser(user)
-        val event = StatsigEvent(
-            eventName = eventName,
-            eventValue = value,
-            eventMetadata = metadata,
-            user = normalizedUser,
-        )
+        val event =
+                StatsigEvent(
+                        eventName = eventName,
+                        eventValue = value,
+                        eventMetadata = metadata,
+                        user = normalizedUser,
+                )
         logger.log(event)
     }
 
@@ -136,24 +153,31 @@ class ServerDriver(private val serverSecret: String, private val options: Statsi
     }
 
     /**
-     * Async methods expose functionality in a friendly way to Java (via CompleteableFutures in Java 8)
-     * Below is, essentially, the "Java" API, which calls into the kotlin implementation above
-     * NOTE: Non async functions like logevent can be used by both without an additional function signature
+     * Async methods expose functionality in a friendly way to Java (via CompleteableFutures in Java
+     * 8) Below is, essentially, the "Java" API, which calls into the kotlin implementation above
+     * NOTE: Non async functions like logevent can be used by both without an additional function
+     * signature
      */
+    fun initializeAsync(): CompletableFuture<Unit> =
+            GlobalScope.future {
+                return@future initialize()
+            }
 
-    fun initializeAsync(): CompletableFuture<Unit> = GlobalScope.future {
-        return@future initialize()
-    }
+    fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> =
+            GlobalScope.future {
+                return@future checkGate(user, gateName)
+            }
 
-    fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> = GlobalScope.future {
-        return@future checkGate(user, gateName)
-    }
+    fun getConfigAsync(user: StatsigUser, configName: String): CompletableFuture<DynamicConfig> =
+            GlobalScope.future {
+                return@future getConfig(user, configName)
+            }
 
-    fun getConfigAsync(user: StatsigUser, configName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
-        return@future getConfig(user, configName)
-    }
-
-    fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> = GlobalScope.future {
-        return@future getExperiment(user, experimentName)
-    }
+    fun getExperimentAsync(
+            user: StatsigUser,
+            experimentName: String
+    ): CompletableFuture<DynamicConfig> =
+            GlobalScope.future {
+                return@future getExperiment(user, experimentName)
+            }
 }
