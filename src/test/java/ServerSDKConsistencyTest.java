@@ -1,8 +1,11 @@
 import com.google.gson.Gson;
-import com.statsig.sdk.DynamicConfig;
-import com.statsig.sdk.ServerDriver;
-import com.statsig.sdk.StatsigOptions;
-import com.statsig.sdk.StatsigUser;
+import com.statsig.sdk.*;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlinx.coroutines.CoroutineScope;
+import kotlinx.coroutines.CoroutineScopeKt;
+import kotlinx.coroutines.SupervisorKt;
+import kotlinx.coroutines.test.TestCoroutineScope;
+import kotlinx.coroutines.test.TestCoroutineScopeKt;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -49,19 +52,21 @@ public class ServerSDKConsistencyTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-        ServerDriver driver = new ServerDriver(secret, new StatsigOptions(api));
-        Future initFuture = driver.initializeAsync();
+        CoroutineScope scope = TestCoroutineScopeKt.TestCoroutineScope(EmptyCoroutineContext.INSTANCE);
+        ServerDriver driver = new ServerDriver(scope, secret, new StatsigOptions(api));
+        StatsigServer.serverDriver = driver;
+        Future initFuture = StatsigServer.initializeAsync(secret);
         initFuture.get();
 
         for (APITestDataSet d: data) {
             StatsigUser user = d.getUser();
             for (Map.Entry<String, Boolean> entry : d.getGates().entrySet()) {
-                Future<Boolean> gate = driver.checkGateAsync(user, entry.getKey());
+                Future<Boolean> gate = StatsigServer.checkGateAsync(user, entry.getKey());
                 assertEquals(entry.getKey() + " for " + user.toString(), entry.getValue(), gate.get());
             }
 
             for (Map.Entry<String, APIConfigData> entry : d.getConfigs().entrySet()) {
-                Future<DynamicConfig> sdkConfig = driver.getConfigAsync(user, entry.getKey());
+                Future<DynamicConfig> sdkConfig = StatsigServer.getConfigAsync(user, entry.getKey());
                 assertTrue("Config value mismatch for " + entry.getKey()+ " for " + user.toString(), sdkConfig.get().getValue().equals(entry.getValue().getValue()));
                 assertTrue("RuleID mismatch for " + entry.getKey() + " for " + user.toString(), sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
             }
