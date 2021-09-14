@@ -1,18 +1,19 @@
 package com.statsig.sdk
 
-import java.util.Properties
-import java.util.concurrent.CompletableFuture
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.future.future
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import java.util.Properties
 
-class ServerDriver(
-        private val serverSecret: String,
-        private val options: StatsigOptions = StatsigOptions()
+internal class ServerDriver(
+    private val coroutineScope: CoroutineScope,
+    serverSecret: String,
+    private val options: StatsigOptions = StatsigOptions()
 ) {
     private val network: StatsigNetwork
     private var configEvaluator: Evaluator
+    @Volatile
     private var initialized: Boolean = false
     private var logger: StatsigLogger
     private val statsigMetadata: Map<String, String>
@@ -34,39 +35,32 @@ class ServerDriver(
 
         network = StatsigNetwork(serverSecret, options, statsigMetadata)
         configEvaluator = Evaluator()
-        logger = StatsigLogger(network, statsigMetadata)
+        logger = StatsigLogger(coroutineScope, network, statsigMetadata)
     }
 
     suspend fun initialize() {
         initialized = true
         val downloadedConfigs = network.downloadConfigSpecs()
-        runBlocking {
-            if (downloadedConfigs != null) {
-                configEvaluator.setDownloadedConfigs(downloadedConfigs)
-            }
+        if (downloadedConfigs != null) {
+            configEvaluator.setDownloadedConfigs(downloadedConfigs)
         }
 
-        pollingJob =
-                network.pollForChanges {
-                    if (it == null || !it.hasUpdates) {
-                        return@pollForChanges
-                    }
-                    configEvaluator.setDownloadedConfigs(it)
-                }
+        pollingJob = network.pollForChanges().onEach {
+            if (it == null || !it.hasUpdates) {
+                return@onEach
+            }
+            configEvaluator.setDownloadedConfigs(it)
+        }.launchIn(coroutineScope)
     }
 
     suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling checkGate")
         }
-        var normalizedUser = normalizeUser(user)
+        val normalizedUser = normalizeUser(user)
         var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
         if (result.fetchFromServer) {
-            val networkResult = network.checkGate(normalizedUser, gateName)
-            result =
-                    runBlocking {
-                        return@runBlocking networkResult
-                    }
+            result = network.checkGate(normalizedUser, gateName)
         } else {
             logger.logGateExposure(
                     normalizedUser,
@@ -82,14 +76,10 @@ class ServerDriver(
         if (!initialized) {
             throw IllegalStateException("Must initialize before calling getConfig")
         }
-        var normalizedUser = normalizeUser(user)
+        val normalizedUser = normalizeUser(user)
         var result: ConfigEvaluation = configEvaluator.getConfig(normalizedUser, dynamicConfigName)
         if (result.fetchFromServer) {
-            val networkResult = network.getConfig(normalizedUser, dynamicConfigName)
-            result =
-                    runBlocking {
-                        return@runBlocking networkResult
-                    }
+            result = network.getConfig(normalizedUser, dynamicConfigName)
         } else {
             logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
         }
@@ -105,13 +95,13 @@ class ServerDriver(
         return getConfig(user, experimentName)
     }
 
-    fun logEvent(
+    suspend fun logEvent(
             user: StatsigUser?,
             eventName: String,
             value: Double,
             metadata: Map<String, String>? = null,
     ) {
-        var normalizedUser = normalizeUser(user)
+        val normalizedUser = normalizeUser(user)
         val event =
                 StatsigEvent(
                         eventName = eventName,
@@ -122,13 +112,13 @@ class ServerDriver(
         logger.log(event)
     }
 
-    fun logEvent(
+    suspend fun logEvent(
             user: StatsigUser?,
             eventName: String,
             value: String? = null,
             metadata: Map<String, String>? = null,
     ) {
-        var normalizedUser = normalizeUser(user)
+        val normalizedUser = normalizeUser(user)
         val event =
                 StatsigEvent(
                         eventName = eventName,
@@ -139,45 +129,16 @@ class ServerDriver(
         logger.log(event)
     }
 
-    fun shutdown() {
+    suspend fun shutdown() {
         pollingJob?.cancel()
-        logger.flush(true)
+        logger.shutdown()
     }
 
     private fun normalizeUser(user: StatsigUser?): StatsigUser {
-        var normalizedUser = user ?: StatsigUser("")
+        val normalizedUser = user ?: StatsigUser("")
         if (options.getEnvironment() != null && user?.statsigEnvironment == null) {
             normalizedUser.statsigEnvironment = options.getEnvironment()
         }
         return normalizedUser
     }
-
-    /**
-     * Async methods expose functionality in a friendly way to Java (via CompleteableFutures in Java
-     * 8) Below is, essentially, the "Java" API, which calls into the kotlin implementation above
-     * NOTE: Non async functions like logevent can be used by both without an additional function
-     * signature
-     */
-    fun initializeAsync(): CompletableFuture<Unit> =
-            GlobalScope.future {
-                return@future initialize()
-            }
-
-    fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> =
-            GlobalScope.future {
-                return@future checkGate(user, gateName)
-            }
-
-    fun getConfigAsync(user: StatsigUser, configName: String): CompletableFuture<DynamicConfig> =
-            GlobalScope.future {
-                return@future getConfig(user, configName)
-            }
-
-    fun getExperimentAsync(
-            user: StatsigUser,
-            experimentName: String
-    ): CompletableFuture<DynamicConfig> =
-            GlobalScope.future {
-                return@future getExperiment(user, experimentName)
-            }
 }

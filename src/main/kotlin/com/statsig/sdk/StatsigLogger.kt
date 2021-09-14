@@ -1,6 +1,7 @@
 package com.statsig.sdk
 
 import kotlinx.coroutines.*
+import java.util.concurrent.Executors
 
 const val MAX_EVENTS: Int = 500
 const val FLUSH_TIMER_MS: Long = 60000
@@ -9,59 +10,56 @@ const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
 
 class StatsigLogger(
+    coroutineScope: CoroutineScope,
     private val network: StatsigNetwork,
     private val statsigMetadata: Map<String, String>,
 ) {
 
-    private var events: MutableList<StatsigEvent> = ArrayList()
-    private var timer: Job
+    private val singleThreadDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private var events = arrayListOf<StatsigEvent>()
+    private val timer = coroutineScope.launch {
+        while (true) {
+            delay(FLUSH_TIMER_MS)
+            flush()
+        }
+    }
 
-    init {
-        timer = GlobalScope.launch {
-            while (isActive) {
-                delay(FLUSH_TIMER_MS)
+    suspend fun log(event: StatsigEvent) {
+        withContext(singleThreadDispatcher) {
+            events.add(event)
+
+            if (events.size >= MAX_EVENTS) {
                 flush()
+                return@withContext
             }
         }
     }
 
-    @Synchronized
-    fun log(event: StatsigEvent) {
-        events.add(event)
-
-        if (events.size >= MAX_EVENTS) {
-            flush()
-            return
-        }
-    }
-
-    @Synchronized
-    fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String) {
-        var event = StatsigEvent(GATE_EXPOSURE_EVENT, eventValue = null, mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID), user, statsigMetadata)
+    suspend fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String) {
+        val event = StatsigEvent(GATE_EXPOSURE_EVENT, eventValue = null, mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID), user, statsigMetadata)
         log(event)
     }
 
-    @Synchronized
-    fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String) {
-        var event = StatsigEvent(CONFIG_EXPOSURE_EVENT, eventValue = null, mapOf("config" to configName, "ruleID" to ruleID), user, statsigMetadata)
+    suspend fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String) {
+        val event = StatsigEvent(CONFIG_EXPOSURE_EVENT, eventValue = null, mapOf("config" to configName, "ruleID" to ruleID), user, statsigMetadata)
         log(event)
     }
 
-    @Synchronized
-    fun flush(isClosing: Boolean = false) {
-        if (isClosing) {
-            timer.cancel()
-        }
-        if (events.size == 0) {
-            return
-        }
+    suspend fun flush() {
+        withContext(singleThreadDispatcher) {
+            if (events.size == 0) {
+                return@withContext
+            }
 
-        val flushEvents: MutableList<StatsigEvent> = ArrayList(this.events.size)
-        flushEvents.addAll(this.events)
-        this.events = ArrayList()
+            val flushEvents = events
+            events = arrayListOf()
 
-        GlobalScope.launch {
             network.postLogs(flushEvents, statsigMetadata)
         }
+    }
+
+    suspend fun shutdown() {
+        timer.cancel()
+        flush()
     }
 }
