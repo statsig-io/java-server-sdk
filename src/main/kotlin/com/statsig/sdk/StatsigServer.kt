@@ -9,8 +9,7 @@ import java.util.concurrent.CompletableFuture
 
 object StatsigServer {
 
-    // Visible for testing
-    internal lateinit var serverDriver: ServerDriver
+    private lateinit var serverDriver: ServerDriver
     private val statsigServerJob = SupervisorJob()
     private val statsigCoroutineScope = CoroutineScope(statsigServerJob)
 
@@ -19,7 +18,7 @@ object StatsigServer {
         if (this::serverDriver.isInitialized) {
             return
         }
-        serverDriver = ServerDriver(statsigCoroutineScope, serverSecret, options)
+        serverDriver = ServerDriver(serverSecret, options, statsigCoroutineScope)
         serverDriver.initialize()
     }
 
@@ -38,25 +37,24 @@ object StatsigServer {
         return serverDriver.getExperiment(user, experimentName)
     }
 
-    @JvmStatic
-    @JvmOverloads
-    fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null) {
-        statsigCoroutineScope.launch {
-            serverDriver.logEvent(user, eventName, value, metadata)
-        }
+    @JvmSynthetic
+    suspend fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null) {
+        serverDriver.logEvent(user, eventName, value, metadata)
+    }
+
+    @JvmSynthetic
+    suspend fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null) {
+        serverDriver.logEvent(user, eventName, value, metadata)
+    }
+
+    @JvmSynthetic
+    suspend fun shutdown() {
+        serverDriver.shutdown()
     }
 
     @JvmStatic
-    @JvmOverloads
-    fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null) {
-        statsigCoroutineScope.launch {
-            serverDriver.logEvent(user, eventName, value, metadata)
-        }
-    }
-
-    @JvmStatic
-    fun shutdown() {
-        runBlocking { // Assuming this needs to be synchronous
+    fun shutdownSync() {
+        runBlocking {
             serverDriver.shutdown()
         }
     }
@@ -80,5 +78,17 @@ object StatsigServer {
     @JvmStatic
     fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> = statsigCoroutineScope.future {
         return@future getExperiment(user, experimentName)
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun logEventAsync(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null): CompletableFuture<Unit> = statsigCoroutineScope.future {
+        return@future logEvent(user, eventName, value, metadata)
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun logEventAsync(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null): CompletableFuture<Unit> = statsigCoroutineScope.future {
+        return@future logEvent(user, eventName, value, metadata)
     }
 }
