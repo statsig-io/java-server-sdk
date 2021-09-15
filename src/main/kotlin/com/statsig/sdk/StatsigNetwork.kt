@@ -13,7 +13,7 @@ private const val POLLING_INTERVAL_MS: Long = 10000
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
 
-class StatsigNetwork(
+internal class StatsigNetwork(
     private val sdkKey: String,
     private val options: StatsigOptions,
     private val statsigMetadata: Map<String, String>,
