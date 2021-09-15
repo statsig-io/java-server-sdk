@@ -53,8 +53,7 @@ public class ServerSDKConsistencyTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-        CoroutineScope scope = TestCoroutineScopeKt.TestCoroutineScope(EmptyCoroutineContext.INSTANCE);
-        ServerDriver driver = new ServerDriver(secret, new StatsigOptions(api), scope);
+        ServerDriver driver = new ServerDriver(secret, new StatsigOptions(api));
         Future initFuture = driver.initializeAsync();
         initFuture.get();
 

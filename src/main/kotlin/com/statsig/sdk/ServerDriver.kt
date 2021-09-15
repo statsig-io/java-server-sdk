@@ -11,7 +11,7 @@ import java.util.Properties
 import java.util.concurrent.CompletableFuture
 
 
-class ServerDriver(
+class ServerDriver @JvmOverloads constructor(
     serverSecret: String,
     private val options: StatsigOptions = StatsigOptions(),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob())
@@ -177,7 +177,7 @@ class ServerDriver(
         logEvent(user, eventName, value, metadata)
     }
 
-    fun shutdownAsync(): CompletableFuture<Unit> = GlobalScope.future {
+    fun shutdownAsync(): CompletableFuture<Unit> = coroutineScope.future {
         shutdown()
     }
 }

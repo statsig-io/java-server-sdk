@@ -1,10 +1,7 @@
 package com.statsig.sdk
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.future.future
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 
 object StatsigServer {
