@@ -32,7 +32,7 @@ public class ServerSDKConsistencyTest {
             try {
                 secret = Files.readString(Paths.get(
                         Paths.get("").toAbsolutePath()
-                                + "/../../ops/secrets/prod_keys/statsig-rulesets-eval-consistency-test-secret.key"),
+                                + "/../ops/secrets/prod_keys/statsig-rulesets-eval-consistency-test-secret.key"),
                         StandardCharsets.US_ASCII);
             } catch (Exception e) {
                 throw new Exception("THIS TEST IS EXPECTED TO FAIL FOR NON-STATSIG EMPLOYEES! If this is the" +

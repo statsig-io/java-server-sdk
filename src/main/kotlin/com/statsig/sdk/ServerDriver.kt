@@ -43,9 +43,6 @@ class ServerDriver(
         logger = StatsigLogger(coroutineScope, network, statsigMetadata)
     }
 
-    fun setScope() {
-    }
-
     suspend fun initialize() {
         initialized = true
         val downloadedConfigs = network.downloadConfigSpecs()
@@ -153,9 +150,8 @@ class ServerDriver(
     /**
      * Async methods expose functionality in a friendly way to Java (via CompleteableFutures in Java 8)
      * Below is, essentially, the "Java" API, which calls into the kotlin implementation above
-     * NOTE: Non async functions like logevent can be used by both without an additional function signature
+     * NOTE: Non async functions can be used by both without an additional function signature
      */
-
     fun initializeAsync(): CompletableFuture<Unit> = coroutineScope.future {
         return@future initialize()
     }
