@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.*;
@@ -52,21 +53,19 @@ public class ServerSDKConsistencyTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-        CoroutineScope scope = TestCoroutineScopeKt.TestCoroutineScope(EmptyCoroutineContext.INSTANCE);
-        ServerDriver driver = new ServerDriver(scope, secret, new StatsigOptions(api));
-        StatsigServer.serverDriver = driver;
-        Future initFuture = StatsigServer.initializeAsync(secret);
+        ServerDriver driver = new ServerDriver(secret, new StatsigOptions(api));
+        Future initFuture = driver.initializeAsync();
         initFuture.get();
 
         for (APITestDataSet d: data) {
             StatsigUser user = d.getUser();
             for (Map.Entry<String, Boolean> entry : d.getGates().entrySet()) {
-                Future<Boolean> gate = StatsigServer.checkGateAsync(user, entry.getKey());
+                Future<Boolean> gate = driver.checkGateAsync(user, entry.getKey());
                 assertEquals(entry.getKey() + " for " + user.toString(), entry.getValue(), gate.get());
             }
 
             for (Map.Entry<String, APIConfigData> entry : d.getConfigs().entrySet()) {
-                Future<DynamicConfig> sdkConfig = StatsigServer.getConfigAsync(user, entry.getKey());
+                Future<DynamicConfig> sdkConfig = driver.getConfigAsync(user, entry.getKey());
                 assertTrue("Config value mismatch for " + entry.getKey()+ " for " + user.toString(), sdkConfig.get().getValue().equals(entry.getValue().getValue()));
                 assertTrue("RuleID mismatch for " + entry.getKey() + " for " + user.toString(), sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
             }
