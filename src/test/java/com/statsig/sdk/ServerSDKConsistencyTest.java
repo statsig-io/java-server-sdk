@@ -1,5 +1,6 @@
+package com.statsig.sdk;
+
 import com.google.gson.Gson;
-import com.statsig.sdk.*;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,8 +48,8 @@ public class ServerSDKConsistencyTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-        StatsigServer driver = Statsig.createServer(secret, new StatsigOptions(api));
-        Future initFuture = driver.initializeAsync(secret);
+        StatsigServer driver = StatsigServer.createServer(secret, new StatsigOptions(api));
+        Future initFuture = driver.initializeAsync();
         initFuture.get();
 
         for (APITestDataSet d: data) {

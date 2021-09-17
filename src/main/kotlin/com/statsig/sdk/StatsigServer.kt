@@ -1,5 +1,3 @@
-@file:JvmName("Statsig")
-
 package com.statsig.sdk
 
 import kotlinx.coroutines.CoroutineScope
@@ -15,7 +13,7 @@ import java.util.concurrent.CompletableFuture
 interface StatsigServer {
 
     @JvmSynthetic
-    suspend fun initialize(serverSecret: String, options: StatsigOptions = StatsigOptions())
+    suspend fun initialize()
 
     @JvmSynthetic
     suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
@@ -45,11 +43,7 @@ interface StatsigServer {
 
     fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null)
 
-    fun initializeAsync(serverSecret: String): CompletableFuture<Unit> {
-        return initializeAsync(serverSecret, StatsigOptions())
-    }
-
-    fun initializeAsync(serverSecret: String, options: StatsigOptions = StatsigOptions()): CompletableFuture<Unit>
+    fun initializeAsync(): CompletableFuture<Unit>
 
     fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
 
@@ -58,10 +52,14 @@ interface StatsigServer {
     fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
     fun shutdownSync()
-}
 
-@JvmName("createServer")
-fun StatsigServer(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer = StatsigServerImpl(serverSecret, options)
+    companion object {
+
+        @JvmStatic
+        @JvmOverloads
+        fun createServer(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer = StatsigServerImpl(serverSecret, options)
+    }
+}
 
 private const val VERSION = "0.7.1+"
 
@@ -101,7 +99,7 @@ private class StatsigServerImpl(
         }
     }
 
-    override suspend fun initialize(serverSecret: String, options: StatsigOptions) {
+    override suspend fun initialize() {
         if (statsigJob.isCancelled) {
             throw IllegalStateException("StatsigServer was shutdown")
         }
@@ -202,12 +200,13 @@ private class StatsigServerImpl(
             throw IllegalStateException("StatsigServer was shutdown")
         }
         pollingJob.cancel()
+        pollingJob.join()
         logger.shutdown()
     }
 
-    override fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<Unit> {
+    override fun initializeAsync(): CompletableFuture<Unit> {
         return statsigScope.future {
-            initialize(serverSecret, options)
+            initialize()
         }
     }
 
