@@ -233,7 +233,7 @@ private class StatsigServerImpl(
     }
 
     private fun enforceActive() {
-        if (pollingJob.isCancelled || pollingJob.isCompleted) {
+        if (statsigJob.isCancelled || statsigJob.isCompleted) {
             throw IllegalStateException("StatsigServer was shutdown")
         }
         if (!pollingJob.isActive) { // If the server was never initialized
