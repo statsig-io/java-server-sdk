@@ -57,7 +57,8 @@ interface StatsigServer {
 
         @JvmStatic
         @JvmOverloads
-        fun createServer(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer = StatsigServerImpl(serverSecret, options)
+        fun createServer(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer =
+            StatsigServerImpl(serverSecret, options)
     }
 }
 
@@ -66,7 +67,7 @@ private const val VERSION = "0.7.1+"
 private class StatsigServerImpl(
     serverSecret: String,
     private val options: StatsigOptions
-): StatsigServer {
+) : StatsigServer {
 
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
