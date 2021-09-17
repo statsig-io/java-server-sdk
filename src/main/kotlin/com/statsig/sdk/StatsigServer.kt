@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 
@@ -87,6 +89,7 @@ private class StatsigServerImpl(
 
     private val statsigJob = SupervisorJob()
     private val statsigScope = CoroutineScope(statsigJob)
+    private val mutex = Mutex()
     private val statsigMetadata = mapOf("sdkType" to "java-server", "sdkVersion" to version)
     private val network = StatsigNetwork(serverSecret, options, statsigMetadata)
     private var configEvaluator = Evaluator()
@@ -101,23 +104,23 @@ private class StatsigServerImpl(
     }
 
     override suspend fun initialize() {
-        if (statsigJob.isCancelled) {
-            throw IllegalStateException("StatsigServer was shutdown")
+        mutex.withLock { // Prevent multiple coroutines from calling this at once.
+            if (pollingJob.isActive) {
+                return // Just return. Initialize was already called.
+            }
+            if (pollingJob.isCancelled || pollingJob.isCompleted) {
+                throw IllegalStateException("Cannot re-initialize server that has shutdown. Please recreate the server connection.")
+            }
+            val downloadedConfigs = network.downloadConfigSpecs()
+            if (downloadedConfigs != null) {
+                configEvaluator.setDownloadedConfigs(downloadedConfigs)
+            }
+            pollingJob.start()
         }
-        val downloadedConfigs = network.downloadConfigSpecs()
-        if (downloadedConfigs != null) {
-            configEvaluator.setDownloadedConfigs(downloadedConfigs)
-        }
-        pollingJob.start()
     }
 
     override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
-        if (statsigJob.isCancelled) {
-            throw IllegalStateException("StatsigServer was shutdown")
-        }
-        if (!pollingJob.isActive) {
-            throw IllegalStateException("Must initialize before calling checkGate")
-        }
+        enforceActive()
         val normalizedUser = normalizeUser(user)
         var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
         if (result.fetchFromServer) {
@@ -134,12 +137,7 @@ private class StatsigServerImpl(
     }
 
     override suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
-        if (statsigJob.isCancelled) {
-            throw IllegalStateException("StatsigServer was shutdown")
-        }
-        if (!pollingJob.isActive) {
-            throw IllegalStateException("Must initialize before calling getConfig")
-        }
+        enforceActive()
         val normalizedUser = normalizeUser(user)
         var result: ConfigEvaluation = configEvaluator.getConfig(normalizedUser, dynamicConfigName)
         if (result.fetchFromServer) {
@@ -153,19 +151,12 @@ private class StatsigServerImpl(
     }
 
     override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
-        if (statsigJob.isCancelled) {
-            throw IllegalStateException("StatsigServer was shutdown")
-        }
-        if (!pollingJob.isActive) {
-            throw IllegalStateException("Must initialize before calling getExperiment")
-        }
+        enforceActive()
         return getConfig(user, experimentName)
     }
 
     override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
-        if (statsigJob.isCancelled) {
-            throw IllegalStateException("StatsigServer was shutdown")
-        }
+        enforceActive()
         statsigScope.launch {
             val normalizedUser = normalizeUser(user)
             val event =
@@ -180,9 +171,7 @@ private class StatsigServerImpl(
     }
 
     override fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>?) {
-        if (statsigJob.isCancelled) {
-            throw IllegalStateException("StatsigServer was shutdown")
-        }
+        enforceActive()
         statsigScope.launch {
             val normalizedUser = normalizeUser(user)
             val event =
@@ -197,12 +186,12 @@ private class StatsigServerImpl(
     }
 
     override suspend fun shutdown() {
-        if (statsigJob.isCancelled) {
-            throw IllegalStateException("StatsigServer was shutdown")
-        }
+        enforceActive()
         pollingJob.cancel()
         pollingJob.join()
         logger.shutdown()
+        statsigJob.cancel() // Cancels any remaining jobs
+        statsigJob.join() // Awaits for jobs to complete
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {
@@ -232,8 +221,6 @@ private class StatsigServerImpl(
     override fun shutdownSync() {
         runBlocking {
             shutdown()
-            statsigJob.cancel() // Cancels any remaining jobs
-            statsigJob.join() // Awaits for jobs to complete
         }
     }
 
@@ -243,5 +230,14 @@ private class StatsigServerImpl(
             normalizedUser.statsigEnvironment = options.getEnvironment()
         }
         return normalizedUser
+    }
+
+    private fun enforceActive() {
+        if (pollingJob.isCancelled || pollingJob.isCompleted) {
+            throw IllegalStateException("StatsigServer was shutdown")
+        }
+        if (!pollingJob.isActive) { // If the server was never initialized
+            throw IllegalStateException("Must initialize before calling getExperiment")
+        }
     }
 }

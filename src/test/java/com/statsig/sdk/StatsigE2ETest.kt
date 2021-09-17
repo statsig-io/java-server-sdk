@@ -84,15 +84,8 @@ class StatsigE2ETest {
         driver = StatsigServer.createServer("secret-testcase", options)
     }
 
-    @After
-    fun teardown() {
-        server.shutdown()
-        driver.shutdownSync()
-    }
-
     @Test
     fun testFeatureGate() = runBlocking {
-        val driver = StatsigServer.createServer("secret-testcase", options)
         driver.initialize()
         assert(driver.checkGate(statsigUser, "always_on_gate"))
         assert(driver.checkGate(statsigUser, "on_for_statsig_email"))
