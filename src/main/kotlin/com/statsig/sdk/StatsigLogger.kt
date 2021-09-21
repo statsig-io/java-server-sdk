@@ -9,7 +9,7 @@ const val FLUSH_TIMER_MS: Long = 60000
 const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
 
-class StatsigLogger(
+internal class StatsigLogger(
     coroutineScope: CoroutineScope,
     private val network: StatsigNetwork,
     private val statsigMetadata: Map<String, String>,

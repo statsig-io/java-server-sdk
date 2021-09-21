@@ -1,91 +1,254 @@
 package com.statsig.sdk
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.future
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.Properties
 import java.util.concurrent.CompletableFuture
 
-object StatsigServer {
+sealed class StatsigServer {
 
-    private lateinit var serverDriver: ServerDriver
-    private val statsigServerJob = SupervisorJob()
-    private val statsigCoroutineScope = CoroutineScope(statsigServerJob)
+    @JvmSynthetic
+    abstract suspend fun initialize()
 
-    @JvmSynthetic // Hide from Java
-    suspend fun initialize(serverSecret: String, options: StatsigOptions = StatsigOptions()) {
-        if (this::serverDriver.isInitialized) {
-            return
+    @JvmSynthetic
+    abstract suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
+
+    @JvmSynthetic
+    abstract suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig
+
+    @JvmSynthetic
+    abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
+
+    @JvmSynthetic
+    abstract suspend fun shutdown()
+
+    fun logEvent(user: StatsigUser?, eventName: String) {
+        logEvent(user, eventName, null)
+    }
+
+    fun logEvent(user: StatsigUser?, eventName: String, value: String? = null) {
+        logEvent(user, eventName, value, null)
+    }
+
+    abstract fun logEvent(
+        user: StatsigUser?,
+        eventName: String,
+        value: String? = null,
+        metadata: Map<String, String>? = null
+    )
+
+    fun logEvent(user: StatsigUser?, eventName: String, value: Double) {
+        logEvent(user, eventName, value, null)
+    }
+
+    abstract fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null)
+
+    abstract fun initializeAsync(): CompletableFuture<Unit>
+
+    abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
+
+    abstract fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig>
+
+    abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
+
+    abstract fun shutdownSync()
+
+    internal abstract suspend fun flush()
+
+    companion object {
+
+        @JvmStatic
+        @JvmOverloads
+        fun createServer(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer =
+            StatsigServerImpl(serverSecret, options)
+    }
+}
+
+private const val VERSION = "0.7.1+"
+
+private class StatsigServerImpl(
+    serverSecret: String,
+    private val options: StatsigOptions
+) : StatsigServer() {
+
+    init {
+        if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
+            throw IllegalArgumentException(
+                "Statsig Server SDKs must be initialized with a secret key"
+            )
         }
-        serverDriver = ServerDriver(serverSecret, options, statsigCoroutineScope)
-        serverDriver.initialize()
     }
 
-    @JvmSynthetic
-    suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
-        return serverDriver.checkGate(user, gateName)
+    private val version = try {
+        val properties = Properties()
+        properties.load(StatsigServerImpl::class.java.getResourceAsStream("/statsigsdk.properties"))
+        properties.getProperty("version")
+    } catch (e: Exception) {
+        VERSION
     }
 
-    @JvmSynthetic
-    suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
-        return serverDriver.getConfig(user, dynamicConfigName)
+    private val statsigJob = SupervisorJob()
+    private val statsigScope = CoroutineScope(statsigJob)
+    private val mutex = Mutex()
+    private val statsigMetadata = mapOf("sdkType" to "java-server", "sdkVersion" to version)
+    private val network = StatsigNetwork(serverSecret, options, statsigMetadata)
+    private var configEvaluator = Evaluator()
+    private var logger: StatsigLogger = StatsigLogger(statsigScope, network, statsigMetadata)
+    private val pollingJob = statsigScope.launch(start = CoroutineStart.LAZY) {
+        network.pollForChanges().collect {
+            if (it == null || !it.hasUpdates) {
+                return@collect
+            }
+            configEvaluator.setDownloadedConfigs(it)
+        }
     }
 
-    @JvmSynthetic
-    suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
-        return serverDriver.getExperiment(user, experimentName)
+    override suspend fun initialize() {
+        mutex.withLock { // Prevent multiple coroutines from calling this at once.
+            if (pollingJob.isActive) {
+                return // Just return. Initialize was already called.
+            }
+            if (pollingJob.isCancelled || pollingJob.isCompleted) {
+                throw IllegalStateException("Cannot re-initialize server that has shutdown. Please recreate the server connection.")
+            }
+            val downloadedConfigs = network.downloadConfigSpecs()
+            if (downloadedConfigs != null) {
+                configEvaluator.setDownloadedConfigs(downloadedConfigs)
+            }
+            pollingJob.start()
+        }
     }
 
-    @JvmSynthetic
-    suspend fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null) {
-        serverDriver.logEvent(user, eventName, value, metadata)
+    override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+        var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
+        if (result.fetchFromServer) {
+            result = network.checkGate(normalizedUser, gateName)
+        } else {
+            logger.logGateExposure(
+                normalizedUser,
+                gateName,
+                result.booleanValue,
+                result.ruleID ?: ""
+            )
+        }
+        return result.booleanValue
     }
 
-    @JvmSynthetic
-    suspend fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null) {
-        serverDriver.logEvent(user, eventName, value, metadata)
+    override suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+        var result: ConfigEvaluation = configEvaluator.getConfig(normalizedUser, dynamicConfigName)
+        if (result.fetchFromServer) {
+            result = network.getConfig(normalizedUser, dynamicConfigName)
+        } else {
+            logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
+        }
+        return DynamicConfig(
+            Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID)
+        )
     }
 
-    @JvmSynthetic
-    suspend fun shutdown() {
-        serverDriver.shutdown()
+    override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
+        enforceActive()
+        return getConfig(user, experimentName)
     }
 
-    @JvmStatic
-    fun shutdownSync() {
+    override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
+        enforceActive()
+        statsigScope.launch {
+            val normalizedUser = normalizeUser(user)
+            val event =
+                StatsigEvent(
+                    eventName = eventName,
+                    eventValue = value,
+                    eventMetadata = metadata,
+                    user = normalizedUser,
+                )
+            logger.log(event)
+        }
+    }
+
+    override fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>?) {
+        enforceActive()
+        statsigScope.launch {
+            val normalizedUser = normalizeUser(user)
+            val event =
+                StatsigEvent(
+                    eventName = eventName,
+                    eventValue = value,
+                    eventMetadata = metadata,
+                    user = normalizedUser,
+                )
+            logger.log(event)
+        }
+    }
+
+    override suspend fun shutdown() {
+        enforceActive()
+        pollingJob.cancel()
+        pollingJob.join()
+        logger.shutdown()
+        statsigJob.cancel() // Cancels any remaining jobs
+        statsigJob.join() // Awaits for jobs to complete
+    }
+
+    override fun initializeAsync(): CompletableFuture<Unit> {
+        return statsigScope.future {
+            initialize()
+        }
+    }
+
+    override fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
+        return statsigScope.future {
+            return@future checkGate(user, gateName)
+        }
+    }
+
+    override fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig> {
+        return statsigScope.future {
+            return@future getConfig(user, dynamicConfigName)
+        }
+    }
+
+    override fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
+        return statsigScope.future {
+            return@future getExperiment(user, experimentName)
+        }
+    }
+
+    override fun shutdownSync() {
         runBlocking {
-            serverDriver.shutdown()
+            shutdown()
         }
     }
 
-    @JvmStatic
-    @JvmOverloads
-    fun initializeAsync(serverSecret: String, options: StatsigOptions = StatsigOptions()): CompletableFuture<Unit> = statsigCoroutineScope.future {
-        initialize(serverSecret, options)
+    override suspend fun flush() {
+        logger.flush()
     }
 
-    @JvmStatic
-    fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> = statsigCoroutineScope.future {
-        return@future checkGate(user, gateName)
+    private fun normalizeUser(user: StatsigUser?): StatsigUser {
+        val normalizedUser = user ?: StatsigUser("")
+        if (options.getEnvironment() != null && user?.statsigEnvironment == null) {
+            normalizedUser.statsigEnvironment = options.getEnvironment()
+        }
+        return normalizedUser
     }
 
-    @JvmStatic
-    fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig> = statsigCoroutineScope.future {
-        return@future getConfig(user, dynamicConfigName)
-    }
-
-    @JvmStatic
-    fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> = statsigCoroutineScope.future {
-        return@future getExperiment(user, experimentName)
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun logEventAsync(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null): CompletableFuture<Unit> = statsigCoroutineScope.future {
-        return@future logEvent(user, eventName, value, metadata)
-    }
-
-    @JvmStatic
-    @JvmOverloads
-    fun logEventAsync(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null): CompletableFuture<Unit> = statsigCoroutineScope.future {
-        return@future logEvent(user, eventName, value, metadata)
+    private fun enforceActive() {
+        if (statsigJob.isCancelled || statsigJob.isCompleted) {
+            throw IllegalStateException("StatsigServer was shutdown")
+        }
+        if (!pollingJob.isActive) { // If the server was never initialized
+            throw IllegalStateException("Must initialize a server before calling other APIs")
+        }
     }
 }

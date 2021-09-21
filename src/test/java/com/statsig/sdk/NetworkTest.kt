@@ -1,6 +1,5 @@
-import com.statsig.sdk.StatsigEvent
-import com.statsig.sdk.StatsigNetwork
-import com.statsig.sdk.StatsigOptions
+package com.statsig.sdk
+
 import io.mockk.*
 import kotlinx.coroutines.*
 import okhttp3.mockwebserver.MockResponse
