@@ -1,8 +1,9 @@
 package com.statsig.sdk
 
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 
-object Statsig : StatsigServer {
+object Statsig : StatsigServer() {
 
     @Volatile
     private lateinit var statsigServer: StatsigServer
@@ -40,7 +41,8 @@ object Statsig : StatsigServer {
     }
 
     override suspend fun shutdown() {
-        shutdownSync()
+        System.err.println("Static StatsigServer class does not shutdown")
+        flush()
     }
 
     override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
@@ -74,7 +76,11 @@ object Statsig : StatsigServer {
     }
 
     override fun shutdownSync() {
-        throw IllegalAccessError("Shutdown of Statsig not allowed")
+        runBlocking { shutdown() }
+    }
+
+    override suspend fun flush() {
+        statsigServer.flush()
     }
 
     private fun enforceDefaultCreated() {

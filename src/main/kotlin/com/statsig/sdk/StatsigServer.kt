@@ -12,22 +12,22 @@ import kotlinx.coroutines.sync.withLock
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 
-interface StatsigServer {
+sealed class StatsigServer {
 
     @JvmSynthetic
-    suspend fun initialize()
+    abstract suspend fun initialize()
 
     @JvmSynthetic
-    suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
+    abstract suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
 
     @JvmSynthetic
-    suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig
+    abstract suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig
 
     @JvmSynthetic
-    suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
+    abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
-    suspend fun shutdown()
+    abstract suspend fun shutdown()
 
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
@@ -37,23 +37,30 @@ interface StatsigServer {
         logEvent(user, eventName, value, null)
     }
 
-    fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null)
+    abstract fun logEvent(
+        user: StatsigUser?,
+        eventName: String,
+        value: String? = null,
+        metadata: Map<String, String>? = null
+    )
 
     fun logEvent(user: StatsigUser?, eventName: String, value: Double) {
         logEvent(user, eventName, value, null)
     }
 
-    fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null)
+    abstract fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null)
 
-    fun initializeAsync(): CompletableFuture<Unit>
+    abstract fun initializeAsync(): CompletableFuture<Unit>
 
-    fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
+    abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
 
-    fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig>
+    abstract fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig>
 
-    fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
+    abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
-    fun shutdownSync()
+    abstract fun shutdownSync()
+
+    internal abstract suspend fun flush()
 
     companion object {
 
@@ -69,7 +76,7 @@ private const val VERSION = "0.7.1+"
 private class StatsigServerImpl(
     serverSecret: String,
     private val options: StatsigOptions
-) : StatsigServer {
+) : StatsigServer() {
 
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
@@ -224,6 +231,10 @@ private class StatsigServerImpl(
         }
     }
 
+    override suspend fun flush() {
+        logger.flush()
+    }
+
     private fun normalizeUser(user: StatsigUser?): StatsigUser {
         val normalizedUser = user ?: StatsigUser("")
         if (options.getEnvironment() != null && user?.statsigEnvironment == null) {
@@ -237,7 +248,7 @@ private class StatsigServerImpl(
             throw IllegalStateException("StatsigServer was shutdown")
         }
         if (!pollingJob.isActive) { // If the server was never initialized
-            throw IllegalStateException("Must initialize before calling getExperiment")
+            throw IllegalStateException("Must initialize a server before calling other APIs")
         }
     }
 }
