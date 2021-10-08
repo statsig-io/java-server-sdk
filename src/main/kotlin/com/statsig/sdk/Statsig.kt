@@ -49,11 +49,13 @@ class Statsig {
             statsigServer.shutdownSuspend()
         }
 
+        @JvmStatic
         fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
             enforceInitialized()
             statsigServer.logEvent(user, eventName, value, metadata)
         }
 
+        @JvmStatic
         fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>?) {
             enforceInitialized()
             statsigServer.logEvent(user, eventName, value, metadata)
