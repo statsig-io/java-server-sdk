@@ -9,6 +9,8 @@ import kotlinx.coroutines.test.TestCoroutineScopeKt;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -57,43 +59,66 @@ public class ServerSDKConsistencyTest {
         Future initFuture = driver.initializeAsync();
         initFuture.get();
 
+        Field privateEvaluatorField = ServerDriver.class.getDeclaredField("configEvaluator");
+        privateEvaluatorField.setAccessible(true);
+
+        Evaluator evaluator = (Evaluator) privateEvaluatorField.get(driver);
+        Gson gson = new Gson();
+
         for (APITestDataSet d: data) {
             StatsigUser user = d.getUser();
-            for (Map.Entry<String, Boolean> entry : d.getGates().entrySet()) {
-                Future<Boolean> gate = driver.checkGateAsync(user, entry.getKey());
-                assertEquals(entry.getKey() + " for " + user.toString(), entry.getValue(), gate.get());
+            for (Map.Entry<String, APIFeatureGate> entry : d.getGates().entrySet()) {
+                ConfigEvaluation sdkResult = evaluator.checkGate(user, entry.getKey());
+                APIFeatureGate serverResult = entry.getValue();
+                assertEquals("Value mismatch for gate " + entry.getKey(), serverResult.getValue(),
+                        sdkResult.getBooleanValue());
+                assertEquals("Rule ID mismatch for gate " + entry.getKey(), serverResult.getRuleID(),
+                        sdkResult.getRuleID());
+                if (serverResult.getSecondaryExposures().size() > 0) {
+                    Future<Boolean> ff = driver.checkGateAsync(user, entry.getKey());
+                    ff.get();
+                }
+                assertEquals("Secondary exposure mismatch for gate " + entry.getKey(),
+                        gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
             }
 
-            for (Map.Entry<String, APIConfigData> entry : d.getConfigs().entrySet()) {
-                Future<DynamicConfig> sdkConfig = driver.getConfigAsync(user, entry.getKey());
-                assertTrue("Config value mismatch for " + entry.getKey()+ " for " + user.toString(), sdkConfig.get().getValue().equals(entry.getValue().getValue()));
-                assertTrue("RuleID mismatch for " + entry.getKey() + " for " + user.toString(), sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
+            for (Map.Entry<String, APIDynamicConfig> entry : d.getConfigs().entrySet()) {
+                ConfigEvaluation sdkResult = evaluator.getConfig(user, entry.getKey());
+                APIDynamicConfig serverResult = entry.getValue();
+                assertEquals("Value mismatch for config " + entry.getKey(),
+                        gson.toJson(serverResult.getValue()), gson.toJson(sdkResult.getJsonValue()));
+                assertEquals("Rule ID mismatch for config " + entry.getKey(), serverResult.getRuleID(),
+                        sdkResult.getRuleID());
+                assertEquals("Secondary exposure mismatch for config " + entry.getKey(),
+                        gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
             }
         }
+        Future f = driver.shutdownAsync();
+        f.get();
     }
 
     @Test
     public void testProd() throws Exception {
-        testConsistency("https://api.statsig.com/v1");
+       testConsistency("https://api.statsig.com/v1");
     }
 
-    @Test
-    public void testStaging() throws Exception {
-        testConsistency("https://latest.api.statsig.com/v1");
-    }
+   @Test
+   public void testStaging() throws Exception {
+       testConsistency("https://latest.api.statsig.com/v1");
+   }
 
-    @Test
-    public void testUSWest() throws Exception {
-        testConsistency("https://us-west-2.api.statsig.com/v1");
-    }
+   @Test
+   public void testUSWest() throws Exception {
+       testConsistency("https://us-west-2.api.statsig.com/v1");
+   }
 
-    @Test
-    public void testUSEast() throws Exception {
-        testConsistency("https://us-east-2.api.statsig.com/v1");
-    }
+   @Test
+   public void testUSEast() throws Exception {
+       testConsistency("https://us-east-2.api.statsig.com/v1");
+   }
 
-    @Test
-    public void testAPSouth() throws Exception {
-        testConsistency("https://ap-south-1.api.statsig.com/v1");
-    }
+   @Test
+   public void testAPSouth() throws Exception {
+       testConsistency("https://ap-south-1.api.statsig.com/v1");
+   }
 }

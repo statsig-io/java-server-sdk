@@ -65,7 +65,7 @@ class StatsigNetwork(
             .build()
         httpClient.newCall(request).await().use { response ->
             val apiGate = gson.fromJson(response.body?.charStream(), APIFeatureGate::class.java)
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = apiGate.value, apiGate.value.toString(), apiGate.ruleID)
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = apiGate.value, apiGate.value.toString(), apiGate.ruleID ?: "")
         }
     }
 
@@ -85,7 +85,7 @@ class StatsigNetwork(
             .build()
         httpClient.newCall(request).await().use { response ->
             val apiConfig = gson.fromJson(response.body?.charStream(), APIDynamicConfig::class.java)
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false, apiConfig.value, apiConfig.ruleID)
+            return ConfigEvaluation(fetchFromServer = false, booleanValue = false, apiConfig.value, apiConfig.ruleID ?: "")
         }
     }
 

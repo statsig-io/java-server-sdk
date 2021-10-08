@@ -15,7 +15,8 @@ data class ConfigEvaluation(
         val fetchFromServer: Boolean = false,
         val booleanValue: Boolean = false,
         val jsonValue: Any? = null,
-        val ruleID: String? = null,
+        val ruleID: String = "",
+        val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
 )
 
 class Evaluator {
@@ -69,14 +70,17 @@ class Evaluator {
             return ConfigEvaluation(
                     fetchFromServer = false,
                     booleanValue = false,
-                    config.defaultValue
+                    config.defaultValue,
+                    "disabled"
             )
         }
+        val secondaryExposures = arrayListOf<Map<String, String>>()
         for (rule in config.rules) {
             val result = this.evaluateRule(user, rule)
             if (result.fetchFromServer) {
                 return result
             }
+            secondaryExposures.addAll(result.secondaryExposures)
             if (result.booleanValue) {
                 val pass =
                         computeUserHash(
@@ -91,7 +95,8 @@ class Evaluator {
                         false,
                         pass,
                         if (pass) rule.returnValue else config.defaultValue,
-                        rule.id
+                        rule.id,
+                        secondaryExposures,
                 )
             }
         }
@@ -99,30 +104,30 @@ class Evaluator {
                 fetchFromServer = false,
                 booleanValue = false,
                 config.defaultValue,
-                "default"
+                "default",
+                secondaryExposures
         )
     }
 
     private fun evaluateRule(user: StatsigUser, rule: APIRule): ConfigEvaluation {
+        val secondaryExposures = arrayListOf<Map<String, String>>()
+        var pass = true
         for (condition in rule.conditions) {
             val result = this.evaluateCondition(user, condition)
             if (result.fetchFromServer) {
                 return result
             }
             if (!result.booleanValue) {
-                return ConfigEvaluation(
-                        fetchFromServer = false,
-                        booleanValue = false,
-                        rule.returnValue,
-                        rule.id
-                )
+                pass = false
             }
+            secondaryExposures.addAll(result.secondaryExposures)
         }
         return ConfigEvaluation(
                 fetchFromServer = false,
-                booleanValue = true,
+                booleanValue = pass,
                 rule.returnValue,
-                rule.id
+                rule.id,
+                secondaryExposures
         )
     }
 
@@ -140,16 +145,34 @@ class Evaluator {
             when (conditionEnum) {
                 ConfigCondition.PUBLIC ->
                         return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
-                ConfigCondition.FAIL_GATE -> {
+                ConfigCondition.FAIL_GATE,
+                ConfigCondition.PASS_GATE -> {
                     val result = this.checkGate(user, condition.targetValue as String)
-                    return ConfigEvaluation(
+                    val newExposure = mapOf(
+                        "gate" to condition.targetValue as String,
+                        "gateValue" to result.booleanValue.toString(),
+                        "ruleID" to result.ruleID,
+                    )
+                    val secondaryExposures = arrayListOf<Map<String, String>>()
+                    secondaryExposures.addAll(result.secondaryExposures)
+                    secondaryExposures.add(newExposure);
+                    if (conditionEnum == ConfigCondition.PASS_GATE) {
+                        return ConfigEvaluation(
+                            result.fetchFromServer,
+                            result.booleanValue,
+                            result.jsonValue,
+                            "",
+                            secondaryExposures
+                        )
+                    } else {
+                        return ConfigEvaluation(
                             result.fetchFromServer,
                             !result.booleanValue,
-                            result.jsonValue
-                    )
-                }
-                ConfigCondition.PASS_GATE -> {
-                    return checkGate(user, condition.targetValue as String)
+                            result.jsonValue,
+                            "",
+                            secondaryExposures
+                        )
+                    }
                 }
                 ConfigCondition.IP_BASED -> {
                     value = getFromUser(user, condition.field)
