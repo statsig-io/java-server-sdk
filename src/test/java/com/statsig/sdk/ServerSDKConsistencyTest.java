@@ -1,11 +1,6 @@
+package com.statsig.sdk;
+
 import com.google.gson.Gson;
-import com.statsig.sdk.*;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlinx.coroutines.CoroutineScope;
-import kotlinx.coroutines.CoroutineScopeKt;
-import kotlinx.coroutines.SupervisorKt;
-import kotlinx.coroutines.test.TestCoroutineScope;
-import kotlinx.coroutines.test.TestCoroutineScopeKt;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -19,10 +14,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ServerSDKConsistencyTest {
     String secret;
@@ -55,7 +50,7 @@ public class ServerSDKConsistencyTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-        ServerDriver driver = new ServerDriver(secret, new StatsigOptions(api));
+        StatsigServer driver = StatsigServer.createServer(secret, new StatsigOptions(api));
         Future initFuture = driver.initializeAsync();
         initFuture.get();
 

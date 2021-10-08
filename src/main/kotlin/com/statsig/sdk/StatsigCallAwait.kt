@@ -9,7 +9,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 // Extension function execute call in a way that is coroutine friendly
-suspend fun Call.await(): Response {
+internal suspend fun Call.await(): Response {
     return suspendCancellableCoroutine { cont ->
         enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {

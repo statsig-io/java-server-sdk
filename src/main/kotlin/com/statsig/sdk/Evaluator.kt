@@ -11,7 +11,7 @@ import kotlin.collections.set
 import ua_parser.Client
 import ua_parser.Parser
 
-data class ConfigEvaluation(
+internal data class ConfigEvaluation(
         val fetchFromServer: Boolean = false,
         val booleanValue: Boolean = false,
         val jsonValue: Any? = null,
@@ -19,7 +19,7 @@ data class ConfigEvaluation(
         val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
 )
 
-class Evaluator {
+internal class Evaluator {
     private var featureGates: MutableMap<String, APIConfig> = HashMap()
     private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
     private var uaParser: Parser = Parser()
@@ -670,7 +670,7 @@ class Evaluator {
     }
 }
 
-enum class ConfigCondition {
+internal enum class ConfigCondition {
     PUBLIC,
     FAIL_GATE,
     PASS_GATE,

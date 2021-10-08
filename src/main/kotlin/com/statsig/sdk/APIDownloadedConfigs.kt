@@ -2,14 +2,14 @@ package com.statsig.sdk
 
 import com.google.gson.annotations.SerializedName
 
-data class APIDownloadedConfigs(
+internal data class APIDownloadedConfigs(
     @SerializedName("dynamic_configs") val dynamicConfigs: Array<APIConfig>,
     @SerializedName("feature_gates") val featureGates: Array<APIConfig>,
     @SerializedName("time") val time: Long,
     @SerializedName("has_updates") val hasUpdates: Boolean,
 )
 
-data class APIConfig(
+internal data class APIConfig(
     @SerializedName("name") val name: String,
     @SerializedName("type") val type: String,
     @SerializedName("salt") val salt: String,
@@ -18,7 +18,7 @@ data class APIConfig(
     @SerializedName("rules") val rules: Array<APIRule>,
 )
 
-data class APIRule(
+internal data class APIRule(
     @SerializedName("name") val name: String,
     @SerializedName("passPercentage") val passPercentage: Int,
     @SerializedName("returnValue") val returnValue: Any,
@@ -27,7 +27,7 @@ data class APIRule(
     @SerializedName("conditions") val conditions: Array<APICondition>,
 )
 
-data class APICondition(
+internal data class APICondition(
     @SerializedName("type") val type: String,
     @SerializedName("targetValue") val targetValue: Any,
     @SerializedName("operator") val operator: String,
@@ -35,7 +35,7 @@ data class APICondition(
     @SerializedName("additionalValues") val additionalValues: Map<String, Any>
 )
 
-data class APIFeatureGate(
+internal data class APIFeatureGate(
     @SerializedName("name") val name: String,
     @SerializedName("value") val value: Boolean,
     @SerializedName("rule_id") val ruleID: String?,
@@ -43,7 +43,7 @@ data class APIFeatureGate(
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()
 )
 
-data class APIDynamicConfig(
+internal data class APIDynamicConfig(
     @SerializedName("name") val name: String,
     @SerializedName("value") val value: Map<String, Any>,
     @SerializedName("rule_id") val ruleID: String? = "",

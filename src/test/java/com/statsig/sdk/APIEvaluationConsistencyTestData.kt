@@ -1,7 +1,8 @@
+package com.statsig.sdk
+
 import com.google.gson.annotations.SerializedName
 import com.statsig.sdk.APIDynamicConfig
 import com.statsig.sdk.APIFeatureGate
-import com.statsig.sdk.StatsigUser
 
 data class APIEvaluationConsistencyTestData(
     @SerializedName("data") val data: Array<APITestDataSet>
