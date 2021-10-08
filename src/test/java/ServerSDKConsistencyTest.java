@@ -74,12 +74,11 @@ public class ServerSDKConsistencyTest {
                         sdkResult.getBooleanValue());
                 assertEquals("Rule ID mismatch for gate " + entry.getKey(), serverResult.getRuleID(),
                         sdkResult.getRuleID());
-                if (serverResult.getSecondaryExposures().size() > 0) {
-                    Future<Boolean> ff = driver.checkGateAsync(user, entry.getKey());
-                    ff.get();
-                }
                 assertEquals("Secondary exposure mismatch for gate " + entry.getKey(),
                         gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
+
+                Future<Boolean> sdkValue = driver.checkGateAsync(user, entry.getKey());
+                assertEquals("Server driver value mismatch for gate " + entry.getKey(), serverResult.getValue(), sdkValue.get());
             }
 
             for (Map.Entry<String, APIDynamicConfig> entry : d.getConfigs().entrySet()) {
@@ -91,10 +90,12 @@ public class ServerSDKConsistencyTest {
                         sdkResult.getRuleID());
                 assertEquals("Secondary exposure mismatch for config " + entry.getKey(),
                         gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
+
+                Future<DynamicConfig> sdkValue = driver.getConfigAsync(user, entry.getKey());
+                assertEquals("Server driver value mismatch for config " + entry.getKey(),
+                        gson.toJson(serverResult.getValue()), gson.toJson(sdkValue.get().getValue()));
             }
         }
-        Future f = driver.shutdownAsync();
-        f.get();
     }
 
     @Test
@@ -102,23 +103,28 @@ public class ServerSDKConsistencyTest {
        testConsistency("https://api.statsig.com/v1");
     }
 
-   @Test
-   public void testStaging() throws Exception {
+    @Test
+    public void testStaging() throws Exception {
        testConsistency("https://latest.api.statsig.com/v1");
-   }
+    }
 
-   @Test
-   public void testUSWest() throws Exception {
+    @Test
+    public void testUSWest() throws Exception {
        testConsistency("https://us-west-2.api.statsig.com/v1");
-   }
+    }
 
-   @Test
-   public void testUSEast() throws Exception {
+    @Test
+    public void testUSEast() throws Exception {
        testConsistency("https://us-east-2.api.statsig.com/v1");
-   }
+    }
 
-   @Test
-   public void testAPSouth() throws Exception {
+    @Test
+    public void testAPSouth() throws Exception {
        testConsistency("https://ap-south-1.api.statsig.com/v1");
-   }
+    }
+
+    @Test
+    public void testEU() throws Exception {
+        testConsistency("https://az-northeurope.api.statsig.com/v1");
+    }
 }

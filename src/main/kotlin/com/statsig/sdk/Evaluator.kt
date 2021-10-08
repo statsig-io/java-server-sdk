@@ -156,23 +156,13 @@ class Evaluator {
                     val secondaryExposures = arrayListOf<Map<String, String>>()
                     secondaryExposures.addAll(result.secondaryExposures)
                     secondaryExposures.add(newExposure);
-                    if (conditionEnum == ConfigCondition.PASS_GATE) {
-                        return ConfigEvaluation(
-                            result.fetchFromServer,
-                            result.booleanValue,
-                            result.jsonValue,
-                            "",
-                            secondaryExposures
-                        )
-                    } else {
-                        return ConfigEvaluation(
-                            result.fetchFromServer,
-                            !result.booleanValue,
-                            result.jsonValue,
-                            "",
-                            secondaryExposures
-                        )
-                    }
+                    return ConfigEvaluation(
+                        result.fetchFromServer,
+                        if (conditionEnum == ConfigCondition.PASS_GATE) result.booleanValue else !result.booleanValue,
+                        result.jsonValue,
+                        "",
+                        secondaryExposures
+                    )
                 }
                 ConfigCondition.IP_BASED -> {
                     value = getFromUser(user, condition.field)
