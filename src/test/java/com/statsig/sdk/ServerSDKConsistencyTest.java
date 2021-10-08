@@ -65,6 +65,7 @@ public class ServerSDKConsistencyTest {
                 assertTrue("RuleID mismatch for " + entry.getKey() + " for " + user, sdkConfig.get().getRuleID().equals(entry.getValue().getRuleID()));
             }
         }
+        driver.shutdown();
     }
 
     @Test

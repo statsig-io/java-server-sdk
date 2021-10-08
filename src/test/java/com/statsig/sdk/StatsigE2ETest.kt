@@ -80,7 +80,6 @@ class StatsigE2ETest {
         }
 
         randomUser = StatsigUser("random")
-
         driver = StatsigServer.createServer("secret-testcase", options)
     }
 

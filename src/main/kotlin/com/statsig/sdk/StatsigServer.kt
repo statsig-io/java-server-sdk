@@ -27,7 +27,7 @@ sealed class StatsigServer {
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
-    abstract suspend fun shutdown()
+    abstract suspend fun shutdownSuspend()
 
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
@@ -58,7 +58,9 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
-    abstract fun shutdownSync()
+    abstract fun shutdown()
+
+    abstract fun shutdownAsync(): CompletableFuture<Unit>
 
     internal abstract suspend fun flush()
 
@@ -71,7 +73,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.7.1+"
+private const val VERSION = "0.7.1"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -192,13 +194,20 @@ private class StatsigServerImpl(
         }
     }
 
-    override suspend fun shutdown() {
+    override suspend fun shutdownSuspend() {
         enforceActive()
         pollingJob.cancel()
         pollingJob.join()
         logger.shutdown()
         statsigJob.cancel() // Cancels any remaining jobs
         statsigJob.join() // Awaits for jobs to complete
+    }
+
+    override fun shutdownAsync(): CompletableFuture<Unit> {
+        enforceActive()
+        return statsigScope.future {
+            shutdownSuspend()
+        }
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {
@@ -225,9 +234,9 @@ private class StatsigServerImpl(
         }
     }
 
-    override fun shutdownSync() {
+    override fun shutdown() {
         runBlocking {
-            shutdown()
+            shutdownAsync()
         }
     }
 
