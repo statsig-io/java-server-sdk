@@ -137,7 +137,8 @@ private class StatsigServerImpl(
                 normalizedUser,
                 gateName,
                 result.booleanValue,
-                result.ruleID ?: ""
+                result.ruleID,
+                result.secondaryExposures,
             )
         }
         return result.booleanValue
@@ -150,7 +151,7 @@ private class StatsigServerImpl(
         if (result.fetchFromServer) {
             result = network.getConfig(normalizedUser, dynamicConfigName)
         } else {
-            logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
+            logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID, result.secondaryExposures)
         }
         return DynamicConfig(
             Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID)

@@ -5,7 +5,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -39,7 +38,7 @@ public class ServerSDKConsistencyTest {
         }
     }
 
-    public void testConsistency(String api) throws Exception {
+    void testConsistency(String api) throws Exception {
         System.out.println("Testing for " + api);
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
@@ -54,7 +53,7 @@ public class ServerSDKConsistencyTest {
         Future initFuture = driver.initializeAsync();
         initFuture.get();
 
-        Field privateEvaluatorField = ServerDriver.class.getDeclaredField("configEvaluator");
+        Field privateEvaluatorField = StatsigServerImpl.class.getDeclaredField("configEvaluator");
         privateEvaluatorField.setAccessible(true);
 
         Evaluator evaluator = (Evaluator) privateEvaluatorField.get(driver);
