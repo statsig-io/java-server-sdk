@@ -71,7 +71,8 @@ class ServerDriver @JvmOverloads constructor(
                     normalizedUser,
                     gateName,
                     result.booleanValue,
-                    result.ruleID ?: ""
+                    result.ruleID,
+                    result.secondaryExposures,
             )
         }
         return result.booleanValue
@@ -86,7 +87,7 @@ class ServerDriver @JvmOverloads constructor(
         if (result.fetchFromServer) {
             result = network.getConfig(normalizedUser, dynamicConfigName)
         } else {
-            logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID ?: "")
+            logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID, result.secondaryExposures)
         }
         return DynamicConfig(
                 Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID)

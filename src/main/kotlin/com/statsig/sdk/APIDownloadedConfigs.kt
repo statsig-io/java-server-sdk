@@ -39,10 +39,14 @@ data class APIFeatureGate(
     @SerializedName("name") val name: String,
     @SerializedName("value") val value: Boolean,
     @SerializedName("rule_id") val ruleID: String?,
+    @SerializedName("secondary_exposures")
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()
 )
 
 data class APIDynamicConfig(
     @SerializedName("name") val name: String,
     @SerializedName("value") val value: Map<String, Any>,
     @SerializedName("rule_id") val ruleID: String? = "",
+    @SerializedName("secondary_exposures")
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
 )

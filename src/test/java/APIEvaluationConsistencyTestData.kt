@@ -1,4 +1,6 @@
 import com.google.gson.annotations.SerializedName
+import com.statsig.sdk.APIDynamicConfig
+import com.statsig.sdk.APIFeatureGate
 import com.statsig.sdk.StatsigUser
 
 data class APIEvaluationConsistencyTestData(
@@ -7,13 +9,6 @@ data class APIEvaluationConsistencyTestData(
 
 data class APITestDataSet(
     @SerializedName("user") val user: StatsigUser,
-    @SerializedName("feature_gates") val gates: Map<String, Boolean>,
-    @SerializedName("dynamic_configs") val configs: Map<String, APIConfigData>,
-)
-
-data class APIConfigData(
-    @SerializedName("rule_id") val ruleID: String,
-    @SerializedName("name") val name : String,
-    @SerializedName("group") val group : String? = null,
-    @SerializedName("value") val value: Map<String, Any>,
+    @SerializedName("feature_gates_v2") val gates: Map<String, APIFeatureGate>,
+    @SerializedName("dynamic_configs") val configs: Map<String, APIDynamicConfig>,
 )
