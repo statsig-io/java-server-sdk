@@ -38,7 +38,7 @@ public class ServerSDKConsistencyTest {
         }
     }
 
-    void testConsistency(String api) throws Exception {
+    public void testConsistency(String api) throws Exception {
         System.out.println("Testing for " + api);
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
