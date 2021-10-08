@@ -68,7 +68,7 @@ sealed class StatsigServer {
 
         @JvmStatic
         @JvmOverloads
-        fun createServer(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer =
+        fun create(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer =
             StatsigServerImpl(serverSecret, options)
     }
 }

@@ -20,7 +20,7 @@ class Statsig {
             if (!::statsigServer.isInitialized) { // Quick check without synchronization
                 synchronized(this) {
                     if (!::statsigServer.isInitialized) { // Secondary check in case another thread already created the default server
-                        statsigServer = StatsigServer.createServer(serverSecret, options)
+                        statsigServer = StatsigServer.create(serverSecret, options)
                     }
                 }
                 statsigServer.initialize()
@@ -47,13 +47,15 @@ class Statsig {
         }
 
         @JvmStatic
-        fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
+        @JvmOverloads
+        fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null) {
             enforceInitialized()
             statsigServer.logEvent(user, eventName, value, metadata)
         }
 
         @JvmStatic
-        fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>?) {
+        @JvmOverloads
+        fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null) {
             enforceInitialized()
             statsigServer.logEvent(user, eventName, value, metadata)
         }
@@ -66,7 +68,7 @@ class Statsig {
             if (!::statsigServer.isInitialized) { // Quick check without synchronization
                 synchronized(this) {
                     if (!::statsigServer.isInitialized) { // Secondary check in case another thread already created the default server
-                        statsigServer = StatsigServer.createServer(serverSecret, options)
+                        statsigServer = StatsigServer.create(serverSecret, options)
                     }
                 }
                 return statsigServer.initializeAsync()

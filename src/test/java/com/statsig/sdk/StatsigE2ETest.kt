@@ -23,7 +23,7 @@ private data class LogEventInput(
     @SerializedName("events") val events: Array<StatsigEvent>,
 )
 
-private const val TEST_TIMEOUT = 1L
+private const val TEST_TIMEOUT = 1000L
 
 /**
  * There are 2 mock gates, 1 mock config, and 1 mock experiment
@@ -80,7 +80,7 @@ class StatsigE2ETest {
         }
 
         randomUser = StatsigUser("random")
-        driver = StatsigServer.createServer("secret-testcase", options)
+        driver = StatsigServer.create("secret-testcase", options)
     }
 
     @Test
