@@ -35,13 +35,29 @@ internal class StatsigLogger(
         }
     }
 
-    suspend fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String) {
-        val event = StatsigEvent(GATE_EXPOSURE_EVENT, eventValue = null, mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID), user, statsigMetadata)
+    suspend fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String,
+                                secondaryExposures: ArrayList<Map<String, String>>) {
+        val event = StatsigEvent(
+            GATE_EXPOSURE_EVENT,
+            eventValue = null,
+            mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID),
+            user,
+            statsigMetadata,
+            secondaryExposures
+        )
         log(event)
     }
 
-    suspend fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String) {
-        val event = StatsigEvent(CONFIG_EXPOSURE_EVENT, eventValue = null, mapOf("config" to configName, "ruleID" to ruleID), user, statsigMetadata)
+    suspend fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String,
+                                  secondaryExposures: ArrayList<Map<String, String>>) {
+        val event = StatsigEvent(
+            CONFIG_EXPOSURE_EVENT,
+            eventValue = null,
+            mapOf("config" to configName, "ruleID" to ruleID),
+            user,
+            statsigMetadata,
+            secondaryExposures
+        )
         log(event)
     }
 
