@@ -10,9 +10,6 @@ import java.util.concurrent.CompletableFuture
 class Statsig {
     companion object {
 
-        private val statsigSingletonJob = SupervisorJob()
-        private val statsigSingletonScope = CoroutineScope(statsigSingletonJob)
-
         @Volatile
         private lateinit var statsigServer: StatsigServer
 
