@@ -73,7 +73,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.7.1"
+private const val VERSION = "0.8.0"
 
 private class StatsigServerImpl(
     serverSecret: String,
