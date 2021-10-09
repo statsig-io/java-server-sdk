@@ -61,9 +61,10 @@ class Statsig {
         }
 
         @JvmStatic
+        @JvmOverloads
         fun initializeAsync(
             serverSecret: String,
-            options: StatsigOptions,
+            options: StatsigOptions = StatsigOptions(),
         ): CompletableFuture<Unit> {
             if (!::statsigServer.isInitialized) { // Quick check without synchronization
                 synchronized(this) {
@@ -97,12 +98,6 @@ class Statsig {
         @JvmStatic
         fun shutdown() {
             runBlocking { statsigServer.shutdown() }
-        }
-
-        @JvmStatic
-        fun shutdownAsync(): CompletableFuture<Unit> {
-            enforceInitialized()
-            return statsigServer.shutdownAsync()
         }
 
         private fun enforceInitialized() {

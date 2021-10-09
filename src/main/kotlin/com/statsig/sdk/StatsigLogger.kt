@@ -18,7 +18,7 @@ internal class StatsigLogger(
     private val singleThreadDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private var events = arrayListOf<StatsigEvent>()
     private val timer = coroutineScope.launch {
-        while (true) {
+        while (coroutineScope.isActive) {
             delay(FLUSH_TIMER_MS)
             flush()
         }
@@ -60,6 +60,8 @@ internal class StatsigLogger(
 
     suspend fun shutdown() {
         timer.cancel()
+        singleThreadDispatcher.cancel()
+
         flush()
     }
 }

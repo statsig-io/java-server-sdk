@@ -23,7 +23,7 @@ private data class LogEventInput(
     @SerializedName("events") val events: Array<StatsigEvent>,
 )
 
-private const val TEST_TIMEOUT = 1000L
+private const val TEST_TIMEOUT = 10L
 
 /**
  * There are 2 mock gates, 1 mock config, and 1 mock experiment
