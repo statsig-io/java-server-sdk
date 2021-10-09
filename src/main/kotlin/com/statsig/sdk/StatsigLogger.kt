@@ -61,5 +61,6 @@ internal class StatsigLogger(
     suspend fun shutdown() {
         timer.cancel()
         flush()
+        singleThreadDispatcher.cancel()
     }
 }

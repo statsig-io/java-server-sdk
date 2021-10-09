@@ -89,6 +89,10 @@ internal class StatsigNetwork(
         }
     }
 
+    suspend fun shutdown() {
+        httpClient.dispatcher.executorService.shutdown()
+    }
+
     suspend fun downloadConfigSpecs(): APIDownloadedConfigs? {
         val bodyJson = gson.toJson(mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastSyncTime))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)

@@ -197,6 +197,7 @@ private class StatsigServerImpl(
         pollingJob.cancel()
         pollingJob.join()
         logger.shutdown()
+        network.shutdown()
         statsigJob.cancel() // Cancels any remaining jobs
         statsigJob.join() // Awaits for jobs to complete
     }

@@ -41,8 +41,7 @@ object Statsig : StatsigServer() {
     }
 
     override suspend fun shutdown() {
-        System.err.println("Static StatsigServer class does not shutdown")
-        flush()
+        statsigServer.shutdown()
     }
 
     override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
