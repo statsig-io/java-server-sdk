@@ -193,8 +193,11 @@ private class StatsigServerImpl(
 
     override suspend fun shutdownSuspend() {
         enforceActive()
+        // CAUTION: Order matters here! Need to clean up jobs and post logs before
+        // shutting down the network and supervisor scope
         pollingJob.cancelAndJoin()
         logger.shutdown()
+        network.shutdown()
         statsigJob.cancelAndJoin()
         statsigScope.cancel()
     }
