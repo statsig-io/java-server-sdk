@@ -1,12 +1,8 @@
 package com.statsig.sdk
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.future
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.Properties
@@ -27,7 +23,7 @@ sealed class StatsigServer {
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
-    abstract suspend fun shutdown()
+    abstract suspend fun shutdownSuspend()
 
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
@@ -58,7 +54,7 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
-    abstract fun shutdownSync()
+    abstract fun shutdown()
 
     internal abstract suspend fun flush()
 
@@ -66,12 +62,12 @@ sealed class StatsigServer {
 
         @JvmStatic
         @JvmOverloads
-        fun createServer(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer =
+        fun create(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer =
             StatsigServerImpl(serverSecret, options)
     }
 }
 
-private const val VERSION = "0.7.1+"
+private const val VERSION = "0.8.0"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -94,8 +90,11 @@ private class StatsigServerImpl(
         VERSION
     }
 
+    private val coroutineExceptionHandler = CoroutineExceptionHandler { coroutineContext, throwable ->
+        // no-op - supervisor job should not throw when a child fails
+    }
     private val statsigJob = SupervisorJob()
-    private val statsigScope = CoroutineScope(statsigJob)
+    private val statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
     private val mutex = Mutex()
     private val statsigMetadata = mapOf("sdkType" to "java-server", "sdkVersion" to version)
     private val network = StatsigNetwork(serverSecret, options, statsigMetadata)
@@ -193,13 +192,15 @@ private class StatsigServerImpl(
         }
     }
 
-    override suspend fun shutdown() {
+    override suspend fun shutdownSuspend() {
         enforceActive()
-        pollingJob.cancel()
-        pollingJob.join()
+        // CAUTION: Order matters here! Need to clean up jobs and post logs before
+        // shutting down the network and supervisor scope
+        pollingJob.cancelAndJoin()
         logger.shutdown()
-        statsigJob.cancel() // Cancels any remaining jobs
-        statsigJob.join() // Awaits for jobs to complete
+        network.shutdown()
+        statsigJob.cancelAndJoin()
+        statsigScope.cancel()
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {
@@ -226,9 +227,9 @@ private class StatsigServerImpl(
         }
     }
 
-    override fun shutdownSync() {
+    override fun shutdown() {
         runBlocking {
-            shutdown()
+            shutdownSuspend()
         }
     }
 

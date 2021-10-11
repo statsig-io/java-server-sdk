@@ -49,7 +49,7 @@ public class ServerSDKConsistencyTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
-        StatsigServer driver = StatsigServer.createServer(secret, new StatsigOptions(api));
+        StatsigServer driver = StatsigServer.create(secret, new StatsigOptions(api));
         Future initFuture = driver.initializeAsync();
         initFuture.get();
 
@@ -90,6 +90,7 @@ public class ServerSDKConsistencyTest {
                         gson.toJson(serverResult.getValue()), gson.toJson(sdkValue.get().getValue()));
             }
         }
+        driver.shutdown();
     }
 
     @Test

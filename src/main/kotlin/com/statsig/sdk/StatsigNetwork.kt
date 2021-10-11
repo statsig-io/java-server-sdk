@@ -158,4 +158,8 @@ internal class StatsigNetwork(
             }
         }
     }
+
+    fun shutdown() {
+        httpClient.dispatcher.executorService.shutdown()
+    }
 }

@@ -1,89 +1,107 @@
 package com.statsig.sdk
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.future.future
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 
-object Statsig : StatsigServer() {
+class Statsig {
+    companion object {
 
-    @Volatile
-    private lateinit var statsigServer: StatsigServer
+        @Volatile
+        private lateinit var statsigServer: StatsigServer
 
-    @JvmStatic
-    fun createDefault(serverSecret: String, options: StatsigOptions = StatsigOptions()): Statsig {
-        if (!::statsigServer.isInitialized) { // Quick check without synchronization
-            synchronized(this) {
-                if (!::statsigServer.isInitialized) { // Secondary check in case another thread already created the default server
-                    statsigServer = StatsigServer.createServer(serverSecret, options)
+        suspend fun initialize(
+            serverSecret: String,
+            options: StatsigOptions,
+        ) {
+            if (!::statsigServer.isInitialized) { // Quick check without synchronization
+                synchronized(this) {
+                    if (!::statsigServer.isInitialized) { // Secondary check in case another thread already created the default server
+                        statsigServer = StatsigServer.create(serverSecret, options)
+                    }
                 }
+                statsigServer.initialize()
             }
         }
-        return this
-    }
 
-    override suspend fun initialize() {
-        enforceDefaultCreated()
-        statsigServer.initialize()
-    }
+        suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
+            enforceInitialized()
+            return statsigServer.checkGate(user, gateName)
+        }
 
-    override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
-        enforceDefaultCreated()
-        return statsigServer.checkGate(user, gateName)
-    }
+        suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+            enforceInitialized()
+            return statsigServer.getConfig(user, dynamicConfigName)
+        }
 
-    override suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
-        enforceDefaultCreated()
-        return statsigServer.getConfig(user, dynamicConfigName)
-    }
+        suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
+            enforceInitialized()
+            return statsigServer.getExperiment(user, experimentName)
+        }
 
-    override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
-        enforceDefaultCreated()
-        return statsigServer.getExperiment(user, experimentName)
-    }
+        suspend fun shutdownSuspend() {
+            statsigServer.shutdownSuspend()
+        }
 
-    override suspend fun shutdown() {
-        System.err.println("Static StatsigServer class does not shutdown")
-        flush()
-    }
+        @JvmStatic
+        @JvmOverloads
+        fun logEvent(user: StatsigUser?, eventName: String, value: String? = null, metadata: Map<String, String>? = null) {
+            enforceInitialized()
+            statsigServer.logEvent(user, eventName, value, metadata)
+        }
 
-    override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
-        enforceDefaultCreated()
-        statsigServer.logEvent(user, eventName, value, metadata)
-    }
+        @JvmStatic
+        @JvmOverloads
+        fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null) {
+            enforceInitialized()
+            statsigServer.logEvent(user, eventName, value, metadata)
+        }
 
-    override fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>?) {
-        enforceDefaultCreated()
-        statsigServer.logEvent(user, eventName, value, metadata)
-    }
+        @JvmStatic
+        @JvmOverloads
+        fun initializeAsync(
+            serverSecret: String,
+            options: StatsigOptions = StatsigOptions(),
+        ): CompletableFuture<Unit> {
+            if (!::statsigServer.isInitialized) { // Quick check without synchronization
+                synchronized(this) {
+                    if (!::statsigServer.isInitialized) { // Secondary check in case another thread already created the default server
+                        statsigServer = StatsigServer.create(serverSecret, options)
+                    }
+                }
+                return statsigServer.initializeAsync()
+            }
+            return CompletableFuture.completedFuture(Unit)
+        }
 
-    override fun initializeAsync(): CompletableFuture<Unit> {
-        enforceDefaultCreated()
-        return statsigServer.initializeAsync()
-    }
+        @JvmStatic
+        fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
+            enforceInitialized()
+            return statsigServer.checkGateAsync(user, gateName)
+        }
 
-    override fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
-        enforceDefaultCreated()
-        return statsigServer.checkGateAsync(user, gateName)
-    }
+        @JvmStatic
+        fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig> {
+            enforceInitialized()
+            return statsigServer.getConfigAsync(user, dynamicConfigName)
+        }
 
-    override fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig> {
-        enforceDefaultCreated()
-        return statsigServer.getConfigAsync(user, dynamicConfigName)
-    }
+        @JvmStatic
+        fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
+            enforceInitialized()
+            return statsigServer.getExperimentAsync(user, experimentName)
+        }
 
-    override fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
-        enforceDefaultCreated()
-        return statsigServer.getExperimentAsync(user, experimentName)
-    }
+        @JvmStatic
+        fun shutdown() {
+            runBlocking { statsigServer.shutdown() }
+        }
 
-    override fun shutdownSync() {
-        runBlocking { shutdown() }
-    }
-
-    override suspend fun flush() {
-        statsigServer.flush()
-    }
-
-    private fun enforceDefaultCreated() {
-        assert(::statsigServer.isInitialized) { "You must call 'createDefault()' before using Statsig" }
+        private fun enforceInitialized() {
+            assert(::statsigServer.isInitialized) { "You must call 'initialize()' before using Statsig" }
+        }
     }
 }

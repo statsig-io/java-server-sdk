@@ -15,10 +15,11 @@ internal class StatsigLogger(
     private val statsigMetadata: Map<String, String>,
 ) {
 
-    private val singleThreadDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val executor = Executors.newSingleThreadExecutor();
+    private val singleThreadDispatcher = executor.asCoroutineDispatcher()
     private var events = arrayListOf<StatsigEvent>()
     private val timer = coroutineScope.launch {
-        while (true) {
+        while (coroutineScope.isActive) {
             delay(FLUSH_TIMER_MS)
             flush()
         }
@@ -76,6 +77,8 @@ internal class StatsigLogger(
 
     suspend fun shutdown() {
         timer.cancel()
+        // Order matters!  Shutdown the executor after posting the final batch
         flush()
+        executor.shutdown()
     }
 }
