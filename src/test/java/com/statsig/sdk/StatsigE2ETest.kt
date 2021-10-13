@@ -58,10 +58,16 @@ class StatsigE2ETest {
                 override fun dispatch(request: RecordedRequest): MockResponse {
                     when (request.path) {
                         "/v1/download_config_specs" -> {
+                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
+                                throw Exception("No content type set!")
+                            }
                             return MockResponse().setResponseCode(200).setBody(DOWNLOAD_CONFIG_SPECS)
                         }
                         "/v1/log_event" -> {
                             val logBody = request.body.readUtf8()
+                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
+                                throw Exception("No content type set!")
+                            }
                             eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
                             return MockResponse().setResponseCode(200).setBody(DOWNLOAD_CONFIG_SPECS)
                         }
