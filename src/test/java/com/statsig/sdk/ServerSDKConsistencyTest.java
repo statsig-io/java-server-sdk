@@ -110,7 +110,7 @@ public class ServerSDKConsistencyTest {
 
     @Test
     public void testUSEast() throws Exception {
-       testConsistency("https://us-east-2.api.statsig.com/v1");
+       testConsistency("https://az-eastus-2.api.statsig.com/v1");
     }
 
     @Test
