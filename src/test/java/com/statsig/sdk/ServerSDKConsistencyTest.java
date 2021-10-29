@@ -102,24 +102,4 @@ public class ServerSDKConsistencyTest {
     public void testStaging() throws Exception {
        testConsistency("https://latest.api.statsig.com/v1");
     }
-
-    @Test
-    public void testUSWest() throws Exception {
-       testConsistency("https://us-west-2.api.statsig.com/v1");
-    }
-
-    @Test
-    public void testUSEast() throws Exception {
-       testConsistency("https://az-eastus-2.api.statsig.com/v1");
-    }
-
-    @Test
-    public void testAPSouth() throws Exception {
-       testConsistency("https://ap-south-1.api.statsig.com/v1");
-    }
-
-    @Test
-    public void testEU() throws Exception {
-        testConsistency("https://az-northeurope.api.statsig.com/v1");
-    }
 }
