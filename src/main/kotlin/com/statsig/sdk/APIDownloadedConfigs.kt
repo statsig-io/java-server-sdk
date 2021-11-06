@@ -16,6 +16,7 @@ internal data class APIConfig(
     @SerializedName("defaultValue") val defaultValue: Any,
     @SerializedName("enabled") val enabled: Boolean,
     @SerializedName("rules") val rules: Array<APIRule>,
+    @SerializedName("idType") val idType: String,
 )
 
 internal data class APIRule(
@@ -25,6 +26,7 @@ internal data class APIRule(
     @SerializedName("id") val id: String,
     @SerializedName("salt") val salt: String?,
     @SerializedName("conditions") val conditions: Array<APICondition>,
+    @SerializedName("idType") val idType: String,
 )
 
 internal data class APICondition(
@@ -32,7 +34,8 @@ internal data class APICondition(
     @SerializedName("targetValue") val targetValue: Any,
     @SerializedName("operator") val operator: String,
     @SerializedName("field") val field: String,
-    @SerializedName("additionalValues") val additionalValues: Map<String, Any>
+    @SerializedName("additionalValues") val additionalValues: Map<String, Any>,
+    @SerializedName("idType") val idType: String,
 )
 
 internal data class APIFeatureGate(
