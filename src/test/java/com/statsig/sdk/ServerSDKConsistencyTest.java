@@ -64,7 +64,7 @@ public class ServerSDKConsistencyTest {
             for (Map.Entry<String, APIFeatureGate> entry : d.getGates().entrySet()) {
                 ConfigEvaluation sdkResult = evaluator.checkGate(user, entry.getKey());
                 APIFeatureGate serverResult = entry.getValue();
-                assertEquals("Value mismatch for gate " + entry.getKey(), serverResult.getValue(),
+                assertEquals("Value mismatch for gate " + entry.getKey() + " for user" + user.toString(), serverResult.getValue(),
                         sdkResult.getBooleanValue());
                 assertEquals("Rule ID mismatch for gate " + entry.getKey(), serverResult.getRuleID(),
                         sdkResult.getRuleID());
@@ -78,7 +78,7 @@ public class ServerSDKConsistencyTest {
             for (Map.Entry<String, APIDynamicConfig> entry : d.getConfigs().entrySet()) {
                 ConfigEvaluation sdkResult = evaluator.getConfig(user, entry.getKey());
                 APIDynamicConfig serverResult = entry.getValue();
-                assertEquals("Value mismatch for config " + entry.getKey(),
+                assertEquals("Value mismatch for config " + entry.getKey() + " for user" + user.toString(),
                         gson.toJson(serverResult.getValue()), gson.toJson(sdkResult.getJsonValue()));
                 assertEquals("Rule ID mismatch for config " + entry.getKey(), serverResult.getRuleID(),
                         sdkResult.getRuleID());

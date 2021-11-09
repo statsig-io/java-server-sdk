@@ -88,7 +88,7 @@ internal class Evaluator {
                                                 '.' +
                                                 (rule.salt ?: rule.id) +
                                                 '.' +
-                                                user.userID
+                                                (getUnitID(user, rule.idType) ?: "")
                                 )
                                 .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
                 return ConfigEvaluation(
@@ -192,8 +192,11 @@ internal class Evaluator {
                 }
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues["salt"])
-                    val userID = user.userID
-                    value = computeUserHash("$salt.$userID").mod(1000UL).toDouble()
+                    val unitID = getUnitID(user, condition.idType) ?: ""
+                    value = computeUserHash("$salt.$unitID").mod(1000UL).toDouble()
+                }
+                ConfigCondition.UNIT_ID -> {
+                    value = getUnitID(user, condition.idType)
                 }
                 else -> {
                     return ConfigEvaluation(fetchFromServer = true)
@@ -668,6 +671,13 @@ internal class Evaluator {
         val bytes = md.digest(inputBytes)
         return ByteBuffer.wrap(bytes).long.toULong()
     }
+
+    private fun getUnitID(user: StatsigUser, idType: String?): String? {
+        if (idType != null && !idType.isNullOrEmpty() && idType.lowercase() != "userid") {
+            return user.customIDs?.get(idType) ?: user.customIDs?.get(idType.lowercase())
+        }
+        return user.userID
+    }
 }
 
 internal enum class ConfigCondition {
@@ -680,4 +690,5 @@ internal enum class ConfigCondition {
     CURRENT_TIME,
     ENVIRONMENT_FIELD,
     USER_BUCKET,
+    UNIT_ID,
 }
