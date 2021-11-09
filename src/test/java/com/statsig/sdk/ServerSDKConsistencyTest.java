@@ -102,9 +102,4 @@ public class ServerSDKConsistencyTest {
     public void testStaging() throws Exception {
        testConsistency("https://latest.api.statsig.com/v1");
     }
-
-    @Test
-    public void testLocal() throws Exception {
-        testConsistency("http://localhost:3006/v1");
-    }
 }
