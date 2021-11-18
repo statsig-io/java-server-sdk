@@ -129,6 +129,10 @@ class StatsigE2ETest {
         assert(config.getInt("number", 0) == 4)
         assert(config.getString("string", "") == "default")
         assert(config.getBoolean("boolean", true))
+
+        var metadata = driver.getExperimentMetadata("test_config")
+        assert(metadata["statsig email"].equals("{number=7.0, string=statsig, boolean=false}"))
+
         driver.shutdown()
 
         val eventLogInput = withTimeout(TEST_TIMEOUT) {
