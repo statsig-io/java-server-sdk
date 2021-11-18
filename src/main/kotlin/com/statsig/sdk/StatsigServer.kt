@@ -54,6 +54,8 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
+    abstract fun getExperimentMetadata(experimentName: String): Map<String, String>
+
     abstract fun shutdown()
 
     internal abstract suspend fun flush()
@@ -225,6 +227,10 @@ private class StatsigServerImpl(
         return statsigScope.future {
             return@future getExperiment(user, experimentName)
         }
+    }
+
+    override fun getExperimentMetadata(experimentName: String): Map<String, String> {
+        return configEvaluator.getVariants(experimentName)
     }
 
     override fun shutdown() {

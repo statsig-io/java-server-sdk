@@ -96,6 +96,12 @@ class Statsig {
         }
 
         @JvmStatic
+        fun getExperimentMetadata(experimentName: String): Map<String, String> {
+            enforceInitialized()
+            return statsigServer.getExperimentMetadata(experimentName)
+        }
+
+        @JvmStatic
         fun shutdown() {
             runBlocking { statsigServer.shutdown() }
         }

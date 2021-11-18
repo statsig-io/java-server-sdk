@@ -12,6 +12,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -28,7 +29,7 @@ public class ServerSDKConsistencyTest {
             try {
                 secret = Files.readString(Paths.get(
                         Paths.get("").toAbsolutePath()
-                                + "/../ops/secrets/prod_keys/statsig-rulesets-eval-consistency-test-secret.key"),
+                                + "/../../ops/secrets/prod_keys/statsig-rulesets-eval-consistency-test-secret.key"),
                         StandardCharsets.US_ASCII);
             } catch (Exception e) {
                 throw new Exception("THIS TEST IS EXPECTED TO FAIL FOR NON-STATSIG EMPLOYEES! If this is the" +
@@ -57,6 +58,12 @@ public class ServerSDKConsistencyTest {
         privateEvaluatorField.setAccessible(true);
 
         Evaluator evaluator = (Evaluator) privateEvaluatorField.get(driver);
+
+        Map<String, String> variants = driver.getExperimentMetadata("test_exp_random_id");
+        for (String s : variants.keySet()) {
+            System.out.println(s + " " + variants.get(s));
+        }
+
         Gson gson = new Gson();
 
         for (APITestDataSet d: data) {
