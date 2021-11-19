@@ -28,6 +28,18 @@ internal class Evaluator {
         CountryLookup.initialize()
     }
 
+    fun getVariants(configName: String): Map<String, String> {
+        var variants : MutableMap<String, String> = HashMap()
+        if (!dynamicConfigs.containsKey(configName)) {
+            return variants
+        }
+        val config = dynamicConfigs[configName]
+        for (r : APIRule in config!!.rules) {
+            variants[r.groupName] = r.returnValue.toString()
+        }
+        return variants
+    }
+
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs) {
         for (config in downloadedConfig.featureGates) {
             featureGates[config.name] = config

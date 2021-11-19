@@ -54,6 +54,11 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
+    /**
+     * @deprecated - we make no promises of support for this API
+     */
+    abstract fun _getExperimentGroups(experimentName: String): Map<String, String>
+
     abstract fun shutdown()
 
     internal abstract suspend fun flush()
@@ -67,7 +72,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.8.0"
+private const val VERSION = "0.8.1"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -225,6 +230,13 @@ private class StatsigServerImpl(
         return statsigScope.future {
             return@future getExperiment(user, experimentName)
         }
+    }
+
+    /**
+     * @deprecated - we make no promises of support for this API
+     */
+    override fun _getExperimentGroups(experimentName: String): Map<String, String> {
+        return configEvaluator.getVariants(experimentName)
     }
 
     override fun shutdown() {

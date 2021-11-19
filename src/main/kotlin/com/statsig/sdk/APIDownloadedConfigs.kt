@@ -27,6 +27,7 @@ internal data class APIRule(
     @SerializedName("salt") val salt: String?,
     @SerializedName("conditions") val conditions: Array<APICondition>,
     @SerializedName("idType") val idType: String,
+    @SerializedName("groupName") val groupName: String,
 )
 
 internal data class APICondition(

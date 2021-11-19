@@ -95,6 +95,15 @@ class Statsig {
             return statsigServer.getExperimentAsync(user, experimentName)
         }
 
+        /**
+         * @deprecated - we make no promises of support for this API
+         */
+        @JvmStatic
+        fun _getExperimentGroups(experimentName: String): Map<String, String> {
+            enforceInitialized()
+            return statsigServer._getExperimentGroups(experimentName)
+        }
+
         @JvmStatic
         fun shutdown() {
             runBlocking { statsigServer.shutdown() }
