@@ -57,7 +57,7 @@ sealed class StatsigServer {
     /**
      * @deprecated - we make no promises of support for this API
      */
-    abstract fun _getExperimentGroups(experimentName: String): Map<String, String>
+    abstract fun _getExperimentGroups(experimentName: String): Map<String, Map<String, Any>>
 
     abstract fun shutdown()
 
@@ -72,7 +72,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.8.1"
+private const val VERSION = "0.8.2"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -235,7 +235,7 @@ private class StatsigServerImpl(
     /**
      * @deprecated - we make no promises of support for this API
      */
-    override fun _getExperimentGroups(experimentName: String): Map<String, String> {
+    override fun _getExperimentGroups(experimentName: String): Map<String, Map<String, Any>> {
         return configEvaluator.getVariants(experimentName)
     }
 
