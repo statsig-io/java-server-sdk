@@ -35,9 +35,7 @@ internal class Evaluator {
         }
         val config = dynamicConfigs[configName]
         for (r : APIRule in config!!.rules) {
-            if ("layerAssignment" != r.name) {
-                variants[r.groupName] = r.returnValue.toString()
-            }
+            variants[r.groupName] = r.returnValue.toString()
         }
         return variants
     }

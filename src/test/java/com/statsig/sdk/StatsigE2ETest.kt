@@ -130,7 +130,7 @@ class StatsigE2ETest {
         assert(config.getString("string", "") == "default")
         assert(config.getBoolean("boolean", true))
 
-        var metadata = driver.getExperimentMetadata("test_config")
+        var metadata = driver._getExperimentGroups("test_config")
         assert(metadata["statsig email"].equals("{number=7.0, string=statsig, boolean=false}"))
 
         driver.shutdown()

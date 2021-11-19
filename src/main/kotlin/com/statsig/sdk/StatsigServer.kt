@@ -54,7 +54,10 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
-    abstract fun getExperimentMetadata(experimentName: String): Map<String, String>
+    /**
+     * @deprecated - we make no promises of support for this API
+     */
+    abstract fun _getExperimentGroups(experimentName: String): Map<String, String>
 
     abstract fun shutdown()
 
@@ -229,7 +232,10 @@ private class StatsigServerImpl(
         }
     }
 
-    override fun getExperimentMetadata(experimentName: String): Map<String, String> {
+    /**
+     * @deprecated - we make no promises of support for this API
+     */
+    override fun _getExperimentGroups(experimentName: String): Map<String, String> {
         return configEvaluator.getVariants(experimentName)
     }
 

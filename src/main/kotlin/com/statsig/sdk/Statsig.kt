@@ -95,10 +95,13 @@ class Statsig {
             return statsigServer.getExperimentAsync(user, experimentName)
         }
 
+        /**
+         * @deprecated - we make no promises of support for this API
+         */
         @JvmStatic
-        fun getExperimentMetadata(experimentName: String): Map<String, String> {
+        fun _getExperimentGroups(experimentName: String): Map<String, String> {
             enforceInitialized()
-            return statsigServer.getExperimentMetadata(experimentName)
+            return statsigServer._getExperimentGroups(experimentName)
         }
 
         @JvmStatic
