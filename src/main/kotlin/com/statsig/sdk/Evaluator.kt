@@ -28,14 +28,22 @@ internal class Evaluator {
         CountryLookup.initialize()
     }
 
-    fun getVariants(configName: String): Map<String, String> {
-        var variants : MutableMap<String, String> = HashMap()
+    fun getVariants(configName: String): Map<String, Map<String, Any>> {
+        var variants : MutableMap<String, Map<String, Any>> = HashMap()
         if (!dynamicConfigs.containsKey(configName)) {
             return variants
         }
         val config = dynamicConfigs[configName]
+        var previousAllocation = 0.0
         for (r : APIRule in config!!.rules) {
-            variants[r.groupName] = r.returnValue.toString()
+            val value = r.returnValue.toString();
+            val cond = r.conditions[0]
+            var percent = 0.0;
+            if (cond.type.lowercase() == "user_bucket" && cond.targetValue is Number) {
+                percent = (cond.targetValue.toDouble() - previousAllocation) / 1000.0
+                previousAllocation = cond.targetValue.toDouble()
+            }
+            variants[r.groupName] = mapOf("value" to value, "percent" to percent)
         }
         return variants
     }

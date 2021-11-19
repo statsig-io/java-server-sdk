@@ -99,7 +99,7 @@ class Statsig {
          * @deprecated - we make no promises of support for this API
          */
         @JvmStatic
-        fun _getExperimentGroups(experimentName: String): Map<String, String> {
+        fun _getExperimentGroups(experimentName: String): Map<String, Map<String, Any>> {
             enforceInitialized()
             return statsigServer._getExperimentGroups(experimentName)
         }
