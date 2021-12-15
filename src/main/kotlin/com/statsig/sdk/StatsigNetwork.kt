@@ -9,9 +9,10 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.lang.Exception
 
-private const val POLLING_INTERVAL_MS: Long = 10000
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
+internal var CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000
+internal var ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
 
 internal class StatsigNetwork(
     private val sdkKey: String,
@@ -111,10 +112,47 @@ internal class StatsigNetwork(
         return null
     }
 
+    private suspend fun downloadIDList(listName: String, list: IDList) {
+        val bodyJson = gson.toJson(mapOf("listName" to listName, "statsigMetadata" to statsigMetadata, "sinceTime" to list.time))
+        val requestBody: RequestBody = bodyJson.toRequestBody(json)
+
+        val request: Request = Request.Builder()
+            .url(options.api + "/download_id_list")
+            .post(requestBody)
+            .build()
+        try {
+            httpClient.newCall(request).await().use { response ->
+                if (response.isSuccessful) {
+                    val response = gson.fromJson(response.body?.charStream(), IDListAPIResponse::class.java)
+                    if (response.time > list.time) {
+                        response.addIDs.forEach { id -> list.ids[id] = true }
+                        response.removeIDs.forEach { id -> list.ids.remove(id) }
+                        list.time = response.time
+                    }
+                }
+            }
+        } catch (e: Exception) {}
+    }
+
+    suspend fun downloadIDLists(evaluator: Evaluator) {
+        coroutineScope {
+            evaluator.idLists.forEach { entry ->
+                launch { downloadIDList(entry.key, entry.value) }
+            }
+        }
+    }
+
+    suspend fun syncIDLists(evaluator: Evaluator) {
+        while (true) {
+            delay(ID_LISTS_SYNC_INTERVAL_MS)
+            downloadIDLists(evaluator)
+        }
+    }
+
     fun pollForChanges(): Flow<APIDownloadedConfigs?> {
         return flow {
             while (true) {
-                delay(POLLING_INTERVAL_MS)
+                delay(CONFIG_SYNC_INTERVAL_MS)
                 val response = downloadConfigSpecs()
                 if (response != null) {
                     lastSyncTime = response.time

@@ -113,6 +113,9 @@ private class StatsigServerImpl(
             configEvaluator.setDownloadedConfigs(it)
         }
     }
+    private val idListPollingJob = statsigScope.launch(start = CoroutineStart.LAZY) {
+        network.syncIDLists(configEvaluator)
+    }
 
     override suspend fun initialize() {
         mutex.withLock { // Prevent multiple coroutines from calling this at once.
@@ -125,8 +128,10 @@ private class StatsigServerImpl(
             val downloadedConfigs = network.downloadConfigSpecs()
             if (downloadedConfigs != null) {
                 configEvaluator.setDownloadedConfigs(downloadedConfigs)
+                network.downloadIDLists(configEvaluator)
             }
             pollingJob.start()
+            idListPollingJob.start()
         }
     }
 

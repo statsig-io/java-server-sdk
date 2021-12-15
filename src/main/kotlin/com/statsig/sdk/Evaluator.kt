@@ -22,6 +22,7 @@ internal data class ConfigEvaluation(
 internal class Evaluator {
     private var featureGates: MutableMap<String, APIConfig> = HashMap()
     private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
+    internal var idLists: MutableMap<String, IDList> = HashMap()
     private var uaParser: Parser = Parser()
 
     init {
@@ -49,11 +50,32 @@ internal class Evaluator {
     }
 
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs) {
-        for (config in downloadedConfig.featureGates) {
-            featureGates[config.name] = config
+        if (!downloadedConfig.hasUpdates) {
+            return
+        }
+        var newGates: MutableMap<String, APIConfig> = HashMap()
+        var newConfigs: MutableMap<String, APIConfig> = HashMap()
+        for (gate in downloadedConfig.featureGates) {
+            newGates[gate.name] = gate
         }
         for (config in downloadedConfig.dynamicConfigs) {
-            dynamicConfigs[config.name] = config
+            newConfigs[config.name] = config
+        }
+        featureGates = newGates
+        dynamicConfigs = newConfigs
+
+        if (downloadedConfig.idLists == null) {
+            return
+        }
+        for (listName in idLists.keys) {
+            if (!downloadedConfig.idLists.containsKey(listName)) {
+                idLists.remove(listName)
+            }
+        }
+        for (listName in downloadedConfig.idLists.keys) {
+            if (!idLists.containsKey(listName)) {
+                idLists[listName] = IDList(ids = HashMap(), time = 0)
+            }
         }
     }
 
@@ -443,6 +465,17 @@ internal class Evaluator {
                             value,
                             condition.targetValue
                     )
+                }
+                "in_segment_list",
+                "not_in_segment_list" -> {
+                    val idList = idLists[condition.targetValue]
+                    val stringValue = getValueAsString(value)
+                    if (idList != null && stringValue != null) {
+                        val bytes = MessageDigest.getInstance("SHA-256").digest(stringValue.toByteArray())
+                        val base64 = Base64.getEncoder().encodeToString(bytes)
+                        return ConfigEvaluation(fetchFromServer = false, idList.ids.containsKey(base64.substring(0, 8)))
+                    }
+                    return ConfigEvaluation(fetchFromServer = false, false)
                 }
                 else -> {
                     return ConfigEvaluation(fetchFromServer = true)

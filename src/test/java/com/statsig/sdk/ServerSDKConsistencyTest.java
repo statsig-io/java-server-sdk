@@ -107,6 +107,6 @@ public class ServerSDKConsistencyTest {
 
     @Test
     public void testStaging() throws Exception {
-       testConsistency("https://latest.api.statsig.com/v1");
+      testConsistency("https://latest.api.statsig.com/v1");
     }
 }
