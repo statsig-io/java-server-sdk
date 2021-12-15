@@ -5,7 +5,8 @@ import com.google.gson.annotations.SerializedName
 internal data class APIDownloadedConfigs(
     @SerializedName("dynamic_configs") val dynamicConfigs: Array<APIConfig>,
     @SerializedName("feature_gates") val featureGates: Array<APIConfig>,
-    @SerializedName("time") val time: Long,
+    @SerializedName("id_lists") val idLists: Map<String, Boolean>?,
+    @SerializedName("time") val time: Long = 0,
     @SerializedName("has_updates") val hasUpdates: Boolean,
 )
 
@@ -53,4 +54,16 @@ internal data class APIDynamicConfig(
     @SerializedName("rule_id") val ruleID: String? = "",
     @SerializedName("secondary_exposures")
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+)
+
+internal data class IDListAPIResponse(
+    @SerializedName("list_name") val listName: String?,
+    @SerializedName("add_ids") val addIDs: Array<String>,
+    @SerializedName("remove_ids") val removeIDs: Array<String>,
+    @SerializedName("time") val time: Long,
+)
+
+internal data class IDList(
+    @SerializedName("ids") val ids: MutableMap<String, Boolean>,
+    @SerializedName("time") var time: Long,
 )
