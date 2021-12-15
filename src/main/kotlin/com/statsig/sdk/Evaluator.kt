@@ -53,12 +53,17 @@ internal class Evaluator {
         if (!downloadedConfig.hasUpdates) {
             return
         }
-        for (config in downloadedConfig.featureGates) {
-            featureGates[config.name] = config
+        var newGates: MutableMap<String, APIConfig> = HashMap()
+        var newConfigs: MutableMap<String, APIConfig> = HashMap()
+        for (gate in downloadedConfig.featureGates) {
+            newGates[gate.name] = gate
         }
         for (config in downloadedConfig.dynamicConfigs) {
-            dynamicConfigs[config.name] = config
+            newConfigs[config.name] = config
         }
+        featureGates = newGates
+        dynamicConfigs = newConfigs
+
         if (downloadedConfig.idLists == null) {
             return
         }
