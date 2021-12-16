@@ -56,9 +56,6 @@ public class ServerSDKConsistencyTest {
         Field privateEvaluatorField = StatsigServerImpl.class.getDeclaredField("configEvaluator");
         privateEvaluatorField.setAccessible(true);
 
-        Field privateConfigResultField = ConfigEvaluation.class.getDeclaredField("fetchFromServer");
-        privateConfigResultField.setAccessible(true);
-
         Evaluator evaluator = (Evaluator) privateEvaluatorField.get(driver);
         Gson gson = new Gson();
 
@@ -66,10 +63,6 @@ public class ServerSDKConsistencyTest {
             StatsigUser user = d.getUser();
             for (Map.Entry<String, APIFeatureGate> entry : d.getGates().entrySet()) {
                 ConfigEvaluation sdkResult = evaluator.checkGate(user, entry.getKey());
-                Boolean fetchFromServer = (boolean)privateConfigResultField.get(sdkResult);
-                if (fetchFromServer) {
-                    continue;
-                }
                 APIFeatureGate serverResult = entry.getValue();
                 assertEquals("Value mismatch for gate " + entry.getKey() + " for user" + user.toString(), serverResult.getValue(),
                         sdkResult.getBooleanValue());
