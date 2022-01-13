@@ -162,9 +162,7 @@ private class StatsigServerImpl(
         } else {
             logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID, result.secondaryExposures)
         }
-        return DynamicConfig(
-            Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID)
-        )
+        return DynamicConfig(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID, result.secondaryExposures)
     }
 
     override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
