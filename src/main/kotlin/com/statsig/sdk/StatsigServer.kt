@@ -72,7 +72,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.8.2"
+private const val VERSION = "0.9.0"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -162,9 +162,7 @@ private class StatsigServerImpl(
         } else {
             logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID, result.secondaryExposures)
         }
-        return DynamicConfig(
-            Config(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID)
-        )
+        return DynamicConfig(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID, result.secondaryExposures)
     }
 
     override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {

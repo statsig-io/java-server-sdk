@@ -1,27 +1,17 @@
 package com.statsig.sdk
 
-data class Config(
-    val name: String,
-    val value: Map<String, Any>,
-    val rule: String?,
-)
+import com.google.gson.Gson
 
 /**
  * A helper class for interfacing with Dynamic Configs defined in the Statsig console
  */
-class DynamicConfig(var config: Config? = null) {
-    private val name: String
-    private val value: Map<String, Any>
-    private val rule: String?
+class DynamicConfig(
+    val name: String,
+    val value: Map<String, Any>,
+    val ruleID: String? = null,
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()) {
 
-    init {
-        if (config == null) {
-            config = Config("", mapOf(), null)
-        }
-        name = config!!.name
-        value = config!!.value
-        rule = config!!.rule
-    }
+    init { }
 
     /**
      * Gets a value from the config, falling back to the provided default value
@@ -146,26 +136,21 @@ class DynamicConfig(var config: Config? = null) {
         return when (this.value[key]) {
             null -> null
             is Map<*, *> -> DynamicConfig(
-                Config(
                     key,
                     this.value[key] as Map<String, Any>,
-                    this.rule
-                )
+                    this.ruleID
             )
             else -> null
         }
     }
 
-    /**
-     * Returns a Map representing the JSON object backing this config
-     * @param key the index within the DynamicConfig to fetch a value from
-     * @return the value at the given key as a DynamicConfig, or null
-     */
-    fun getValue(): Map<String, Any> {
-        return value
-    }
-
-    fun getRuleID(): String? {
-        return rule
+    fun getExposureMetadata(): String {
+        return Gson().toJson(
+            mapOf(
+                "config" to this.name,
+                "ruleID" to this.ruleID,
+                "secondaryExposures" to this.secondaryExposures
+            )
+        )
     }
 }
