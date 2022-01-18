@@ -4,7 +4,7 @@ import org.gradle.language.jvm.tasks.ProcessResources
 plugins {
     kotlin("jvm") version "1.5.0"
     idea
-    `maven-publish`
+    maven
 }
 
 group = "com.statsig"
