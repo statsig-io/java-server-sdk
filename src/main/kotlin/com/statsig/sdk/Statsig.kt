@@ -42,9 +42,9 @@ class Statsig {
             return statsigServer.getExperiment(user, experimentName)
         }
 
-        suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String): DynamicConfig {
+        suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String, disableExposure: Boolean = false): DynamicConfig {
             enforceInitialized()
-            return statsigServer.getExperimentInLayerForUser(user, layerName)
+            return statsigServer.getExperimentInLayerForUser(user, layerName, disableExposure)
         }
 
         suspend fun shutdownSuspend() {
@@ -101,9 +101,9 @@ class Statsig {
         }
 
         @JvmStatic
-        fun getExperimentInLayerForUserAsync(user: StatsigUser, layerName: String): CompletableFuture<DynamicConfig> {
+        fun getExperimentInLayerForUserAsync(user: StatsigUser, layerName: String, disableExposure: Boolean): CompletableFuture<DynamicConfig> {
             enforceInitialized()
-            return statsigServer.getExperimentInLayerForUserAsync(user, layerName)
+            return statsigServer.getExperimentInLayerForUserAsync(user, layerName, disableExposure)
         }
 
         /**
