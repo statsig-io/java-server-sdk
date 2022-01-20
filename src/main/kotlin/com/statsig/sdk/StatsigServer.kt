@@ -23,6 +23,9 @@ sealed class StatsigServer {
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
+    abstract suspend fun getExperimentInLayer(user: StatsigUser, layerName: String): DynamicConfig
+
+    @JvmSynthetic
     abstract suspend fun shutdownSuspend()
 
     fun logEvent(user: StatsigUser?, eventName: String) {
@@ -54,6 +57,8 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
+    abstract fun getExperimentInLayerAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
+
     /**
      * @deprecated - we make no promises of support for this API
      */
@@ -72,7 +77,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.9.0"
+private const val VERSION = "0.10.0"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -170,6 +175,28 @@ private class StatsigServerImpl(
         return getConfig(user, experimentName)
     }
 
+    override suspend fun getExperimentInLayer(user: StatsigUser, layerName: String): DynamicConfig {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+        val experiments = configEvaluator.layers[layerName] ?: return DynamicConfig("", hashMapOf(), "")
+        for (expName in experiments) {
+            if (configEvaluator.isUserAllocatedToExperiment(user, expName)) {
+                var result: ConfigEvaluation = configEvaluator.getConfig(normalizedUser, expName)
+                if (result.fetchFromServer) {
+                    result = network.getConfig(normalizedUser, expName)
+                }
+                return DynamicConfig(
+                    expName,
+                    result.jsonValue as Map<String, Any>,
+                    result.ruleID,
+                    result.secondaryExposures
+                )
+            }
+        }
+        // User is not allocated to any experiment at this point
+        return DynamicConfig("", mapOf())
+    }
+
     override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
         enforceActive()
         statsigScope.launch {
@@ -232,6 +259,12 @@ private class StatsigServerImpl(
     override fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperiment(user, experimentName)
+        }
+    }
+
+    override fun getExperimentInLayerAsync(user: StatsigUser, layerName: String): CompletableFuture<DynamicConfig> {
+        return statsigScope.future {
+            return@future getExperimentInLayer(user, layerName)
         }
     }
 
