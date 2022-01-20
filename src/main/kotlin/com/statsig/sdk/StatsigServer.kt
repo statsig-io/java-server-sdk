@@ -23,7 +23,7 @@ sealed class StatsigServer {
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
-    abstract suspend fun getExperimentInLayer(user: StatsigUser, layerName: String): DynamicConfig
+    abstract suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String): DynamicConfig
 
     @JvmSynthetic
     abstract suspend fun shutdownSuspend()
@@ -57,7 +57,7 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
-    abstract fun getExperimentInLayerAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
+    abstract fun getExperimentInLayerForUserAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
     /**
      * @deprecated - we make no promises of support for this API
@@ -175,7 +175,7 @@ private class StatsigServerImpl(
         return getConfig(user, experimentName)
     }
 
-    override suspend fun getExperimentInLayer(user: StatsigUser, layerName: String): DynamicConfig {
+    override suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String): DynamicConfig {
         enforceActive()
         val normalizedUser = normalizeUser(user)
         val experiments = configEvaluator.layers[layerName] ?: return DynamicConfig("", hashMapOf(), "")
@@ -262,9 +262,9 @@ private class StatsigServerImpl(
         }
     }
 
-    override fun getExperimentInLayerAsync(user: StatsigUser, layerName: String): CompletableFuture<DynamicConfig> {
+    override fun getExperimentInLayerForUserAsync(user: StatsigUser, layerName: String): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
-            return@future getExperimentInLayer(user, layerName)
+            return@future getExperimentInLayerForUser(user, layerName)
         }
     }
 
