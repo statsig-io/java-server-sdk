@@ -6,6 +6,7 @@ internal data class APIDownloadedConfigs(
     @SerializedName("dynamic_configs") val dynamicConfigs: Array<APIConfig>,
     @SerializedName("feature_gates") val featureGates: Array<APIConfig>,
     @SerializedName("id_lists") val idLists: Map<String, Boolean>?,
+    @SerializedName("layers") val layers: Map<String, Array<String>>?,
     @SerializedName("time") val time: Long = 0,
     @SerializedName("has_updates") val hasUpdates: Boolean,
 )

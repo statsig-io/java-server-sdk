@@ -23,6 +23,9 @@ sealed class StatsigServer {
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
+    abstract suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String, disableExposure: Boolean = false): DynamicConfig
+
+    @JvmSynthetic
     abstract suspend fun shutdownSuspend()
 
     fun logEvent(user: StatsigUser?, eventName: String) {
@@ -54,6 +57,8 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
+    abstract fun getExperimentInLayerForUserAsync(user: StatsigUser, experimentName: String, disableExposure: Boolean = false): CompletableFuture<DynamicConfig>
+
     /**
      * @deprecated - we make no promises of support for this API
      */
@@ -72,7 +77,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.9.0"
+private const val VERSION = "0.10.0"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -156,18 +161,25 @@ private class StatsigServerImpl(
     override suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
         enforceActive()
         val normalizedUser = normalizeUser(user)
-        var result: ConfigEvaluation = configEvaluator.getConfig(normalizedUser, dynamicConfigName)
-        if (result.fetchFromServer) {
-            result = network.getConfig(normalizedUser, dynamicConfigName)
-        } else {
-            logger.logConfigExposure(normalizedUser, dynamicConfigName, result.ruleID, result.secondaryExposures)
-        }
-        return DynamicConfig(dynamicConfigName, result.jsonValue as Map<String, Any>, result.ruleID, result.secondaryExposures)
+        return getConfigHelper(normalizedUser, dynamicConfigName, false)
     }
 
     override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
         enforceActive()
         return getConfig(user, experimentName)
+    }
+
+    override suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String, disableExposure: Boolean): DynamicConfig {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+        val experiments = configEvaluator.layers[layerName] ?: return DynamicConfig("", hashMapOf(), "")
+        for (expName in experiments) {
+            if (configEvaluator.isUserAllocatedToExperiment(user, expName)) {
+                return getConfigHelper(normalizedUser, expName, disableExposure)
+            }
+        }
+        // User is not allocated to any experiment at this point
+        return DynamicConfig("", mapOf())
     }
 
     override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
@@ -235,6 +247,12 @@ private class StatsigServerImpl(
         }
     }
 
+    override fun getExperimentInLayerForUserAsync(user: StatsigUser, layerName: String, disableExposure: Boolean): CompletableFuture<DynamicConfig> {
+        return statsigScope.future {
+            return@future getExperimentInLayerForUser(user, layerName, disableExposure)
+        }
+    }
+
     /**
      * @deprecated - we make no promises of support for this API
      */
@@ -267,5 +285,15 @@ private class StatsigServerImpl(
         if (!pollingJob.isActive) { // If the server was never initialized
             throw IllegalStateException("Must initialize a server before calling other APIs")
         }
+    }
+
+    private suspend fun getConfigHelper(user: StatsigUser, configName: String, disableExposure: Boolean = false): DynamicConfig {
+        var result: ConfigEvaluation = configEvaluator.getConfig(user, configName)
+        if (result.fetchFromServer) {
+            result = network.getConfig(user, configName)
+        } else if (!disableExposure) {
+            logger.logConfigExposure(user, configName, result.ruleID, result.secondaryExposures)
+        }
+        return DynamicConfig(configName, result.jsonValue as Map<String, Any>, result.ruleID, result.secondaryExposures)
     }
 }

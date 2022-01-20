@@ -23,6 +23,7 @@ internal class Evaluator {
     private var featureGates: MutableMap<String, APIConfig> = HashMap()
     private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
     internal var idLists: MutableMap<String, IDList> = HashMap()
+    internal var layers: Map<String, Array<String>> = HashMap()
     private var uaParser: Parser = Parser()
 
     init {
@@ -77,6 +78,20 @@ internal class Evaluator {
                 idLists[listName] = IDList(ids = HashMap(), time = 0)
             }
         }
+        layers = downloadedConfig.layers ?: HashMap()
+    }
+
+    // check if a user is allocated to a specific experiment due to layer assignment
+    fun isUserAllocatedToExperiment(user: StatsigUser, expName: String): Boolean {
+        val config = dynamicConfigs[expName] ?: return false
+        for (rule in config.rules) {
+            if (rule.id.equals("layerAssignment", ignoreCase = true)) {
+                val result = evaluateRule(user, rule)
+                // user is in an experiment when they FAIL the layerAssignment rule
+                return !result.booleanValue
+            }
+        }
+        return false
     }
 
     fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
