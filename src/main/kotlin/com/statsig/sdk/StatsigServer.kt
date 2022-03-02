@@ -23,6 +23,9 @@ sealed class StatsigServer {
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
+    abstract suspend fun getExperimentWithExposureLoggingDisabled(user: StatsigUser, experimentName: String): DynamicConfig
+
+    @JvmSynthetic
     abstract suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String, disableExposure: Boolean = false): DynamicConfig
 
     @JvmSynthetic
@@ -57,6 +60,8 @@ sealed class StatsigServer {
 
     abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
 
+    abstract fun getExperimentWithExposureLoggingDisabledAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
+
     abstract fun getExperimentInLayerForUserAsync(user: StatsigUser, experimentName: String, disableExposure: Boolean = false): CompletableFuture<DynamicConfig>
 
     /**
@@ -77,7 +82,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.10.0"
+private const val VERSION = "0.11.0"
 
 private class StatsigServerImpl(
     serverSecret: String,
@@ -169,10 +174,21 @@ private class StatsigServerImpl(
         return getConfig(user, experimentName)
     }
 
+    override suspend fun getExperimentWithExposureLoggingDisabled(user: StatsigUser, experimentName: String): DynamicConfig {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+        return getConfigHelper(normalizedUser, experimentName, true)
+    }
+
     override suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String, disableExposure: Boolean): DynamicConfig {
         enforceActive()
         val normalizedUser = normalizeUser(user)
         val experiments = configEvaluator.layers[layerName] ?: return DynamicConfig("", hashMapOf(), "")
+        for (expName in experiments) {
+            if (configEvaluator.isUserOverriddenToExperiment(user, expName)) {
+                return getConfigHelper(normalizedUser, expName, disableExposure)
+            }
+        }
         for (expName in experiments) {
             if (configEvaluator.isUserAllocatedToExperiment(user, expName)) {
                 return getConfigHelper(normalizedUser, expName, disableExposure)
@@ -244,6 +260,12 @@ private class StatsigServerImpl(
     override fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperiment(user, experimentName)
+        }
+    }
+
+    override fun getExperimentWithExposureLoggingDisabledAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
+        return statsigScope.future {
+            return@future getExperimentWithExposureLoggingDisabled(user, experimentName)
         }
     }
 

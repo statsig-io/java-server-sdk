@@ -176,6 +176,8 @@ class StatsigE2ETest {
         assert(config.getString("experiment_param", "") == "test")
         config = driver.getExperiment(randomUser, "sample_experiment")
         assert(config.getString("experiment_param", "") == "control")
+        // check below should not result in an exposure log
+        driver.getExperimentWithExposureLoggingDisabled(randomUser, "sample_experiment_2")
         driver.shutdown()
 
         val eventLogInput = withTimeout(TEST_TIMEOUT) {
