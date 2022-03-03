@@ -81,6 +81,21 @@ internal class Evaluator {
         layers = downloadedConfig.layers ?: HashMap()
     }
 
+    // check if a user is overridden to any group for the experiment
+    fun isUserOverriddenToExperiment(user: StatsigUser, expName: String): Boolean {
+        val config = dynamicConfigs[expName] ?: return false
+        for (rule in config.rules) {
+            if (rule.id.contains("override", ignoreCase = true)) {
+                val result = evaluateRule(user, rule)
+                if (result.booleanValue) {
+                    // user is overridden into the experiment
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     // check if a user is allocated to a specific experiment due to layer assignment
     fun isUserAllocatedToExperiment(user: StatsigUser, expName: String): Boolean {
         val config = dynamicConfigs[expName] ?: return false
