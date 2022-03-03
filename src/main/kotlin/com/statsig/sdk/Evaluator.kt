@@ -87,9 +87,9 @@ internal class Evaluator {
         for (rule in config.rules) {
             if (rule.id.contains("override", ignoreCase = true)) {
                 val result = evaluateRule(user, rule)
-                // user is in an experiment when they FAIL the layerAssignment rule
                 if (result.booleanValue) {
-                    return true;
+                    // user is overridden into the experiment
+                    return true
                 }
             }
         }
