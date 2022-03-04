@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat.*
 
 plugins {
     kotlin("jvm") version "1.5.0"
@@ -32,6 +33,10 @@ tasks.test {
 
     testLogging {
         events("passed", "skipped", "failed")
+        exceptionFormat = FULL
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
     }
 }
 
