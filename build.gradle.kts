@@ -29,6 +29,10 @@ dependencies {
 
 tasks.test {
     useJUnit()
+
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
 }
 
 configure<ProcessResources>("processResources") {
