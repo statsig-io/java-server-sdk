@@ -17,11 +17,13 @@ internal data class ConfigEvaluation(
         val jsonValue: Any? = null,
         val ruleID: String = "",
         val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+        val configDelegate: String? = null
 )
 
 internal class Evaluator {
     private var featureGates: MutableMap<String, APIConfig> = HashMap()
     private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
+    private var layerConfigs: Map<String, APILayerConfig> = HashMap()
     internal var idLists: MutableMap<String, IDList> = HashMap()
     internal var layers: Map<String, Array<String>> = HashMap()
     private var uaParser: Parser = Parser()
@@ -31,16 +33,16 @@ internal class Evaluator {
     }
 
     fun getVariants(configName: String): Map<String, Map<String, Any>> {
-        var variants : MutableMap<String, Map<String, Any>> = HashMap()
+        var variants: MutableMap<String, Map<String, Any>> = HashMap()
         if (!dynamicConfigs.containsKey(configName)) {
             return variants
         }
         val config = dynamicConfigs[configName]
         var previousAllocation = 0.0
-        for (r : APIRule in config!!.rules) {
-            val value = r.returnValue.toString();
+        for (r: APIRule in config!!.rules) {
+            val value = r.returnValue.toString()
             val cond = r.conditions[0]
-            var percent = 0.0;
+            var percent = 0.0
             if (cond.type.lowercase() == "user_bucket" && cond.targetValue is Number) {
                 percent = (cond.targetValue.toDouble() - previousAllocation) / 1000.0
                 previousAllocation = cond.targetValue.toDouble()
@@ -64,6 +66,7 @@ internal class Evaluator {
         }
         featureGates = newGates
         dynamicConfigs = newConfigs
+        layerConfigs = downloadedConfig.layerConfigs
         layers = downloadedConfig.layers ?: HashMap()
     }
 
@@ -113,6 +116,30 @@ internal class Evaluator {
         return this.evaluate(user, config)
     }
 
+    fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
+        val config =
+                layerConfigs[layerName]
+                        ?: return ConfigEvaluation(
+                                fetchFromServer = false,
+                                booleanValue = false,
+                                mapOf<String, Any>()
+                        )
+
+        for (rule in config.allocationRules) {
+            val result = this.evaluateRule(user, rule)
+            if (result.fetchFromServer || result.booleanValue) {
+                return result
+            }
+        }
+
+        return ConfigEvaluation(
+                fetchFromServer = false,
+                booleanValue = false,
+                config.defaultValues,
+                "layer_defaults"
+        )
+    }
+
     fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
         if (!featureGates.containsKey(gateName)) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
@@ -149,6 +176,7 @@ internal class Evaluator {
                                                 (getUnitID(user, rule.idType) ?: "")
                                 )
                                 .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
+
                 return ConfigEvaluation(
                         false,
                         pass,
@@ -180,6 +208,23 @@ internal class Evaluator {
             }
             secondaryExposures.addAll(result.secondaryExposures)
         }
+
+        if (pass) {
+            dynamicConfigs[rule.configDelegate]?.let {
+                val delegatedResult = this.evaluate(user, it)
+                secondaryExposures.addAll(delegatedResult.secondaryExposures)
+
+                return ConfigEvaluation(
+                    fetchFromServer = delegatedResult.fetchFromServer,
+                    booleanValue = delegatedResult.booleanValue,
+                    jsonValue = delegatedResult.jsonValue,
+                    ruleID = delegatedResult.ruleID,
+                    secondaryExposures = secondaryExposures,
+                    configDelegate = rule.configDelegate
+                )
+            }
+        }
+
         return ConfigEvaluation(
                 fetchFromServer = false,
                 booleanValue = pass,
@@ -203,23 +248,24 @@ internal class Evaluator {
             when (conditionEnum) {
                 ConfigCondition.PUBLIC ->
                         return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
-                ConfigCondition.FAIL_GATE,
-                ConfigCondition.PASS_GATE -> {
+                ConfigCondition.FAIL_GATE, ConfigCondition.PASS_GATE -> {
                     val result = this.checkGate(user, condition.targetValue as String)
-                    val newExposure = mapOf(
-                        "gate" to condition.targetValue as String,
-                        "gateValue" to result.booleanValue.toString(),
-                        "ruleID" to result.ruleID,
-                    )
+                    val newExposure =
+                            mapOf(
+                                    "gate" to condition.targetValue as String,
+                                    "gateValue" to result.booleanValue.toString(),
+                                    "ruleID" to result.ruleID,
+                            )
                     val secondaryExposures = arrayListOf<Map<String, String>>()
                     secondaryExposures.addAll(result.secondaryExposures)
-                    secondaryExposures.add(newExposure);
+                    secondaryExposures.add(newExposure)
                     return ConfigEvaluation(
-                        result.fetchFromServer,
-                        if (conditionEnum == ConfigCondition.PASS_GATE) result.booleanValue else !result.booleanValue,
-                        result.jsonValue,
-                        "",
-                        secondaryExposures
+                            result.fetchFromServer,
+                            if (conditionEnum == ConfigCondition.PASS_GATE) result.booleanValue
+                            else !result.booleanValue,
+                            result.jsonValue,
+                            "",
+                            secondaryExposures
                     )
                 }
                 ConfigCondition.IP_BASED -> {
@@ -482,12 +528,13 @@ internal class Evaluator {
                             condition.targetValue
                     )
                 }
-                "in_segment_list",
-                "not_in_segment_list" -> {
+                "in_segment_list", "not_in_segment_list" -> {
                     val idList = idLists[condition.targetValue]
                     val stringValue = getValueAsString(value)
                     if (idList != null && stringValue != null) {
-                        val bytes = MessageDigest.getInstance("SHA-256").digest(stringValue.toByteArray())
+                        val bytes =
+                                MessageDigest.getInstance("SHA-256")
+                                        .digest(stringValue.toByteArray())
                         val base64 = Base64.getEncoder().encodeToString(bytes)
                         return ConfigEvaluation(fetchFromServer = false, idList.contains(base64.substring(0, 8)))
                     }

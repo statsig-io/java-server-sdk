@@ -7,6 +7,7 @@ const val MAX_EVENTS: Int = 500
 const val FLUSH_TIMER_MS: Long = 60000
 
 const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
+const val LAYER_EXPOSURE_EVENT = "statsig::layer_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
 
 internal class StatsigLogger(
@@ -51,10 +52,29 @@ internal class StatsigLogger(
 
     suspend fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String,
                                   secondaryExposures: ArrayList<Map<String, String>>) {
+        val metadata = mutableMapOf("config" to configName, "ruleID" to ruleID)
+
         val event = StatsigEvent(
             CONFIG_EXPOSURE_EVENT,
             eventValue = null,
-            mapOf("config" to configName, "ruleID" to ruleID),
+            metadata,
+            user,
+            statsigMetadata,
+            secondaryExposures
+        )
+        log(event)
+    }
+
+    suspend fun logLayerExposure(user: StatsigUser?, configName: String, ruleID: String,
+                                  secondaryExposures: ArrayList<Map<String, String>>, allocatedExperiment: String) {
+        val event = StatsigEvent(
+            LAYER_EXPOSURE_EVENT,
+            eventValue = null,
+            mapOf(
+                "config" to configName,
+                "ruleID" to ruleID,
+                "allocatedExperiment" to allocatedExperiment
+            ),
             user,
             statsigMetadata,
             secondaryExposures
