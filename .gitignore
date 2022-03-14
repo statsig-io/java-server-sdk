@@ -30,3 +30,4 @@ outTmp/
 /test.output
 /kotlin-native/dist~
 *.log
+bin

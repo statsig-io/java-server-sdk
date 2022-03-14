@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class ServerSDKConsistencyTest {
     String secret;
@@ -89,6 +88,14 @@ public class ServerSDKConsistencyTest {
                 assertEquals("Server driver value mismatch for config " + entry.getKey(),
                         gson.toJson(serverResult.getValue()), gson.toJson(sdkValue.get().getValue()));
             }
+
+            for (Map.Entry<String, Map<String, Object>> entry : d.getLayers().entrySet()) {
+                ConfigEvaluation sdkResult = evaluator.getLayer(user, entry.getKey());
+                Map<String, Object> serverResult = entry.getValue();
+
+                assertEquals("Value mismatch for layer " + entry.getKey() + " for user " + user.toString(),
+                        sdkResult.getJsonValue(), serverResult);
+            }
         }
         driver.shutdown();
     }
@@ -100,6 +107,6 @@ public class ServerSDKConsistencyTest {
 
     @Test
     public void testStaging() throws Exception {
-      testConsistency("https://latest.api.statsig.com/v1");
+        testConsistency("https://latest.api.statsig.com/v1");
     }
 }

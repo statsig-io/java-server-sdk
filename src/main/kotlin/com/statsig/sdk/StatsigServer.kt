@@ -1,20 +1,18 @@
 package com.statsig.sdk
 
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.Properties
-import java.util.concurrent.CompletableFuture
 
 sealed class StatsigServer {
 
-    @JvmSynthetic
-    abstract suspend fun initialize()
+    @JvmSynthetic abstract suspend fun initialize()
 
-    @JvmSynthetic
-    abstract suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
+    @JvmSynthetic abstract suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
 
     @JvmSynthetic
     abstract suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig
@@ -23,13 +21,21 @@ sealed class StatsigServer {
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
     @JvmSynthetic
-    abstract suspend fun getExperimentWithExposureLoggingDisabled(user: StatsigUser, experimentName: String): DynamicConfig
+    abstract suspend fun getExperimentWithExposureLoggingDisabled(
+            user: StatsigUser,
+            experimentName: String
+    ): DynamicConfig
 
     @JvmSynthetic
-    abstract suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String, disableExposure: Boolean = false): DynamicConfig
+    abstract suspend fun getExperimentInLayerForUser(
+            user: StatsigUser,
+            layerName: String,
+            disableExposure: Boolean = false
+    ): DynamicConfig
 
-    @JvmSynthetic
-    abstract suspend fun shutdownSuspend()
+    @JvmSynthetic abstract suspend fun getLayer(user: StatsigUser, layerName: String): Layer
+
+    @JvmSynthetic abstract suspend fun shutdownSuspend()
 
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
@@ -40,32 +46,56 @@ sealed class StatsigServer {
     }
 
     abstract fun logEvent(
-        user: StatsigUser?,
-        eventName: String,
-        value: String? = null,
-        metadata: Map<String, String>? = null
+            user: StatsigUser?,
+            eventName: String,
+            value: String? = null,
+            metadata: Map<String, String>? = null
     )
 
     fun logEvent(user: StatsigUser?, eventName: String, value: Double) {
         logEvent(user, eventName, value, null)
     }
 
-    abstract fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>? = null)
+    abstract fun logEvent(
+            user: StatsigUser?,
+            eventName: String,
+            value: Double,
+            metadata: Map<String, String>? = null
+    )
 
     abstract fun initializeAsync(): CompletableFuture<Unit>
 
     abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
 
-    abstract fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig>
+    abstract fun getConfigAsync(
+            user: StatsigUser,
+            dynamicConfigName: String
+    ): CompletableFuture<DynamicConfig>
 
-    abstract fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
+    abstract fun getExperimentAsync(
+            user: StatsigUser,
+            experimentName: String
+    ): CompletableFuture<DynamicConfig>
 
-    abstract fun getExperimentWithExposureLoggingDisabledAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig>
+    abstract fun getExperimentWithExposureLoggingDisabledAsync(
+            user: StatsigUser,
+            experimentName: String
+    ): CompletableFuture<DynamicConfig>
 
-    abstract fun getExperimentInLayerForUserAsync(user: StatsigUser, experimentName: String, disableExposure: Boolean = false): CompletableFuture<DynamicConfig>
+    abstract fun getExperimentInLayerForUserAsync(
+            user: StatsigUser,
+            experimentName: String,
+            disableExposure: Boolean = false
+    ): CompletableFuture<DynamicConfig>
+
+    abstract fun getLayerAsync(
+            user: StatsigUser,
+            layerName: String
+    ): CompletableFuture<Layer>
 
     /**
-     * @deprecated - we make no promises of support for this API
+     * @deprecated
+     * - we make no promises of support for this API
      */
     abstract fun _getExperimentGroups(experimentName: String): Map<String, Map<String, Any>>
 
@@ -77,35 +107,39 @@ sealed class StatsigServer {
 
         @JvmStatic
         @JvmOverloads
-        fun create(serverSecret: String, options: StatsigOptions = StatsigOptions()): StatsigServer =
-            StatsigServerImpl(serverSecret, options)
+        fun create(
+                serverSecret: String,
+                options: StatsigOptions = StatsigOptions()
+        ): StatsigServer = StatsigServerImpl(serverSecret, options)
     }
 }
 
 private const val VERSION = "0.11.0"
 
-private class StatsigServerImpl(
-    serverSecret: String,
-    private val options: StatsigOptions
-) : StatsigServer() {
+private class StatsigServerImpl(serverSecret: String, private val options: StatsigOptions) :
+        StatsigServer() {
 
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
             throw IllegalArgumentException(
-                "Statsig Server SDKs must be initialized with a secret key"
+                    "Statsig Server SDKs must be initialized with a secret key"
             )
         }
     }
 
-    private val version = try {
-        val properties = Properties()
-        properties.load(StatsigServerImpl::class.java.getResourceAsStream("/statsigsdk.properties"))
-        properties.getProperty("version")
-    } catch (e: Exception) {
-        VERSION
-    }
+    private val version =
+            try {
+                val properties = Properties()
+                properties.load(
+                        StatsigServerImpl::class.java.getResourceAsStream("/statsigsdk.properties")
+                )
+                properties.getProperty("version")
+            } catch (e: Exception) {
+                VERSION
+            }
 
-    private val coroutineExceptionHandler = CoroutineExceptionHandler { coroutineContext, throwable ->
+    private val coroutineExceptionHandler =
+                    CoroutineExceptionHandler { coroutineContext, throwable ->
         // no-op - supervisor job should not throw when a child fails
     }
     private val statsigJob = SupervisorJob()
@@ -115,17 +149,19 @@ private class StatsigServerImpl(
     private val network = StatsigNetwork(serverSecret, options, statsigMetadata)
     private var configEvaluator = Evaluator()
     private var logger: StatsigLogger = StatsigLogger(statsigScope, network, statsigMetadata)
-    private val pollingJob = statsigScope.launch(start = CoroutineStart.LAZY) {
-        network.pollForChanges().collect {
-            if (it == null || !it.hasUpdates) {
-                return@collect
+    private val pollingJob =
+            statsigScope.launch(start = CoroutineStart.LAZY) {
+                network.pollForChanges().collect {
+                    if (it == null || !it.hasUpdates) {
+                        return@collect
+                    }
+                    configEvaluator.setDownloadedConfigs(it)
+                }
             }
-            configEvaluator.setDownloadedConfigs(it)
-        }
-    }
-    private val idListPollingJob = statsigScope.launch(start = CoroutineStart.LAZY) {
-        network.syncIDLists(configEvaluator)
-    }
+    private val idListPollingJob =
+            statsigScope.launch(start = CoroutineStart.LAZY) {
+                network.syncIDLists(configEvaluator)
+            }
 
     override suspend fun initialize() {
         mutex.withLock { // Prevent multiple coroutines from calling this at once.
@@ -133,7 +169,9 @@ private class StatsigServerImpl(
                 return // Just return. Initialize was already called.
             }
             if (pollingJob.isCancelled || pollingJob.isCompleted) {
-                throw IllegalStateException("Cannot re-initialize server that has shutdown. Please recreate the server connection.")
+                throw IllegalStateException(
+                        "Cannot re-initialize server that has shutdown. Please recreate the server connection."
+                )
             }
             val downloadedConfigs = network.downloadConfigSpecs()
             if (downloadedConfigs != null) {
@@ -153,11 +191,11 @@ private class StatsigServerImpl(
             result = network.checkGate(normalizedUser, gateName)
         } else {
             logger.logGateExposure(
-                normalizedUser,
-                gateName,
-                result.booleanValue,
-                result.ruleID,
-                result.secondaryExposures,
+                    normalizedUser,
+                    gateName,
+                    result.booleanValue,
+                    result.ruleID,
+                    result.secondaryExposures,
             )
         }
         return result.booleanValue
@@ -174,16 +212,24 @@ private class StatsigServerImpl(
         return getConfig(user, experimentName)
     }
 
-    override suspend fun getExperimentWithExposureLoggingDisabled(user: StatsigUser, experimentName: String): DynamicConfig {
+    override suspend fun getExperimentWithExposureLoggingDisabled(
+            user: StatsigUser,
+            experimentName: String
+    ): DynamicConfig {
         enforceActive()
         val normalizedUser = normalizeUser(user)
         return getConfigHelper(normalizedUser, experimentName, true)
     }
 
-    override suspend fun getExperimentInLayerForUser(user: StatsigUser, layerName: String, disableExposure: Boolean): DynamicConfig {
+    override suspend fun getExperimentInLayerForUser(
+            user: StatsigUser,
+            layerName: String,
+            disableExposure: Boolean
+    ): DynamicConfig {
         enforceActive()
         val normalizedUser = normalizeUser(user)
-        val experiments = configEvaluator.layers[layerName] ?: return DynamicConfig("", hashMapOf(), "")
+        val experiments =
+                configEvaluator.layers[layerName] ?: return DynamicConfig("", hashMapOf(), "")
         for (expName in experiments) {
             if (configEvaluator.isUserOverriddenToExperiment(user, expName)) {
                 return getConfigHelper(normalizedUser, expName, disableExposure)
@@ -198,32 +244,61 @@ private class StatsigServerImpl(
         return DynamicConfig("", mapOf())
     }
 
-    override fun logEvent(user: StatsigUser?, eventName: String, value: String?, metadata: Map<String, String>?) {
+    override suspend fun getLayer(user: StatsigUser, layerName: String): Layer {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+
+        var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
+        if (result.fetchFromServer) {
+            result = network.getConfig(user, layerName)
+        } else {
+            logger.logLayerExposure(user, layerName, result.ruleID, result.secondaryExposures, result.configDelegate ?: "")
+        }
+
+        return Layer(
+            layerName,
+            result.ruleID,
+            result.secondaryExposures,
+            result.jsonValue as Map<String, Any>
+        )
+    }
+
+    override fun logEvent(
+            user: StatsigUser?,
+            eventName: String,
+            value: String?,
+            metadata: Map<String, String>?
+    ) {
         enforceActive()
         statsigScope.launch {
             val normalizedUser = normalizeUser(user)
             val event =
-                StatsigEvent(
-                    eventName = eventName,
-                    eventValue = value,
-                    eventMetadata = metadata,
-                    user = normalizedUser,
-                )
+                    StatsigEvent(
+                            eventName = eventName,
+                            eventValue = value,
+                            eventMetadata = metadata,
+                            user = normalizedUser,
+                    )
             logger.log(event)
         }
     }
 
-    override fun logEvent(user: StatsigUser?, eventName: String, value: Double, metadata: Map<String, String>?) {
+    override fun logEvent(
+            user: StatsigUser?,
+            eventName: String,
+            value: Double,
+            metadata: Map<String, String>?
+    ) {
         enforceActive()
         statsigScope.launch {
             val normalizedUser = normalizeUser(user)
             val event =
-                StatsigEvent(
-                    eventName = eventName,
-                    eventValue = value,
-                    eventMetadata = metadata,
-                    user = normalizedUser,
-                )
+                    StatsigEvent(
+                            eventName = eventName,
+                            eventValue = value,
+                            eventMetadata = metadata,
+                            user = normalizedUser,
+                    )
             logger.log(event)
         }
     }
@@ -240,9 +315,7 @@ private class StatsigServerImpl(
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {
-        return statsigScope.future {
-            initialize()
-        }
+        return statsigScope.future { initialize() }
     }
 
     override fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
@@ -251,41 +324,62 @@ private class StatsigServerImpl(
         }
     }
 
-    override fun getConfigAsync(user: StatsigUser, dynamicConfigName: String): CompletableFuture<DynamicConfig> {
+    override fun getConfigAsync(
+            user: StatsigUser,
+            dynamicConfigName: String
+    ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getConfig(user, dynamicConfigName)
         }
     }
 
-    override fun getExperimentAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
+    override fun getExperimentAsync(
+            user: StatsigUser,
+            experimentName: String
+    ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperiment(user, experimentName)
         }
     }
 
-    override fun getExperimentWithExposureLoggingDisabledAsync(user: StatsigUser, experimentName: String): CompletableFuture<DynamicConfig> {
+    override fun getExperimentWithExposureLoggingDisabledAsync(
+            user: StatsigUser,
+            experimentName: String
+    ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperimentWithExposureLoggingDisabled(user, experimentName)
         }
     }
 
-    override fun getExperimentInLayerForUserAsync(user: StatsigUser, layerName: String, disableExposure: Boolean): CompletableFuture<DynamicConfig> {
+    override fun getExperimentInLayerForUserAsync(
+            user: StatsigUser,
+            layerName: String,
+            disableExposure: Boolean
+    ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperimentInLayerForUser(user, layerName, disableExposure)
         }
     }
 
+    override fun getLayerAsync(
+            user: StatsigUser,
+            layerName: String
+    ): CompletableFuture<Layer> {
+        return statsigScope.future {
+            return@future getLayer(user, layerName)
+        }
+    }
+
     /**
-     * @deprecated - we make no promises of support for this API
+     * @deprecated
+     * - we make no promises of support for this API
      */
     override fun _getExperimentGroups(experimentName: String): Map<String, Map<String, Any>> {
         return configEvaluator.getVariants(experimentName)
     }
 
     override fun shutdown() {
-        runBlocking {
-            shutdownSuspend()
-        }
+        runBlocking { shutdownSuspend() }
     }
 
     override suspend fun flush() {
@@ -309,13 +403,32 @@ private class StatsigServerImpl(
         }
     }
 
-    private suspend fun getConfigHelper(user: StatsigUser, configName: String, disableExposure: Boolean = false): DynamicConfig {
-        var result: ConfigEvaluation = configEvaluator.getConfig(user, configName)
+    private suspend fun getConfigHelper(
+            user: StatsigUser,
+            configName: String,
+            disableExposure: Boolean = false
+    ): DynamicConfig {
+        val result: ConfigEvaluation = configEvaluator.getConfig(user, configName)
+        return this.getDynamicConfigFromEvalResult(result, user, configName, disableExposure)
+    }
+
+    private suspend fun getDynamicConfigFromEvalResult(
+            result: ConfigEvaluation,
+            user: StatsigUser,
+            configName: String,
+            disableExposure: Boolean = false
+    ): DynamicConfig {
+        var result = result
         if (result.fetchFromServer) {
             result = network.getConfig(user, configName)
         } else if (!disableExposure) {
             logger.logConfigExposure(user, configName, result.ruleID, result.secondaryExposures)
         }
-        return DynamicConfig(configName, result.jsonValue as Map<String, Any>, result.ruleID, result.secondaryExposures)
+        return DynamicConfig(
+                configName,
+                result.jsonValue as Map<String, Any>,
+                result.ruleID,
+                result.secondaryExposures
+        )
     }
 }
