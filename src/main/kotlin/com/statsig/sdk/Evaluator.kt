@@ -64,20 +64,6 @@ internal class Evaluator {
         }
         featureGates = newGates
         dynamicConfigs = newConfigs
-
-        if (downloadedConfig.idLists == null) {
-            return
-        }
-        for (listName in idLists.keys) {
-            if (!downloadedConfig.idLists.containsKey(listName)) {
-                idLists.remove(listName)
-            }
-        }
-        for (listName in downloadedConfig.idLists.keys) {
-            if (!idLists.containsKey(listName)) {
-                idLists[listName] = IDList(ids = HashMap(), time = 0)
-            }
-        }
         layers = downloadedConfig.layers ?: HashMap()
     }
 
@@ -503,7 +489,7 @@ internal class Evaluator {
                     if (idList != null && stringValue != null) {
                         val bytes = MessageDigest.getInstance("SHA-256").digest(stringValue.toByteArray())
                         val base64 = Base64.getEncoder().encodeToString(bytes)
-                        return ConfigEvaluation(fetchFromServer = false, idList.ids.containsKey(base64.substring(0, 8)))
+                        return ConfigEvaluation(fetchFromServer = false, idList.contains(base64.substring(0, 8)))
                     }
                     return ConfigEvaluation(fetchFromServer = false, false)
                 }

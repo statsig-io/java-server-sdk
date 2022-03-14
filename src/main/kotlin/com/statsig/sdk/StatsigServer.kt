@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.Properties
+import java.util.*
 import java.util.concurrent.CompletableFuture
 
 sealed class StatsigServer {
@@ -33,6 +33,7 @@ sealed class StatsigServer {
 
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
+        println(Date())
     }
 
     fun logEvent(user: StatsigUser?, eventName: String, value: String? = null) {
@@ -138,8 +139,8 @@ private class StatsigServerImpl(
             val downloadedConfigs = network.downloadConfigSpecs()
             if (downloadedConfigs != null) {
                 configEvaluator.setDownloadedConfigs(downloadedConfigs)
-                network.downloadIDLists(configEvaluator)
             }
+            network.downloadIDLists(configEvaluator)
             pollingJob.start()
             idListPollingJob.start()
         }

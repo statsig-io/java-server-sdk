@@ -57,14 +57,23 @@ internal data class APIDynamicConfig(
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
 )
 
-internal data class IDListAPIResponse(
-    @SerializedName("list_name") val listName: String?,
-    @SerializedName("add_ids") val addIDs: Array<String>,
-    @SerializedName("remove_ids") val removeIDs: Array<String>,
-    @SerializedName("time") val time: Long,
-)
-
 internal data class IDList(
-    @SerializedName("ids") val ids: MutableMap<String, Boolean>,
-    @SerializedName("time") var time: Long,
-)
+    @SerializedName("name") val name: String,
+    @SerializedName("size") var size: Long = 0,
+    @SerializedName("creationTime") var creationTime: Long = 0,
+    @SerializedName("url") var url: String? = null,
+    @SerializedName("fileID") var fileID: String? = null,
+) {
+    internal val ids: MutableSet<String> = mutableSetOf();
+    fun contains(id: String): Boolean {
+        return ids.contains(id)
+    }
+
+    fun add(id: String) {
+        ids.add(id)
+    }
+
+    fun remove(id: String) {
+        ids.remove(id)
+    }
+}

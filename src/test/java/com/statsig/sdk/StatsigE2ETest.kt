@@ -44,14 +44,16 @@ class StatsigE2ETest {
 
     private var download_config_count: Int = 0
     private var download_id_list_count: Int = 0
+    private var download_list_1_count: Int = 0
+    private var download_list_2_count: Int = 0
 
     @Before
     fun setup() {
         gson = Gson()
 
         eventLogInputCompletable = CompletableDeferred()
-
-        server = MockWebServer().apply {
+        server = MockWebServer()
+        server.apply {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
@@ -71,26 +73,108 @@ class StatsigE2ETest {
                             eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
                             return MockResponse().setResponseCode(200).setBody(DOWNLOAD_CONFIG_SPECS)
                         }
-                        "/v1/download_id_list" -> {
+                        "/v1/get_id_lists" -> {
                             download_id_list_count++
                             if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
                                 throw Exception("No content type set!")
                             }
-                            val body = request.body.readUtf8()
                             var list: Map<String, Any>
-                            if (body.contains("list_1")) {
-                                list = mapOf("add_ids" to arrayOf("1", "2"), "remove_ids" to arrayOf<String>(), "time" to 1)
-                                if (download_id_list_count > 2) {
-                                    list = mapOf("add_ids" to arrayOf("3", "4"), "remove_ids" to arrayOf("1"), "time" to download_id_list_count)
-                                }
+                            if (download_id_list_count == 1) {
+                                list = mapOf(
+                                    "list_1" to mapOf(
+                                        "name" to "list_1",
+                                        "size" to 6,
+                                        "creationTime" to 1,
+                                        "url" to server.url("/v1/list_1").toString(),
+                                        "fileID" to "file_id_1",
+                                    ),
+                                    "list_2" to mapOf(
+                                        "name" to "list_2",
+                                        "size" to 6,
+                                        "creationTime" to 1,
+                                        "url" to server.url("/v1/list_2").toString(),
+                                        "fileID" to "file_id_2",
+                                    )
+                                )
+                            } else if (download_id_list_count == 2) {
+                                list = mapOf(
+                                    "list_1" to mapOf(
+                                        "name" to "list_1",
+                                        "size" to 15,
+                                        "creationTime" to 1,
+                                        "url" to server.url("/v1/list_1").toString(),
+                                        "fileID" to "file_id_1",
+                                    ),
+                                    "list_2" to mapOf(
+                                        "name" to "list_2",
+                                        "size" to 18,
+                                        "creationTime" to 1,
+                                        "url" to server.url("/v1/list_2").toString(),
+                                        "fileID" to "file_id_2",
+                                    )
+                                )
+                            } else if (download_id_list_count == 3) {
+                                list = mapOf(
+                                    "list_1" to mapOf(
+                                        "name" to "list_1",
+                                        "size" to 18,
+                                        "creationTime" to 1,
+                                        "url" to server.url("/v1/list_1").toString(),
+                                        "fileID" to "file_id_1",
+                                    ),
+                                    "list_2" to mapOf(
+                                        "name" to "list_2",
+                                        "size" to 6,
+                                        "creationTime" to 2,
+                                        "url" to server.url("/v1/list_2").toString(),
+                                        "fileID" to "file_id_2_a",
+                                    )
+                                )
                             } else {
-                                list = mapOf("add_ids" to arrayOf("a", "b"), "remove_ids" to arrayOf<String>(), "time" to 1)
-                                if (download_id_list_count > 1) {
-                                    list = mapOf("add_ids" to arrayOf("c", "d"), "remove_ids" to arrayOf("a", "b"), "time" to download_id_list_count)
-                                }
+                                list = mapOf(
+                                    "list_1" to mapOf(
+                                        "name" to "list_1",
+                                        "size" to 18,
+                                        "creationTime" to 1,
+                                        "url" to server.url("/v1/list_1").toString(),
+                                        "fileID" to "file_id_1",
+                                    ),
+                                    "list_2" to mapOf(
+                                        "name" to "list_2",
+                                        "size" to 9,
+                                        "creationTime" to 2,
+                                        "url" to server.url("/v1/list_2").toString(),
+                                        "fileID" to "file_id_2_a",
+                                    )
+                                )
                             }
-
                             return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
+                        }
+                        "/v1/list_1" -> {
+                            val range = request.headers["range"]
+                            val startIndex = range!!.substring(6, range!!.length-1).toIntOrNull()
+                            download_list_1_count++
+
+                            var content: String = when (download_list_1_count) {
+                                1 -> "+1\r+2\r"
+                                2 -> "+1\r+2\r+3\r+4\r-1\r"
+                                3 -> "+1\r+2\r+3\r+4\r-1\r?5\r" // append invalid entry, should reset the list
+                                else -> "+1\r+2\r+3\r+4\r-1\r+5\r"
+                            }
+                            return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
+                        }
+                        "/v1/list_2" -> {
+                            val range = request.headers["range"]
+                            val startIndex = range!!.substring(6, range!!.length-1).toIntOrNull()
+                            download_list_2_count++
+
+                            var content: String = when (download_list_2_count) {
+                                1 -> "+a\r+b\r"
+                                2 -> "+a\r+b\r+c\r+d\r-a\r-b\r"
+                                3 -> "+c\r+d\r" // new file, ids are consolidated
+                                else -> "+c\r+d\r-a\r"
+                            }
+                            return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
                         }
                     }
                     return MockResponse().setResponseCode(404)
@@ -213,6 +297,8 @@ class StatsigE2ETest {
     fun testBackgroundSync() = runBlocking {
         download_config_count = 0
         download_id_list_count = 0
+        download_list_1_count = 0
+        download_list_2_count = 0
 
         CONFIG_SYNC_INTERVAL_MS = 1000
         ID_LISTS_SYNC_INTERVAL_MS = 1000
@@ -224,25 +310,40 @@ class StatsigE2ETest {
         val evaluator = privateEvaluatorField[driver] as Evaluator
 
         assert(download_config_count == 1)
-        assert(download_id_list_count == 2)
+        assert(download_id_list_count == 1)
 
-        assert(evaluator.idLists["list_1"]?.ids == mapOf("1" to true, "2" to true))
-        assert(evaluator.idLists["list_2"]?.ids == mapOf("a" to true, "b" to true))
+        assert(evaluator.idLists["list_1"]?.ids == mutableSetOf("1", "2"))
+        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("a", "b"))
+        assert(evaluator.idLists["list_1"]?.creationTime == 1L)
+        assert(evaluator.idLists["list_2"]?.creationTime == 1L)
 
         Thread.sleep(1100)
         assert(download_config_count == 2)
-        assert(download_id_list_count == 4)
-        assert(evaluator.idLists["list_1"]?.ids == mapOf("2" to true, "3" to true, "4" to true))
-        assert(evaluator.idLists["list_2"]?.ids == mapOf("c" to true, "d" to true))
+        assert(download_id_list_count == 2)
+        assert(evaluator.idLists["list_1"]?.ids == mutableSetOf("2", "3", "4"))
+        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("c", "d"))
+        assert(evaluator.idLists["list_1"]?.creationTime == 1L)
+        assert(evaluator.idLists["list_2"]?.creationTime == 1L)
 
         Thread.sleep(1100)
         assert(download_config_count == 3)
-        assert(download_id_list_count == 6)
+        assert(download_id_list_count == 3)
+        assert(evaluator.idLists["list_1"] == null)
+        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("c", "d"))
+        assert(evaluator.idLists["list_2"]?.creationTime == 2L)
+
+        Thread.sleep(1100)
+        assert(download_config_count == 4)
+        assert(download_id_list_count == 4)
+        assert(evaluator.idLists["list_1"]?.ids == mutableSetOf("2", "3", "4", "5"))
+        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("c", "d"))
+        assert(evaluator.idLists["list_1"]?.creationTime == 1L)
+        assert(evaluator.idLists["list_2"]?.creationTime == 2L)
 
         driver.shutdown()
 
         Thread.sleep(2000)
-        assert(download_config_count == 3)
-        assert(download_id_list_count == 6)
+        assert(download_config_count == 4)
+        assert(download_id_list_count == 4)
     }
 }
