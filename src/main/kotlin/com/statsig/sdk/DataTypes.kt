@@ -1,6 +1,7 @@
 package com.statsig.sdk
 
 import com.google.gson.annotations.SerializedName
+import java.util.concurrent.ConcurrentHashMap
 
 internal data class APIDownloadedConfigs(
     @SerializedName("dynamic_configs") val dynamicConfigs: Array<APIConfig>,
@@ -71,7 +72,7 @@ internal data class IDList(
     @SerializedName("url") var url: String? = null,
     @SerializedName("fileID") var fileID: String? = null,
 ) {
-    internal val ids: MutableSet<String> = mutableSetOf();
+    internal val ids: MutableSet<String> = ConcurrentHashMap.newKeySet();
     fun contains(id: String): Boolean {
         return ids.contains(id)
     }

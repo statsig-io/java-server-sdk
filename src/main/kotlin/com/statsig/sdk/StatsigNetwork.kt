@@ -157,7 +157,7 @@ internal class StatsigNetwork(
         } catch (e: Exception) {}
     }
 
-    suspend fun downloadIDLists(evaluator: Evaluator) {
+    suspend fun getAllIDLists(evaluator: Evaluator) {
         coroutineScope {
             try {
                 val bodyJson = gson.toJson(mapOf("statsigMetadata" to statsigMetadata))
@@ -218,7 +218,7 @@ internal class StatsigNetwork(
     suspend fun syncIDLists(evaluator: Evaluator) {
         while (true) {
             delay(ID_LISTS_SYNC_INTERVAL_MS)
-            downloadIDLists(evaluator)
+            getAllIDLists(evaluator)
         }
     }
 

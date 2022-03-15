@@ -177,7 +177,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             if (downloadedConfigs != null) {
                 configEvaluator.setDownloadedConfigs(downloadedConfigs)
             }
-            network.downloadIDLists(configEvaluator)
+            network.getAllIDLists(configEvaluator)
             pollingJob.start()
             idListPollingJob.start()
         }
