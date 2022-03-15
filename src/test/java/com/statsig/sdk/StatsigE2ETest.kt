@@ -13,7 +13,6 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Before
 import org.junit.Test
-import java.io.File
 
 private data class LogEventInput(
     @SerializedName("events") val events: Array<StatsigEvent>,
@@ -199,6 +198,7 @@ class StatsigE2ETest {
     @Test
     fun testFeatureGate() = runBlocking {
         driver.initialize()
+        val now = System.currentTimeMillis()
         assert(driver.checkGate(statsigUser, "always_on_gate"))
         assert(driver.checkGate(statsigUser, "on_for_statsig_email"))
         assert(!driver.checkGate(randomUser, "on_for_statsig_email"))
@@ -213,21 +213,25 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventMetadata!!["gate"].equals("always_on_gate"))
         assert(eventLogInput.events[0].eventMetadata!!["gateValue"].equals("true"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("6N6Z8ODekNYZ7F8gFdoLP5"))
+        assert(eventLogInput.events[0].time!!/1000 == now/1000)
 
         assert(eventLogInput.events[1].eventName == "statsig::gate_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["gate"].equals("on_for_statsig_email"))
         assert(eventLogInput.events[1].eventMetadata!!["gateValue"].equals("true"))
         assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("7w9rbTSffLT89pxqpyhuqK"))
+        assert(eventLogInput.events[1].time!!/1000 == now/1000)
 
         assert(eventLogInput.events[2].eventName == "statsig::gate_exposure")
         assert(eventLogInput.events[2].eventMetadata!!["gate"].equals("on_for_statsig_email"))
         assert(eventLogInput.events[2].eventMetadata!!["gateValue"].equals("false"))
         assert(eventLogInput.events[2].eventMetadata!!["ruleID"].equals("default"))
+        assert(eventLogInput.events[2].time!!/1000 == now/1000)
     }
 
     @Test
     fun testDynamicConfig() = runBlocking {
         driver.initialize()
+        val now = System.currentTimeMillis()
         var config = driver.getConfig(statsigUser, "test_config")
         assert(config.getInt("number", 0) == 7)
         assert(config.getString("string", "") == "statsig")
@@ -249,15 +253,18 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[0].eventMetadata!!["config"].equals("test_config"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("1kNmlB23wylPFZi1M0Divl"))
+        assert(eventLogInput.events[0].time!!/1000 == now/1000)
 
         assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["config"].equals("test_config"))
         assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("default"))
+        assert(eventLogInput.events[1].time!!/1000 == now/1000)
     }
 
     @Test
     fun testExperiment() = runBlocking {
         driver.initialize()
+        val now = System.currentTimeMillis()
         var config = driver.getExperiment(statsigUser, "sample_experiment")
         assert(config.getString("experiment_param", "") == "test")
         config = driver.getExperiment(randomUser, "sample_experiment")
@@ -273,16 +280,18 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[0].eventMetadata!!["config"].equals("sample_experiment"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("2RamGujUou6h2bVNQWhtNZ"))
+        assert(eventLogInput.events[0].time!!/1000 == now/1000)
 
         assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["config"].equals("sample_experiment"))
         assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("2RamGsERWbWMIMnSfOlQuX"))
+        assert(eventLogInput.events[1].time!!/1000 == now/1000)
     }
 
     @Test
     fun testLayer() = runBlocking {
         driver.initialize()
-
+        val now = System.currentTimeMillis()
         var config = driver.getLayer(statsigUser, "a_layer")
         assertEquals("test", config.getString("experiment_param", ""))
         assertTrue(config.getBoolean("layer_param", false))
@@ -304,15 +313,18 @@ class StatsigE2ETest {
         assertEquals("a_layer", events[0].eventMetadata!!["config"])
         assertEquals("2RamGujUou6h2bVNQWhtNZ", events[0].eventMetadata!!["ruleID"])
         assertEquals("sample_experiment", events[0].eventMetadata!!["allocatedExperiment"])
+        assertEquals(now/1000, eventLogInput.events[0].time!!/1000)
 
         assertEquals("statsig::layer_exposure", events[1].eventName)
         assertEquals("b_layer_no_alloc", events[1].eventMetadata!!["config"])
         assertEquals("layer_defaults", events[1].eventMetadata!!["ruleID"])
+        assertEquals(now/1000, eventLogInput.events[1].time!!/1000)
     }
 
     @Test
     fun testLogEvent() = runBlocking {
         driver.initialize()
+        val now = System.currentTimeMillis()
         driver.logEvent(statsigUser, "purchase", 2.99, mapOf("item_name" to "remove_ads"))
         driver.shutdown()
 
@@ -324,6 +336,7 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventName == "purchase")
         assert(eventLogInput.events[0].eventValue == 2.99)
         assert(eventLogInput.events[0].eventMetadata!!["item_name"].equals("remove_ads"))
+        assert(eventLogInput.events[0].time!!/1000 == now/1000)
     }
 
     @Test
