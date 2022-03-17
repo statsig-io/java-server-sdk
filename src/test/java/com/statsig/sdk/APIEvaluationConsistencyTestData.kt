@@ -12,5 +12,5 @@ internal data class APITestDataSet(
     @SerializedName("user") val user: StatsigUser,
     @SerializedName("feature_gates_v2") val gates: Map<String, APIFeatureGate>,
     @SerializedName("dynamic_configs") val configs: Map<String, APIDynamicConfig>,
-    @SerializedName("layer_configs") val layers: Map<String, Map<String, Any>>,
+    @SerializedName("layer_configs") val layers: Map<String, APIDynamicConfig>,
 )

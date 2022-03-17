@@ -89,12 +89,30 @@ public class ServerSDKConsistencyTest {
                         gson.toJson(serverResult.getValue()), gson.toJson(sdkValue.get().getValue()));
             }
 
-            for (Map.Entry<String, Map<String, Object>> entry : d.getLayers().entrySet()) {
+            for (Map.Entry<String, APIDynamicConfig> entry : d.getLayers().entrySet()) {
                 ConfigEvaluation sdkResult = evaluator.getLayer(user, entry.getKey());
-                Map<String, Object> serverResult = entry.getValue();
+                APIDynamicConfig serverResult = entry.getValue();
+                assertEquals("Value mismatch for layer " + entry.getKey() + " for user" + user.toString(),
+                        gson.toJson(serverResult.getValue()), gson.toJson(sdkResult.getJsonValue()));
+                assertEquals("Rule ID mismatch for layer " + entry.getKey(), serverResult.getRuleID(),
+                        sdkResult.getRuleID());
+                assertEquals("Secondary exposure mismatch for layer " + entry.getKey(),
+                        gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
 
-                assertEquals("Value mismatch for layer " + entry.getKey() + " for user " + user.toString(),
-                        sdkResult.getJsonValue(), serverResult);
+                Future<Layer> sdkValue = driver.getLayerAsync(user, entry.getKey());
+                for (Map.Entry<String, Object> valEntry : serverResult.getValue().entrySet()) {
+                    Object sdkVal = "ERR";
+                    if (valEntry.getValue() instanceof Number) {
+                        sdkVal = sdkValue.get().getInt(valEntry.getKey(), -1);
+                    } else if (valEntry.getValue() instanceof Boolean) {
+                        sdkVal = sdkValue.get().getBoolean(valEntry.getKey(), false);
+                    } else {
+                        sdkVal = sdkValue.get().getString(valEntry.getKey(), "ERR");
+                    }
+
+                    assertEquals("Server driver value mismatch for layer " + entry.getKey(),
+                            gson.toJson(valEntry.getValue()), gson.toJson(sdkVal));
+                }
             }
         }
         driver.shutdown();

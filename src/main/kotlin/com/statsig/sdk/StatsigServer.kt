@@ -259,6 +259,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             layerName,
             result.ruleID,
             result.secondaryExposures,
+            result.configDelegate ?: "",
             result.jsonValue as Map<String, Any>
         )
     }

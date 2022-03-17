@@ -23,7 +23,7 @@ internal data class ConfigEvaluation(
 internal class Evaluator {
     private var featureGates: MutableMap<String, APIConfig> = HashMap()
     private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
-    private var layerConfigs: Map<String, APILayerConfig> = HashMap()
+    private var layerConfigs: Map<String, APIConfig> = HashMap()
     internal var idLists: MutableMap<String, IDList> = HashMap()
     internal var layers: Map<String, Array<String>> = HashMap()
     private var uaParser: Parser = Parser()
@@ -58,15 +58,19 @@ internal class Evaluator {
         }
         var newGates: MutableMap<String, APIConfig> = HashMap()
         var newConfigs: MutableMap<String, APIConfig> = HashMap()
+        var newLayers: MutableMap<String, APIConfig> = HashMap()
         for (gate in downloadedConfig.featureGates) {
             newGates[gate.name] = gate
         }
         for (config in downloadedConfig.dynamicConfigs) {
             newConfigs[config.name] = config
         }
+        for (config in downloadedConfig.layerConfigs) {
+            newLayers[config.name] = config
+        }
         featureGates = newGates
         dynamicConfigs = newConfigs
-        layerConfigs = downloadedConfig.layerConfigs
+        layerConfigs = newLayers
         layers = downloadedConfig.layers ?: HashMap()
     }
 
@@ -99,55 +103,26 @@ internal class Evaluator {
     }
 
     fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
-        if (!dynamicConfigs.containsKey(dynamicConfigName)) {
-            return ConfigEvaluation(
-                    fetchFromServer = false,
-                    booleanValue = false,
-                    mapOf<String, Any>()
-            )
-        }
-        val config =
-                dynamicConfigs[dynamicConfigName]
-                        ?: return ConfigEvaluation(
-                                fetchFromServer = false,
-                                booleanValue = false,
-                                mapOf<String, Any>()
-                        )
-        return this.evaluate(user, config)
+        return this.evaluateConfig(user, dynamicConfigs[dynamicConfigName])
     }
 
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
-        val config =
-                layerConfigs[layerName]
+        return this.evaluateConfig(user, layerConfigs[layerName])
+    }
+
+    fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
+        return this.evaluateConfig(user, featureGates[gateName])
+    }
+
+    private fun evaluateConfig(user: StatsigUser, config: APIConfig?): ConfigEvaluation {
+        val unwrappedConfig =
+                config
                         ?: return ConfigEvaluation(
                                 fetchFromServer = false,
                                 booleanValue = false,
                                 mapOf<String, Any>()
                         )
-
-        for (rule in config.allocationRules) {
-            val result = this.evaluateRule(user, rule)
-            if (result.fetchFromServer || result.booleanValue) {
-                return result
-            }
-        }
-
-        return ConfigEvaluation(
-                fetchFromServer = false,
-                booleanValue = false,
-                config.defaultValues,
-                "layer_defaults"
-        )
-    }
-
-    fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
-        if (!featureGates.containsKey(gateName)) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-        }
-        val config =
-                featureGates[gateName]
-                        ?: return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-        return this.evaluate(user, config)
+        return this.evaluate(user, unwrappedConfig)
     }
 
     private fun evaluate(user: StatsigUser, config: APIConfig): ConfigEvaluation {
@@ -180,9 +155,10 @@ internal class Evaluator {
                 return ConfigEvaluation(
                         false,
                         pass,
-                        if (pass) rule.returnValue else config.defaultValue,
-                        rule.id,
+                        if (pass) result.jsonValue else config.defaultValue,
+                        result.ruleID,
                         secondaryExposures,
+                        result.configDelegate
                 )
             }
         }
@@ -215,12 +191,12 @@ internal class Evaluator {
                 secondaryExposures.addAll(delegatedResult.secondaryExposures)
 
                 return ConfigEvaluation(
-                    fetchFromServer = delegatedResult.fetchFromServer,
-                    booleanValue = delegatedResult.booleanValue,
-                    jsonValue = delegatedResult.jsonValue,
-                    ruleID = delegatedResult.ruleID,
-                    secondaryExposures = secondaryExposures,
-                    configDelegate = rule.configDelegate
+                        fetchFromServer = delegatedResult.fetchFromServer,
+                        booleanValue = delegatedResult.booleanValue,
+                        jsonValue = delegatedResult.jsonValue,
+                        ruleID = delegatedResult.ruleID,
+                        secondaryExposures = secondaryExposures,
+                        configDelegate = rule.configDelegate
                 )
             }
         }
@@ -536,7 +512,10 @@ internal class Evaluator {
                                 MessageDigest.getInstance("SHA-256")
                                         .digest(stringValue.toByteArray())
                         val base64 = Base64.getEncoder().encodeToString(bytes)
-                        return ConfigEvaluation(fetchFromServer = false, idList.contains(base64.substring(0, 8)))
+                        return ConfigEvaluation(
+                                fetchFromServer = false,
+                                idList.contains(base64.substring(0, 8))
+                        )
                     }
                     return ConfigEvaluation(fetchFromServer = false, false)
                 }

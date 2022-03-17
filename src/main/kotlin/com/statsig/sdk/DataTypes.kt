@@ -6,16 +6,11 @@ import java.util.concurrent.ConcurrentHashMap
 internal data class APIDownloadedConfigs(
     @SerializedName("dynamic_configs") val dynamicConfigs: Array<APIConfig>,
     @SerializedName("feature_gates") val featureGates: Array<APIConfig>,
+    @SerializedName("layer_configs") val layerConfigs: Array<APIConfig>,
     @SerializedName("id_lists") val idLists: Map<String, Boolean>?,
     @SerializedName("layers") val layers: Map<String, Array<String>>?,
-    @SerializedName("layer_configs") val layerConfigs: Map<String, APILayerConfig>,
     @SerializedName("time") val time: Long = 0,
     @SerializedName("has_updates") val hasUpdates: Boolean,
-)
-
-internal data class APILayerConfig(
-    @SerializedName("allocation_rules") val allocationRules: Array<APIRule>,
-    @SerializedName("default_values") val defaultValues: Map<String, Any>,
 )
 
 internal data class APIConfig(

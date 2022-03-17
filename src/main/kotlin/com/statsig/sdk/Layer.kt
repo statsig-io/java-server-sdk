@@ -9,6 +9,7 @@ class Layer(
     val name: String,
     val ruleID: String? = null,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    val allocatedExperiment: String,
     private val value: Map<String, Any>) {
 
     init { }
@@ -149,7 +150,8 @@ class Layer(
             mapOf(
                 "config" to this.name,
                 "ruleID" to this.ruleID,
-                "secondaryExposures" to this.secondaryExposures
+                "secondaryExposures" to this.secondaryExposures,
+                "allocatedExperiment" to this.allocatedExperiment
             )
         )
     }

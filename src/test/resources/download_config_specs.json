@@ -235,9 +235,14 @@
       ]
     }
   ],
-  "layer_configs": {
-    "a_layer": {
-      "allocation_rules": [
+  "layer_configs": [
+    {
+      "name": "a_layer",
+      "type": "dynamic_config",
+      "salt": "f8aeba58-18fb-4f36-9bbd-4c611447a912",
+      "enabled": true,
+      "defaultValue": { "experiment_param": "control" },
+      "rules": [
         {
           "name": "experimentAssignment",
           "groupName": "Experiment Assignment",
@@ -343,18 +348,61 @@
           "configDelegate": "sample_experiment"
         }
       ],
-      "default_values": {
-        "layer_param": true,
-        "second_layer_param": false
-      }
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "layer"
     },
-    "b_layer_no_alloc": {
-      "allocation_rules": [],
-      "default_values": {
-        "a_param": "foo"
-      }
+    {
+      "name": "b_layer_no_alloc",
+      "type": "dynamic_config",
+      "salt": "3e361046-bc69-4dfd-bbb1-538afe609157",
+      "enabled": true,
+      "defaultValue": {
+        "b_param": "layer_default"
+      },
+      "rules": [],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "layer"
+    },
+    {
+      "name": "c_layer_with_holdout",
+      "type": "dynamic_config",
+      "salt": "ab40c4af-947f-411e-9403-880393703507",
+      "enabled": true,
+      "defaultValue": {
+        "holdout_layer_param": "layer_default"
+      },
+      "rules": [
+        {
+          "name": "7d2E854TtGmfETdmJFip1L",
+          "groupName": "master_holdout",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "pass_gate",
+              "targetValue": "always_on_gate",
+              "operator": "any",
+              "field": null,
+              "additionalValues": null,
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {
+            "holdout_layer_param": "layer_default"
+          },
+          "id": "7d2E854TtGmfETdmJFip1L",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID"
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "layer"
     }
-  },
+  ],
   "has_updates": true,
   "time": 1631638014811,
   "id_lists": { "list_1": true, "list_2": true }
