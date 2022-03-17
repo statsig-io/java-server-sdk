@@ -7,7 +7,7 @@ enum class Tier {
 }
 
 private const val TIER_KEY: String = "tier"
-private const val DEFAULT_API_URL_BASE: String = "https://api.statsig.com/v1"
+private const val DEFAULT_API_URL_BASE: String = "https://statsigapi.net/v1"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
 
 
