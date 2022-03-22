@@ -21,12 +21,8 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getString(key: String, default: String?): String? {
-        if (!value.containsKey(key)) {
-            return default
-        }
-        return when (this.value[key]) {
-            null -> default
-            is String -> this.value[key] as String
+        return when (val res = value[key]) {
+            is String -> res
             else -> default
         }
     }
@@ -38,12 +34,8 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getBoolean(key: String, default: Boolean): Boolean {
-        if (!value.containsKey(key)) {
-            return default
-        }
-        return when (this.value[key]) {
-            null -> default
-            is Boolean -> this.value[key] as Boolean
+        return when (val res = value[key]) {
+            is Boolean -> res
             else -> default
         }
     }
@@ -55,13 +47,8 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getDouble(key: String, default: Double): Double {
-        if (!value.containsKey(key)) {
-            return default
-        }
-        return when (this.value[key]) {
-            null -> default
-            is Double -> this.value[key] as Double
-            is Int -> this.value[key] as Double
+        return when (val res = value[key]) {
+            is Number -> res.toDouble()
             else -> default
         }
     }
@@ -73,19 +60,23 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getInt(key: String, default: Int): Int {
-        if (!value.containsKey(key)) {
-            return default
+        return when (val res = value[key]) {
+            is Number -> res.toInt()
+            else -> default
         }
-        if (value[key] == null) {
-            return default
+    }
+
+    /**
+     * Gets a value from the layer, falling back to the provided default value
+     * @param key the index within the Layer to fetch a value from
+     * @param default the default value to return if the expected key does not exist in the config
+     * @return the value at the given key, or the default value if not found
+     */
+    fun getLong(key: String, default: Long): Long {
+        return when (val res = value[key]) {
+            is Number -> res.toLong()
+            else -> default
         }
-        if (value[key] is Int) {
-            return value[key] as Int
-        }
-        if (value[key] is Double) {
-            return (value[key] as Double).toInt()
-        }
-        return default
     }
 
     /**
@@ -95,15 +86,9 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getArray(key: String, default: Array<*>?): Array<*>? {
-        if (!value.containsKey(key)) {
-            return default
-        }
-        return when (value[key]) {
-            null -> default
-            is Array<*> -> this.value[key] as Array<*>
-            is IntArray -> (this.value[key] as IntArray).toTypedArray()
-            is DoubleArray -> (this.value[key] as DoubleArray).toTypedArray()
-            is BooleanArray -> (this.value[key] as BooleanArray).toTypedArray()
+        return when (val value = this.value[key]) {
+            is Array<*> -> value
+            is ArrayList<*> -> value.toTypedArray()
             else -> default
         }
     }
@@ -115,11 +100,7 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getDictionary(key: String, default: Map<String, Any>?): Map<String, Any>? {
-        if (!value.containsKey(key)) {
-            return default
-        }
         return when (this.value[key]) {
-            null -> default
             is Map<*, *> -> this.value[key] as Map<String, Any>
             else -> default
         }
@@ -131,11 +112,7 @@ class Layer(
      * @return the value at the given key as a DynamicConfig, or null
      */
     fun getConfig(key: String): DynamicConfig? {
-        if (!value.containsKey(key)) {
-            return null
-        }
         return when (this.value[key]) {
-            null -> null
             is Map<*, *> -> DynamicConfig(
                 key,
                 this.value[key] as Map<String, Any>,

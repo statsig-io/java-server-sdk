@@ -1,6 +1,8 @@
 package com.statsig.sdk
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.ToNumberPolicy
 import com.google.gson.annotations.SerializedName
 import junit.framework.Assert.assertEquals
 import junit.framework.Assert.assertTrue
@@ -48,7 +50,7 @@ class StatsigE2ETest {
 
     @Before
     fun setup() {
-        gson = Gson()
+        gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
         eventLogInputCompletable = CompletableDeferred()
         val downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
@@ -242,7 +244,7 @@ class StatsigE2ETest {
         assert(config.getBoolean("boolean", true))
 
         var groups = driver._getExperimentGroups("test_config")
-        assert(groups["statsig email"]!!.get("value")!!.equals("{number=7.0, string=statsig, boolean=false}"))
+        assert(groups["statsig email"]!!.get("value")!!.equals("{number=7, string=statsig, boolean=false}"))
 
         driver.shutdown()
 

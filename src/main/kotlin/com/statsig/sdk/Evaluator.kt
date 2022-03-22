@@ -1,15 +1,17 @@
 package com.statsig.sdk
 
 import ip3country.CountryLookup
+import ua_parser.Client
+import ua_parser.Parser
 import java.lang.Long.parseLong
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Base64
+import java.util.Calendar
+import java.util.Date
 import kotlin.collections.set
-import ua_parser.Client
-import ua_parser.Parser
 
 internal data class ConfigEvaluation(
         val fetchFromServer: Boolean = false,
@@ -273,7 +275,7 @@ internal class Evaluator {
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues["salt"])
                     val unitID = getUnitID(user, condition.idType) ?: ""
-                    value = computeUserHash("$salt.$unitID").mod(1000UL).toDouble()
+                    value = computeUserHash("$salt.$unitID").mod(1000UL)
                 }
                 ConfigCondition.UNIT_ID -> {
                     value = getUnitID(user, condition.idType)

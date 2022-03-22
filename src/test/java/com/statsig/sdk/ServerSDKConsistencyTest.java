@@ -1,6 +1,8 @@
 package com.statsig.sdk;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -19,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 public class ServerSDKConsistencyTest {
     String secret;
+    private Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     @Before
     public void setUp() throws Exception {
@@ -47,7 +50,7 @@ public class ServerSDKConsistencyTest {
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        APITestDataSet[] data = (new Gson()).fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
+        APITestDataSet[] data = gson.fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
         StatsigServer driver = StatsigServer.create(secret, new StatsigOptions(api));
         Future initFuture = driver.initializeAsync();
         initFuture.get();
@@ -56,7 +59,6 @@ public class ServerSDKConsistencyTest {
         privateEvaluatorField.setAccessible(true);
 
         Evaluator evaluator = (Evaluator) privateEvaluatorField.get(driver);
-        Gson gson = new Gson();
 
         for (APITestDataSet d: data) {
             StatsigUser user = d.getUser();

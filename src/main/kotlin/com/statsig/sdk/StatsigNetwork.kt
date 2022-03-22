@@ -1,14 +1,22 @@
 package com.statsig.sdk
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import okhttp3.*
+import kotlinx.coroutines.launch
+import okhttp3.Interceptor
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.lang.Exception
 
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
@@ -35,7 +43,7 @@ internal class StatsigNetwork(
     private val statsigHttpClient: OkHttpClient
     private val httpClient: OkHttpClient
     private var lastSyncTime: Long = 0
-    private val gson = Gson()
+    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object: TypeToken<T>() {}.type)
 
@@ -168,7 +176,7 @@ internal class StatsigNetwork(
                 statsigHttpClient.newCall(request).await().use { response ->
                     if (response.isSuccessful) {
                         val body = response.body ?: return@coroutineScope
-                        val response = Gson().fromJson<Map<String, IDList>>(body.string())
+                        val response = gson.fromJson<Map<String, IDList>>(body.string())
                         val allLocalLists = evaluator.idLists
                         for ((name, serverList) in response) {
                             var localList = allLocalLists[name]
