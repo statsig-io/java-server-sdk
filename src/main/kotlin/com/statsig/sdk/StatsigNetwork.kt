@@ -17,6 +17,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.UUID
 
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
@@ -44,6 +45,7 @@ internal class StatsigNetwork(
     private val httpClient: OkHttpClient
     private var lastSyncTime: Long = 0
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+    private val serverSessionID = UUID.randomUUID().toString();
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object: TypeToken<T>() {}.type)
 
@@ -55,6 +57,7 @@ internal class StatsigNetwork(
             val request = original.newBuilder()
                 .addHeader("STATSIG-API-KEY", sdkKey)
                 .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
+                .addHeader("STATSIG-SERVER-SESSION-ID", serverSessionID)
                 .method(original.method, original.body)
                 .build()
             it.proceed(request)
