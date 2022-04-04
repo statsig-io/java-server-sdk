@@ -100,6 +100,8 @@ public class ServerSDKConsistencyTest {
                         sdkResult.getRuleID());
                 assertEquals("Secondary exposure mismatch for layer " + entry.getKey(),
                         gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
+                assertEquals("Undelegated secondary exposure mismatch for config " + entry.getKey(),
+                        gson.toJson(serverResult.getUndelegatedSecondaryExposures()), gson.toJson(sdkResult.getUndelegatedSecondaryExposures()));
 
                 Future<Layer> sdkValue = driver.getLayerAsync(user, entry.getKey());
                 for (Map.Entry<String, Object> valEntry : serverResult.getValue().entrySet()) {
@@ -122,11 +124,12 @@ public class ServerSDKConsistencyTest {
 
     @Test
     public void testProd() throws Exception {
-       testConsistency("https://api.statsig.com/v1");
+       testConsistency("https://statsigapi.net/v1");
     }
 
     @Test
     public void testStaging() throws Exception {
-        testConsistency("https://latest.api.statsig.com/v1");
+        testConsistency("https://staging.statsigapi.net/v1");
     }
+
 }

@@ -14,12 +14,13 @@ import java.util.Date
 import kotlin.collections.set
 
 internal data class ConfigEvaluation(
-        val fetchFromServer: Boolean = false,
-        val booleanValue: Boolean = false,
-        val jsonValue: Any? = null,
-        val ruleID: String = "",
-        val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-        val configDelegate: String? = null
+    val fetchFromServer: Boolean = false,
+    val booleanValue: Boolean = false,
+    val jsonValue: Any? = null,
+    val ruleID: String = "",
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    val undelegatedSecondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    val configDelegate: String? = null
 )
 
 internal class Evaluator {
@@ -142,8 +143,13 @@ internal class Evaluator {
             if (result.fetchFromServer) {
                 return result
             }
+
             secondaryExposures.addAll(result.secondaryExposures)
             if (result.booleanValue) {
+                this.evaluateDelegate(user, rule, secondaryExposures)?.let {
+                    return it
+                }
+
                 val pass =
                         computeUserHash(
                                         config.salt +
@@ -160,7 +166,6 @@ internal class Evaluator {
                         if (pass) result.jsonValue else config.defaultValue,
                         result.ruleID,
                         secondaryExposures,
-                        result.configDelegate
                 )
             }
         }
@@ -171,6 +176,31 @@ internal class Evaluator {
                 "default",
                 secondaryExposures
         )
+    }
+
+    private fun evaluateDelegate(
+        user: StatsigUser,
+        rule: APIRule,
+        secondaryExposures: ArrayList<Map<String, String>>
+    ): ConfigEvaluation? {
+        dynamicConfigs[rule.configDelegate]?.let {
+            val delegatedResult = this.evaluate(user, it)
+            val undelegatedSecondaryExposures = arrayListOf<Map<String, String>>()
+            undelegatedSecondaryExposures.addAll(secondaryExposures)
+            secondaryExposures.addAll(delegatedResult.secondaryExposures)
+
+            return ConfigEvaluation(
+                fetchFromServer = delegatedResult.fetchFromServer,
+                booleanValue = delegatedResult.booleanValue,
+                jsonValue = delegatedResult.jsonValue,
+                ruleID = delegatedResult.ruleID,
+                secondaryExposures = secondaryExposures,
+                undelegatedSecondaryExposures = undelegatedSecondaryExposures,
+                configDelegate = rule.configDelegate
+            )
+        }
+
+        return null
     }
 
     private fun evaluateRule(user: StatsigUser, rule: APIRule): ConfigEvaluation {
@@ -185,22 +215,6 @@ internal class Evaluator {
                 pass = false
             }
             secondaryExposures.addAll(result.secondaryExposures)
-        }
-
-        if (pass) {
-            dynamicConfigs[rule.configDelegate]?.let {
-                val delegatedResult = this.evaluate(user, it)
-                secondaryExposures.addAll(delegatedResult.secondaryExposures)
-
-                return ConfigEvaluation(
-                        fetchFromServer = delegatedResult.fetchFromServer,
-                        booleanValue = delegatedResult.booleanValue,
-                        jsonValue = delegatedResult.jsonValue,
-                        ruleID = delegatedResult.ruleID,
-                        secondaryExposures = secondaryExposures,
-                        configDelegate = rule.configDelegate
-                )
-            }
         }
 
         return ConfigEvaluation(

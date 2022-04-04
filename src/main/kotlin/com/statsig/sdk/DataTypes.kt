@@ -58,6 +58,8 @@ internal data class APIDynamicConfig(
     @SerializedName("rule_id") val ruleID: String? = "",
     @SerializedName("secondary_exposures")
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    @SerializedName("undelegated_secondary_exposures")
+    val undelegatedSecondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
 )
 
 internal data class IDList(
