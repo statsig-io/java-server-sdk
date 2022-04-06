@@ -10,12 +10,12 @@ class LayerTest {
 
     @Before
     fun setup() {
-        layer = Layer("a_config", value = TestUtil.getConfigTestValues(), allocatedExperiment = "")
+        layer = Layer("a_config", value = TestUtil.getConfigTestValues())
     }
 
     @Test
     fun testDummy() {
-        val dummyLayer = Layer("", value = mapOf(), allocatedExperiment = "")
+        val dummyLayer = Layer("", value = mapOf())
         assertEquals("provided default", dummyLayer.getString("test", "provided default"))
         assertEquals(true, dummyLayer.getBoolean("test", true))
         assertEquals(12, dummyLayer.getInt("test", 12))
@@ -34,7 +34,6 @@ class LayerTest {
             "test_layer",
             value = mapOf(),
             ruleID = "default",
-            allocatedExperiment = ""
         )
 
         assertEquals("provided default", emptyLayer.getString("test", "provided default"))

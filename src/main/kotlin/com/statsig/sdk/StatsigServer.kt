@@ -1,12 +1,19 @@
 package com.statsig.sdk
 
-import java.util.Properties
-import java.util.concurrent.CompletableFuture
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.future
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
 
 sealed class StatsigServer {
 
@@ -251,17 +258,28 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
         if (result.fetchFromServer) {
             result = network.getConfig(user, layerName)
-        } else {
-            logger.logLayerExposure(user, layerName, result.ruleID, result.secondaryExposures, result.configDelegate ?: "")
         }
+
+        fun logParamFun(layer: Layer, parameterName: String) {
+            statsigScope.launch {
+                logger.logLayerExposure(
+                    user,
+                    layer,
+                    parameterName,
+                    result
+                )
+            }
+        }
+
+        val value = (result.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
 
         return Layer(
             layerName,
             result.ruleID,
-            result.secondaryExposures,
-            result.configDelegate ?: "",
-            result.jsonValue as Map<String, Any>
-        )
+            value as Map<String, Any>
+        ) { layer, parameterName ->
+            logParamFun(layer, parameterName)
+        }
     }
 
     override fun logEvent(

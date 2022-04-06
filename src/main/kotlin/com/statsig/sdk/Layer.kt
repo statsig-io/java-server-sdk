@@ -1,18 +1,16 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
+typealias ParamExposureLogger = (layer: Layer, parameterName: String) -> Unit
 
 /**
  * A helper class for interfacing with Layers defined in the Statsig console
  */
-class Layer(
+class Layer internal constructor(
     val name: String,
     val ruleID: String? = null,
-    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-    val allocatedExperiment: String,
-    private val value: Map<String, Any>) {
-
-    init { }
+    private val value: Map<String, Any>,
+    private val exposureLogFunc: ParamExposureLogger? = null
+) {
 
     /**
      * Gets a value from the config, falling back to the provided default value
@@ -21,10 +19,7 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getString(key: String, default: String?): String? {
-        return when (val res = value[key]) {
-            is String -> res
-            else -> default
-        }
+        return get(key, default, value)
     }
 
     /**
@@ -34,10 +29,7 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getBoolean(key: String, default: Boolean): Boolean {
-        return when (val res = value[key]) {
-            is Boolean -> res
-            else -> default
-        }
+        return get(key, default, value)
     }
 
     /**
@@ -47,10 +39,7 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getDouble(key: String, default: Double): Double {
-        return when (val res = value[key]) {
-            is Number -> res.toDouble()
-            else -> default
-        }
+        return get<Number>(key, default, value).toDouble()
     }
 
     /**
@@ -60,10 +49,7 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getInt(key: String, default: Int): Int {
-        return when (val res = value[key]) {
-            is Number -> res.toInt()
-            else -> default
-        }
+        return get<Number>(key, default, value).toInt()
     }
 
     /**
@@ -73,10 +59,7 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getLong(key: String, default: Long): Long {
-        return when (val res = value[key]) {
-            is Number -> res.toLong()
-            else -> default
-        }
+        return get<Number>(key, default, value).toLong()
     }
 
     /**
@@ -86,11 +69,16 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getArray(key: String, default: Array<*>?): Array<*>? {
-        return when (val value = this.value[key]) {
-            is Array<*> -> value
-            is ArrayList<*> -> value.toTypedArray()
-            else -> default
+        var res = value[key] as? Array<*>
+        if (res == null) {
+            res = (value[key] as? ArrayList<*>)?.toTypedArray()
         }
+
+        if (res != null) {
+            logParameterExposure(key)
+        }
+
+        return res ?: default
     }
 
     /**
@@ -100,10 +88,7 @@ class Layer(
      * @return the value at the given key, or the default value if not found
      */
     fun getDictionary(key: String, default: Map<String, Any>?): Map<String, Any>? {
-        return when (this.value[key]) {
-            is Map<*, *> -> this.value[key] as Map<String, Any>
-            else -> default
-        }
+        return get(key, default, value)
     }
 
     /**
@@ -112,24 +97,30 @@ class Layer(
      * @return the value at the given key as a DynamicConfig, or null
      */
     fun getConfig(key: String): DynamicConfig? {
-        return when (this.value[key]) {
-            is Map<*, *> -> DynamicConfig(
+        return when (val value = get(key, null as Map<String, Any>?, value)) {
+            is Map<String, Any> -> DynamicConfig(
                 key,
-                this.value[key] as Map<String, Any>,
+                value,
                 this.ruleID
             )
             else -> null
         }
     }
 
-    fun getExposureMetadata(): String {
-        return Gson().toJson(
-            mapOf(
-                "config" to this.name,
-                "ruleID" to this.ruleID,
-                "secondaryExposures" to this.secondaryExposures,
-                "allocatedExperiment" to this.allocatedExperiment
-            )
-        )
+    private fun logParameterExposure(key: String) {
+        exposureLogFunc?.let {
+            it(this, key)
+        }
+    }
+
+    /**
+     * We should not just expose this function as inline reified is copied to every place it is used.
+     */
+    private inline fun <reified T> get(key: String, default: T, jsonValue: Map<String, Any>): T {
+        val value = jsonValue[key] as? T
+        if (value != null) {
+            logParameterExposure(key)
+        }
+        return value ?: default
     }
 }

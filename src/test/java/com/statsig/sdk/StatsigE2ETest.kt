@@ -16,7 +16,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Before
 import org.junit.Test
 
-private data class LogEventInput(
+internal data class LogEventInput(
     @SerializedName("events") val events: Array<StatsigEvent>,
 )
 
@@ -288,56 +288,6 @@ class StatsigE2ETest {
         assert(eventLogInput.events[1].eventMetadata!!["config"].equals("sample_experiment"))
         assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("2RamGsERWbWMIMnSfOlQuX"))
         assert(eventLogInput.events[1].time!!/1000 == now/1000)
-    }
-
-    @Test
-    fun testLayer() = runBlocking {
-        driver.initialize()
-        val now = System.currentTimeMillis()
-        var config = driver.getLayer(statsigUser, "a_layer")
-        assertEquals("test", config.getString("experiment_param", "ERR"))
-        assertTrue(config.getBoolean("layer_param", false))
-        assertTrue(config.getBoolean("second_layer_param", false))
-
-        config = driver.getLayer(statsigUser, "b_layer_no_alloc")
-        assertEquals("layer_default", config.getString("b_param", "ERR"))
-
-        config = driver.getLayer(statsigUser, "c_layer_with_holdout")
-        assertEquals("layer_default", config.getString("holdout_layer_param", "ERR"))
-
-        driver.shutdown()
-
-        val eventLogInput = withTimeout(TEST_TIMEOUT) {
-            eventLogInputCompletable.await()
-        }
-
-        val events = eventLogInput.events
-        assertEquals(3, events.size)
-
-        assertEquals("statsig::layer_exposure", events[0].eventName)
-        assertEquals("a_layer", events[0].eventMetadata!!["config"])
-        assertEquals("2RamGujUou6h2bVNQWhtNZ", events[0].eventMetadata!!["ruleID"])
-        assertEquals("sample_experiment", events[0].eventMetadata!!["allocatedExperiment"])
-        assertEquals(now/1000, events[0].time!!/1000)
-        assertEquals(listOf<Map<String,String>>(), events[0].secondaryExposures)
-
-        assertEquals("statsig::layer_exposure", events[1].eventName)
-        assertEquals("b_layer_no_alloc", events[1].eventMetadata!!["config"])
-        assertEquals("default", events[1].eventMetadata!!["ruleID"])
-        assertEquals("", events[1].eventMetadata!!["allocatedExperiment"])
-        assertEquals(now/1000, events[1].time!!/1000)
-        assertEquals(listOf<Map<String,String>>(), events[1].secondaryExposures)
-
-        assertEquals("statsig::layer_exposure", events[2].eventName)
-        assertEquals("c_layer_with_holdout", events[2].eventMetadata!!["config"])
-        assertEquals("7d2E854TtGmfETdmJFip1L", events[2].eventMetadata!!["ruleID"])
-        assertEquals("", events[2].eventMetadata!!["allocatedExperiment"])
-        assertEquals(now/1000, events[2].time!!/1000)
-        assertEquals(listOf(mapOf(
-            "gate" to "always_on_gate",
-            "gateValue" to "true",
-            "ruleID" to "6N6Z8ODekNYZ7F8gFdoLP5"
-        )), events[2].secondaryExposures)
     }
 
     @Test

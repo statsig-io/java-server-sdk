@@ -1,6 +1,11 @@
 package com.statsig.sdk
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
 const val MAX_EVENTS: Int = 500
@@ -65,19 +70,28 @@ internal class StatsigLogger(
         log(event)
     }
 
-    suspend fun logLayerExposure(user: StatsigUser?, configName: String, ruleID: String,
-                                  secondaryExposures: ArrayList<Map<String, String>>, allocatedExperiment: String) {
+    suspend fun logLayerExposure(user: StatsigUser?, layer: Layer, parameterName: String, configEvaluation: ConfigEvaluation) {
+        var allocatedExperiment = ""
+        var exposures = configEvaluation.undelegatedSecondaryExposures
+        val isExplicit = configEvaluation.explicitParameters.contains(parameterName)
+        if (isExplicit) {
+            exposures = configEvaluation.secondaryExposures
+            allocatedExperiment = configEvaluation.configDelegate ?: ""
+        }
+
         val event = StatsigEvent(
             LAYER_EXPOSURE_EVENT,
             eventValue = null,
             mapOf(
-                "config" to configName,
-                "ruleID" to ruleID,
-                "allocatedExperiment" to allocatedExperiment
+                "config" to layer.name,
+                "ruleID" to (layer.ruleID ?: ""),
+                "allocatedExperiment" to allocatedExperiment,
+                "parameterName" to parameterName,
+                "isExplicitParameter" to isExplicit.toString()
             ),
             user,
             statsigMetadata,
-            secondaryExposures
+            exposures
         )
         log(event)
     }

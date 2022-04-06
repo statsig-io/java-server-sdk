@@ -21,6 +21,7 @@ internal data class APIConfig(
     @SerializedName("enabled") val enabled: Boolean,
     @SerializedName("rules") val rules: Array<APIRule>,
     @SerializedName("idType") val idType: String,
+    @SerializedName("explicitParameters") val explicitParameters: Array<String>?,
 )
 
 internal data class APIRule(

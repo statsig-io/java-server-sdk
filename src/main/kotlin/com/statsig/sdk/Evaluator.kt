@@ -20,6 +20,7 @@ internal data class ConfigEvaluation(
     val ruleID: String = "",
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val undelegatedSecondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    val explicitParameters: Array<String> = arrayOf(),
     val configDelegate: String? = null
 )
 
@@ -59,9 +60,9 @@ internal class Evaluator {
         if (!downloadedConfig.hasUpdates) {
             return
         }
-        var newGates: MutableMap<String, APIConfig> = HashMap()
-        var newConfigs: MutableMap<String, APIConfig> = HashMap()
-        var newLayers: MutableMap<String, APIConfig> = HashMap()
+        val newGates: MutableMap<String, APIConfig> = HashMap()
+        val newConfigs: MutableMap<String, APIConfig> = HashMap()
+        val newLayers: MutableMap<String, APIConfig> = HashMap()
         for (gate in downloadedConfig.featureGates) {
             newGates[gate.name] = gate
         }
@@ -196,7 +197,8 @@ internal class Evaluator {
                 ruleID = delegatedResult.ruleID,
                 secondaryExposures = secondaryExposures,
                 undelegatedSecondaryExposures = undelegatedSecondaryExposures,
-                configDelegate = rule.configDelegate
+                configDelegate = rule.configDelegate,
+                explicitParameters = it.explicitParameters ?: arrayOf()
             )
         }
 
