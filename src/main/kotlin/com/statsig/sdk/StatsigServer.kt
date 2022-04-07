@@ -193,7 +193,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             }
             var downloadedConfigs : APIDownloadedConfigs? = null
             downloadedConfigs = if (options.bootstrapValues != null) {
-                network.getConfigSpecs(options.bootstrapValues)
+                network.parseConfigSpecs(options.bootstrapValues)
             } else {
                 network.downloadConfigSpecs()
             }

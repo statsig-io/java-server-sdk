@@ -106,7 +106,7 @@ internal class StatsigNetwork(
         }
     }
 
-    fun getConfigSpecs(specs: String): APIDownloadedConfigs? {
+    fun parseConfigSpecs(specs: String): APIDownloadedConfigs? {
         if (specs.isEmpty()) {
             return null
         }
