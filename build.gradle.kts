@@ -16,6 +16,7 @@ repositories {
 }
 
 dependencies {
+    implementation("org.junit.jupiter:junit-jupiter:5.4.2")
     testImplementation("junit:junit:4.13")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.9.1")
     testImplementation("io.mockk:mockk:1.10.6")

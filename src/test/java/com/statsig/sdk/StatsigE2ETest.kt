@@ -4,8 +4,6 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.annotations.SerializedName
-import junit.framework.Assert.assertEquals
-import junit.framework.Assert.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -13,8 +11,10 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import org.junit.Before
 import org.junit.Test
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.Before
 
 internal data class LogEventInput(
     @SerializedName("events") val events: Array<StatsigEvent>,
@@ -42,18 +42,20 @@ class StatsigE2ETest {
     private lateinit var statsigUser: StatsigUser
     private lateinit var randomUser: StatsigUser
     private lateinit var driver: StatsigServer
+    private lateinit var downloadConfigSpecsResponse: String
 
     private var download_config_count: Int = 0
     private var download_id_list_count: Int = 0
     private var download_list_1_count: Int = 0
     private var download_list_2_count: Int = 0
+    private var bootstrap_callback_count: Int = 0
 
     @Before
     fun setup() {
         gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
         eventLogInputCompletable = CompletableDeferred()
-        val downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
+        downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
         
         server = MockWebServer()
         server.apply {
@@ -199,6 +201,16 @@ class StatsigE2ETest {
 
     @Test
     fun testFeatureGate() = runBlocking {
+        featureGateHelper()
+    }
+
+    @Test
+    fun testFeatureGateWithBootstrap() = runBlocking {
+        bootstrap()
+        featureGateHelper()
+    }
+
+    private fun featureGateHelper() = runBlocking {
         driver.initialize()
         val now = System.currentTimeMillis()
         assert(driver.checkGate(statsigUser, "always_on_gate"))
@@ -232,6 +244,16 @@ class StatsigE2ETest {
 
     @Test
     fun testDynamicConfig() = runBlocking {
+        dynamicConfigHelper()
+    }
+
+    @Test
+    fun testDynamicConfigWithBootstrap() = runBlocking {
+        bootstrap()
+        dynamicConfigHelper()
+    }
+
+    private fun dynamicConfigHelper() = runBlocking {
         driver.initialize()
         val now = System.currentTimeMillis()
         var config = driver.getConfig(statsigUser, "test_config")
@@ -265,6 +287,16 @@ class StatsigE2ETest {
 
     @Test
     fun testExperiment() = runBlocking {
+        experimentHelper()
+    }
+
+    @Test
+    fun testExperimentWithBootstrap() = runBlocking {
+        bootstrap()
+        experimentHelper()
+    }
+
+    private fun experimentHelper() = runBlocking {
         driver.initialize()
         val now = System.currentTimeMillis()
         var config = driver.getExperiment(statsigUser, "sample_experiment")
@@ -292,6 +324,16 @@ class StatsigE2ETest {
 
     @Test
     fun testLogEvent() = runBlocking {
+        logEventHelper()
+    }
+
+    @Test
+    fun testLogEventWithBootstrap() = runBlocking {
+        bootstrap()
+        logEventHelper()
+    }
+
+    private fun logEventHelper() = runBlocking {
         driver.initialize()
         val now = System.currentTimeMillis()
         driver.logEvent(statsigUser, "purchase", 2.99, mapOf("item_name" to "remove_ads"))
@@ -311,6 +353,30 @@ class StatsigE2ETest {
     @Test
     fun testBackgroundSync() = runBlocking {
         download_config_count = 0
+        backgroundSyncHelper()
+    }
+
+    private fun bootstrap() = runBlocking {
+        options = StatsigOptions(bootstrapValues = downloadConfigSpecsResponse, rulesUpdatedCallback = { bootstrap_callback_count++ }).apply {
+            api = server.url("/v1").toString()
+        }
+        driver = StatsigServer.create("secret-testcase", options)
+    }
+
+    @Test
+    fun testBackgroundSyncWithBootstrap() = runBlocking {
+        bootstrap()
+        // the initialize is synchronous, and wont trigger a call to download_config_specs
+        // this normalizes the count so the remainder of the test works
+        download_config_count = 1
+        bootstrap_callback_count = 0
+        backgroundSyncHelper()
+        // callback will fire 1 less time than the total download count
+        // because the initial bootstrap counts as a download config count
+        assert(bootstrap_callback_count == download_config_count - 1)
+    }
+
+    private fun backgroundSyncHelper() = runBlocking {
         download_id_list_count = 0
         download_list_1_count = 0
         download_list_2_count = 0
@@ -323,7 +389,6 @@ class StatsigE2ETest {
         privateEvaluatorField.isAccessible = true
 
         val evaluator = privateEvaluatorField[driver] as Evaluator
-
         assert(download_config_count == 1)
         assert(download_id_list_count == 1)
 
