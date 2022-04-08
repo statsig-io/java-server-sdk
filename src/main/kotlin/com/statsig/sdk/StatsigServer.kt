@@ -42,6 +42,8 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract suspend fun getLayer(user: StatsigUser, layerName: String): Layer
 
+    @JvmSynthetic abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
+
     @JvmSynthetic abstract suspend fun shutdownSuspend()
 
     fun logEvent(user: StatsigUser?, eventName: String) {
@@ -100,6 +102,11 @@ sealed class StatsigServer {
             layerName: String
     ): CompletableFuture<Layer>
 
+    abstract fun getLayerWithExposureLoggingDisabledAsync(
+        user: StatsigUser,
+        layerName: String
+    ): CompletableFuture<Layer>
+
     /**
      * @deprecated
      * - we make no promises of support for this API
@@ -121,7 +128,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.11.0"
+private const val VERSION = "0.13.1"
 
 private class StatsigServerImpl(serverSecret: String, private val options: StatsigOptions) :
         StatsigServer() {
@@ -302,6 +309,12 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
     }
 
+    override suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+        return getLayerHelper(normalizedUser, layerName, true);
+    }
+
     override fun logEvent(
             user: StatsigUser?,
             eventName: String,
@@ -409,6 +422,15 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
     }
 
+    override fun getLayerWithExposureLoggingDisabledAsync(
+        user: StatsigUser,
+        experimentName: String
+    ): CompletableFuture<Layer> {
+        return statsigScope.future {
+            return@future getLayerWithExposureLoggingDisabled(user, experimentName)
+        }
+    }
+
     /**
      * @deprecated
      * - we make no promises of support for this API
@@ -468,6 +490,29 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                 result.jsonValue as Map<String, Any>,
                 result.ruleID,
                 result.secondaryExposures
+        )
+    }
+
+    private suspend fun getLayerHelper(user: StatsigUser, layerName: String, disableExposure: Boolean): Layer {
+        var result: ConfigEvaluation = configEvaluator.getLayer(user, layerName)
+        if (result.fetchFromServer) {
+            result = network.getConfig(user, layerName)
+        } else if (!disableExposure) {
+            logger.logLayerExposure(
+                user,
+                layerName,
+                result.ruleID,
+                result.secondaryExposures,
+                result.configDelegate ?: ""
+            )
+        }
+
+        return Layer(
+            layerName,
+            result.ruleID,
+            result.secondaryExposures,
+            result.configDelegate ?: "",
+            result.jsonValue as Map<String, Any>
         )
     }
 }

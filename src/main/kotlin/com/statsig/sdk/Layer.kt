@@ -8,7 +8,7 @@ typealias ParamExposureLogger = (layer: Layer, parameterName: String) -> Unit
 class Layer internal constructor(
     val name: String,
     val ruleID: String? = null,
-    private val value: Map<String, Any>,
+    val value: Map<String, Any>,
     private val exposureLogFunc: ParamExposureLogger? = null
 ) {
 
