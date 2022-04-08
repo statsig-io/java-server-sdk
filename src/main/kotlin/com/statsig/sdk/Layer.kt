@@ -10,7 +10,7 @@ class Layer(
     val ruleID: String? = null,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val allocatedExperiment: String,
-    private val value: Map<String, Any>) {
+    val value: Map<String, Any>) {
 
     init { }
 

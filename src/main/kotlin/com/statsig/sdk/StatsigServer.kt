@@ -121,7 +121,7 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.13.0"
+private const val VERSION = "0.13.1"
 
 private class StatsigServerImpl(serverSecret: String, private val options: StatsigOptions) :
         StatsigServer() {
