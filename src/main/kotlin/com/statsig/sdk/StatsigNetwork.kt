@@ -106,8 +106,8 @@ internal class StatsigNetwork(
         }
     }
 
-    fun parseConfigSpecs(specs: String): APIDownloadedConfigs? {
-        if (specs.isEmpty()) {
+    fun parseConfigSpecs(specs: String?): APIDownloadedConfigs? {
+        if (specs == null || specs.isEmpty()) {
             return null
         }
         try {
@@ -189,9 +189,9 @@ internal class StatsigNetwork(
                 statsigHttpClient.newCall(request).await().use { response ->
                     if (response.isSuccessful) {
                         val body = response.body ?: return@coroutineScope
-                        val response = gson.fromJson<Map<String, IDList>>(body.string())
+                        val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string())
                         val allLocalLists = evaluator.idLists
-                        for ((name, serverList) in response) {
+                        for ((name, serverList) in jsonResponse) {
                             var localList = allLocalLists[name]
                             if (localList == null) {
                                 localList = IDList(name=name)
@@ -223,7 +223,7 @@ internal class StatsigNetwork(
                         // remove deleted id lists
                         val deletedLists = mutableListOf<String>()
                         for (name in allLocalLists.keys) {
-                            if (!response.containsKey(name)) {
+                            if (!jsonResponse.containsKey(name)) {
                                 deletedLists.add(name)
                             }
                         }
