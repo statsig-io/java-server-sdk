@@ -163,12 +163,23 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                         return@collect
                     }
                     configEvaluator.setDownloadedConfigs(it)
+                    fireRulesUpdatedCallback(it)
                 }
             }
     private val idListPollingJob =
             statsigScope.launch(start = CoroutineStart.LAZY) {
                 network.syncIDLists(configEvaluator)
             }
+
+    private fun fireRulesUpdatedCallback(configSpecs: APIDownloadedConfigs) {
+        if (options.rulesUpdatedCallback == null) {
+            return
+        }
+        try {
+            val configString = configSpecs.toString()
+            options.rulesUpdatedCallback?.invoke(configString)
+        } catch (e: Exception) {}
+    }
 
     override suspend fun initialize() {
         mutex.withLock { // Prevent multiple coroutines from calling this at once.
@@ -180,9 +191,18 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                         "Cannot re-initialize server that has shutdown. Please recreate the server connection."
                 )
             }
-            val downloadedConfigs = network.downloadConfigSpecs()
+            var downloadedConfigs : APIDownloadedConfigs? = null
+            downloadedConfigs = if (options.bootstrapValues != null) {
+                network.parseConfigSpecs(options.bootstrapValues)
+            } else {
+                network.downloadConfigSpecs()
+            }
             if (downloadedConfigs != null) {
                 configEvaluator.setDownloadedConfigs(downloadedConfigs)
+                if (options.bootstrapValues == null) {
+                    // only fire the callback if this wasnt the result of a bootstrap
+                    fireRulesUpdatedCallback(downloadedConfigs)
+                }
             }
             network.getAllIDLists(configEvaluator)
             pollingJob.start()

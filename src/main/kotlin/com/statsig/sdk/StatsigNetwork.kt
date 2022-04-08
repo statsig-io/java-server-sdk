@@ -106,6 +106,16 @@ internal class StatsigNetwork(
         }
     }
 
+    fun parseConfigSpecs(specs: String): APIDownloadedConfigs? {
+        if (specs.isEmpty()) {
+            return null
+        }
+        try {
+            return gson.fromJson(specs, APIDownloadedConfigs::class.java)
+        } catch (e: Exception) {}
+        return null
+    }
+
     suspend fun downloadConfigSpecs(): APIDownloadedConfigs? {
         val bodyJson = gson.toJson(mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastSyncTime))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
