@@ -3,7 +3,6 @@ package com.statsig.sdk
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import org.junit.Assert.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -11,6 +10,8 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -200,6 +201,36 @@ class LayerExposureTest {
             Gson().toJson(events[0].user)
         )
         assertEquals("statsig::layer_exposure", events[0].eventName)
+    }
+
+    @Test
+    fun testCustomExposureLogging() = runBlocking {
+        var calledLayer: Layer? = null
+        var calledParam: String? = null
+        var calledMetadata: String? = null
+
+        driver.initialize()
+        val layer = driver.getLayerWithCustomExposureLogging(user, "unallocated_layer") { layer, param, metadata ->
+            calledLayer = layer
+            calledParam = param
+            calledMetadata = metadata
+        }
+        layer.getInt("an_int", 0)
+        driver.shutdown()
+
+        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        assertEquals(layer, calledLayer)
+        assertEquals("an_int", calledParam)
+        assertEquals("""
+            {
+                "config":"unallocated_layer",
+                "ruleID":"default",
+                "allocatedExperiment":"",
+                "parameterName":"an_int",
+                "isExplicitParameter":"false",
+                "secondaryExposures":[]
+            }
+        """.replace("\\s".toRegex(), ""), calledMetadata)
     }
 
     /***

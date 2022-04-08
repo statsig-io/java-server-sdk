@@ -1,7 +1,7 @@
 package com.statsig.sdk
 
-import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CompletableFuture
 
 class Statsig {
     companion object {
@@ -60,9 +60,9 @@ class Statsig {
             return statsigServer.getLayer(user, layerName)
         }
 
-        suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
+        suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer {
             enforceInitialized()
-            return statsigServer.getLayerWithExposureLoggingDisabled(user, layerName)
+            return statsigServer.getLayerWithCustomExposureLogging(user, layerName, onExposure)
         }
 
         suspend fun shutdownSuspend() {
@@ -156,10 +156,11 @@ class Statsig {
         @JvmStatic
         fun getLayerWithExposureLoggingDisabledAsync(
             user: StatsigUser,
-            layerName: String
+            layerName: String,
+            onExposure: OnLayerExposure
         ): CompletableFuture<Layer> {
             enforceInitialized()
-            return statsigServer.getLayerWithExposureLoggingDisabledAsync(user, layerName)
+            return statsigServer.getLayerWithCustomExposureLoggingAsync(user, layerName, onExposure)
         }
 
         @JvmStatic

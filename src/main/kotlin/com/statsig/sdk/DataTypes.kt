@@ -83,3 +83,23 @@ internal data class IDList(
         ids.remove(id)
     }
 }
+
+internal data class LayerExposureMetadata(
+    @SerializedName("config") val config: String,
+    @SerializedName("ruleID") val ruleID: String,
+    @SerializedName("allocatedExperiment") val allocatedExperiment: String,
+    @SerializedName("parameterName") val parameterName: String,
+    @SerializedName("isExplicitParameter") val isExplicitParameter: String,
+    @SerializedName("secondaryExposures") val secondaryExposures: ArrayList<Map<String, String>>,
+) {
+    fun toStatsigEventMetadataMap(): Map<String, String> {
+        return mapOf(
+            "config" to config,
+            "ruleID" to ruleID,
+            "allocatedExperiment" to allocatedExperiment,
+            "parameterName" to parameterName,
+            "isExplicitParameter" to isExplicitParameter,
+            // secondaryExposures excluded -- StatsigEvent adds secondaryExposures explicitly as a top level key
+        )
+    }
+}

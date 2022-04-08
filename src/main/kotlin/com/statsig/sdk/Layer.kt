@@ -1,6 +1,7 @@
 package com.statsig.sdk
 
-typealias ParamExposureLogger = (layer: Layer, parameterName: String) -> Unit
+typealias OnLayerExposure = (layer: Layer, parameterName: String, metadata: String) -> Unit
+internal typealias OnLayerExposureInternal = (layer: Layer, parameterName: String) -> Unit
 
 /**
  * A helper class for interfacing with Layers defined in the Statsig console
@@ -9,7 +10,7 @@ class Layer internal constructor(
     val name: String,
     val ruleID: String? = null,
     val value: Map<String, Any>,
-    private val exposureLogFunc: ParamExposureLogger? = null
+    private val onExposure: OnLayerExposureInternal? = null
 ) {
 
     /**
@@ -108,7 +109,7 @@ class Layer internal constructor(
     }
 
     private fun logParameterExposure(key: String) {
-        exposureLogFunc?.let {
+        onExposure?.let {
             it(this, key)
         }
     }
@@ -123,4 +124,27 @@ class Layer internal constructor(
         }
         return value ?: default
     }
+}
+
+internal fun createLayerExposureMetadata(
+    layer: Layer,
+    parameterName: String,
+    configEvaluation: ConfigEvaluation
+): LayerExposureMetadata {
+    var allocatedExperiment = ""
+    var exposures = configEvaluation.undelegatedSecondaryExposures
+    val isExplicit = configEvaluation.explicitParameters.contains(parameterName)
+    if (isExplicit) {
+        exposures = configEvaluation.secondaryExposures
+        allocatedExperiment = configEvaluation.configDelegate ?: ""
+    }
+
+    return LayerExposureMetadata(
+        layer.name,
+        layer.ruleID ?: "",
+        allocatedExperiment,
+        parameterName,
+        isExplicit.toString(),
+        exposures
+    )
 }

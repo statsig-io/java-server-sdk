@@ -70,28 +70,14 @@ internal class StatsigLogger(
         log(event)
     }
 
-    suspend fun logLayerExposure(user: StatsigUser?, layer: Layer, parameterName: String, configEvaluation: ConfigEvaluation) {
-        var allocatedExperiment = ""
-        var exposures = configEvaluation.undelegatedSecondaryExposures
-        val isExplicit = configEvaluation.explicitParameters.contains(parameterName)
-        if (isExplicit) {
-            exposures = configEvaluation.secondaryExposures
-            allocatedExperiment = configEvaluation.configDelegate ?: ""
-        }
-
+    suspend fun logLayerExposure(user: StatsigUser?, layerExposureMetadata: LayerExposureMetadata) {
         val event = StatsigEvent(
             LAYER_EXPOSURE_EVENT,
             eventValue = null,
-            mapOf(
-                "config" to layer.name,
-                "ruleID" to (layer.ruleID ?: ""),
-                "allocatedExperiment" to allocatedExperiment,
-                "parameterName" to parameterName,
-                "isExplicitParameter" to isExplicit.toString()
-            ),
+            layerExposureMetadata.toStatsigEventMetadataMap(),
             user,
             statsigMetadata,
-            exposures
+            layerExposureMetadata.secondaryExposures
         )
         log(event)
     }

@@ -1,5 +1,6 @@
 package com.statsig.sdk
 
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -42,7 +43,7 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract suspend fun getLayer(user: StatsigUser, layerName: String): Layer
 
-    @JvmSynthetic abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
+    @JvmSynthetic abstract suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer
 
     @JvmSynthetic abstract suspend fun shutdownSuspend()
 
@@ -102,9 +103,10 @@ sealed class StatsigServer {
             layerName: String
     ): CompletableFuture<Layer>
 
-    abstract fun getLayerWithExposureLoggingDisabledAsync(
+    abstract fun getLayerWithCustomExposureLoggingAsync(
         user: StatsigUser,
-        layerName: String
+        layerName: String,
+        onExposure: OnLayerExposure
     ): CompletableFuture<Layer>
 
     /**
@@ -278,11 +280,11 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun getLayer(user: StatsigUser, layerName: String): Layer {
-        return getLayerHelper(user, layerName, false);
+       return getLayerImpl(user, layerName)
     }
 
-    override suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
-        return getLayerHelper(user, layerName, true);
+    override suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer {
+        return getLayerImpl(user, layerName, onExposure)
     }
 
     override fun logEvent(
@@ -392,12 +394,13 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
     }
 
-    override fun getLayerWithExposureLoggingDisabledAsync(
+    override fun getLayerWithCustomExposureLoggingAsync(
         user: StatsigUser,
-        experimentName: String
+        layerName: String,
+        onExposure: OnLayerExposure
     ): CompletableFuture<Layer> {
         return statsigScope.future {
-            return@future getLayerWithExposureLoggingDisabled(user, experimentName)
+            return@future getLayerWithCustomExposureLogging(user, layerName, onExposure)
         }
     }
 
@@ -415,6 +418,38 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     override suspend fun flush() {
         logger.flush()
+    }
+
+    private suspend fun getLayerImpl(user: StatsigUser, layerName: String, onExposure: OnLayerExposure? = null): Layer {
+        enforceActive()
+        val normalizedUser = normalizeUser(user)
+
+        var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
+        if (result.fetchFromServer) {
+            result = network.getConfig(user, layerName)
+        }
+
+        val value = (result.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
+
+        return Layer(
+            layerName,
+            result.ruleID,
+            value as Map<String, Any>
+        ) { layer, paramName ->
+            val metadata = createLayerExposureMetadata(layer, paramName, result)
+
+            if (onExposure != null) {
+                val json = Gson().toJson(metadata)
+                onExposure(layer, paramName, json)
+            } else {
+                statsigScope.launch {
+                    logger.logLayerExposure(
+                        user,
+                        metadata
+                    )
+                }
+            }
+        }
     }
 
     private fun normalizeUser(user: StatsigUser?): StatsigUser {
@@ -461,40 +496,5 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             finalResult.ruleID,
             finalResult.secondaryExposures
         )
-    }
-
-    private suspend fun getLayerHelper(user: StatsigUser, layerName: String, disableExposure: Boolean): Layer {
-        enforceActive()
-        val normalizedUser = normalizeUser(user)
-
-        var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
-        if (result.fetchFromServer) {
-            result = network.getConfig(user, layerName)
-        }
-
-        fun logParamFun(layer: Layer, parameterName: String) {
-            if (disableExposure) {
-                return
-            }
-
-            statsigScope.launch {
-                logger.logLayerExposure(
-                    user,
-                    layer,
-                    parameterName,
-                    result
-                )
-            }
-        }
-
-        val value = (result.jsonValue as? Map<String, *>) ?: mapOf<String, Any>()
-
-        return Layer(
-            layerName,
-            result.ruleID,
-            value as Map<String, Any>
-        ) { layer, parameterName ->
-            logParamFun(layer, parameterName)
-        }
     }
 }

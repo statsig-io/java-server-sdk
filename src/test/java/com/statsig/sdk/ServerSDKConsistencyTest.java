@@ -11,9 +11,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -27,16 +24,9 @@ public class ServerSDKConsistencyTest {
     public void setUp() throws Exception {
         secret = System.getenv("test_api_key");
         if (secret == null || secret.length() == 0) {
-            try {
-                secret = Files.readString(Paths.get(
-                        Paths.get("").toAbsolutePath()
-                                + "/../ops/secrets/prod_keys/statsig-rulesets-eval-consistency-test-secret.key"),
-                        StandardCharsets.US_ASCII);
-            } catch (Exception e) {
-                throw new Exception("THIS TEST IS EXPECTED TO FAIL FOR NON-STATSIG EMPLOYEES! If this is the" +
-                        "only test failing, please proceed to submit a pull request. If you are a Statsig employee," +
-                        "chat with jkw.");
-            }
+            throw new Exception("THIS TEST IS EXPECTED TO FAIL FOR NON-STATSIG EMPLOYEES! If this is the" +
+                    "only test failing, please proceed to submit a pull request. If you are a Statsig employee," +
+                    "chat with jkw.");
         }
     }
 
