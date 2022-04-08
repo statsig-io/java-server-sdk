@@ -305,6 +305,9 @@ class StatsigE2ETest {
         config = driver.getLayer(statsigUser, "c_layer_with_holdout")
         assertEquals("layer_default", config.getString("holdout_layer_param", "ERR"))
 
+        // check below should not result in an exposure log
+        driver.getLayerWithExposureLoggingDisabled(statsigUser, "a_layer")
+        driver.getLayerWithExposureLoggingDisabledAsync(statsigUser, "a_layer")
         driver.shutdown()
 
         val eventLogInput = withTimeout(TEST_TIMEOUT) {
