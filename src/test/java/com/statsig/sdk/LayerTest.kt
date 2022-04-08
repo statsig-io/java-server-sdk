@@ -1,6 +1,6 @@
 package com.statsig.sdk
 
-import junit.framework.Assert.*
+import org.junit.Assert.*
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Test

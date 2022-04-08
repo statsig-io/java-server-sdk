@@ -155,7 +155,7 @@ class StatsigE2ETest {
                         }
                         "/v1/list_1" -> {
                             val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range!!.length-1).toIntOrNull()
+                            val startIndex = range!!.substring(6, range.length-1).toIntOrNull()
                             download_list_1_count++
 
                             var content: String = when (download_list_1_count) {
@@ -168,7 +168,7 @@ class StatsigE2ETest {
                         }
                         "/v1/list_2" -> {
                             val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range!!.length-1).toIntOrNull()
+                            val startIndex = range!!.substring(6, range.length-1).toIntOrNull()
                             download_list_2_count++
 
                             var content: String = when (download_list_2_count) {
