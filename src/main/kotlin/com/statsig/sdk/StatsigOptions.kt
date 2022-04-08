@@ -21,8 +21,8 @@ private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
 class StatsigOptions(
     var api: String = DEFAULT_API_URL_BASE,
     var initTimeoutMs: Long? = DEFAULT_INIT_TIME_OUT_MS,
-    val bootstrapValues: String? = null,
-    val rulesUpdatedCallback: ((rules: String) -> Unit)? = null,
+    var bootstrapValues: String? = null,
+    var rulesUpdatedCallback: ((rules: String) -> Unit)? = null,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
 

@@ -91,7 +91,7 @@ sealed class StatsigServer {
 
     abstract fun getExperimentInLayerForUserAsync(
             user: StatsigUser,
-            experimentName: String,
+            layerName: String,
             disableExposure: Boolean = false
     ): CompletableFuture<DynamicConfig>
 
@@ -146,7 +146,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             }
 
     private val coroutineExceptionHandler =
-                    CoroutineExceptionHandler { coroutineContext, throwable ->
+                    CoroutineExceptionHandler { _, _ ->
         // no-op - supervisor job should not throw when a child fails
     }
     private val statsigJob = SupervisorJob()
@@ -191,8 +191,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                         "Cannot re-initialize server that has shutdown. Please recreate the server connection."
                 )
             }
-            var downloadedConfigs : APIDownloadedConfigs? = null
-            downloadedConfigs = if (options.bootstrapValues != null) {
+            val downloadedConfigs = if (options.bootstrapValues != null) {
                 network.parseConfigSpecs(options.bootstrapValues)
             } else {
                 network.downloadConfigSpecs()
@@ -291,7 +290,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             }
         }
 
-        val value = (result.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
+        val value = (result.jsonValue as? Map<String, *>) ?: mapOf<String, Any>()
 
         return Layer(
             layerName,
@@ -457,17 +456,17 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             configName: String,
             disableExposure: Boolean = false
     ): DynamicConfig {
-        var result = result
-        if (result.fetchFromServer) {
-            result = network.getConfig(user, configName)
+        var finalResult = result
+        if (finalResult.fetchFromServer) {
+            finalResult = network.getConfig(user, configName)
         } else if (!disableExposure) {
-            logger.logConfigExposure(user, configName, result.ruleID, result.secondaryExposures)
+            logger.logConfigExposure(user, configName, finalResult.ruleID, finalResult.secondaryExposures)
         }
         return DynamicConfig(
-                configName,
-                result.jsonValue as Map<String, Any>,
-                result.ruleID,
-                result.secondaryExposures
+            configName,
+            finalResult.jsonValue as Map<String, Any>,
+            finalResult.ruleID,
+            finalResult.secondaryExposures
         )
     }
 }

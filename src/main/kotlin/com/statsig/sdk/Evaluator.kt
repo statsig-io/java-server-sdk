@@ -246,7 +246,7 @@ internal class Evaluator {
                     val result = this.checkGate(user, condition.targetValue as String)
                     val newExposure =
                             mapOf(
-                                    "gate" to condition.targetValue as String,
+                                    "gate" to condition.targetValue,
                                     "gateValue" to result.booleanValue.toString(),
                                     "ruleID" to result.ruleID,
                             )
@@ -265,7 +265,7 @@ internal class Evaluator {
                 ConfigCondition.IP_BASED -> {
                     value = getFromUser(user, condition.field)
                     if (value == null) {
-                        val ipString = getFromUser(user, "ip").toString()
+                        val ipString = getFromUser(user, "ip")?.toString()
                         if (ipString == null) {
                             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
                         } else {
@@ -725,7 +725,7 @@ internal class Evaluator {
     private fun getFromUserAgent(user: StatsigUser, field: String): String? {
         val ua = getFromUser(user, "userAgent") ?: return null
         val c: Client = uaParser.parse(ua.toString())
-        when (field.toLowerCase()) {
+        when (field.lowercase()) {
             "os_name", "osname" -> return c.os.family
             "os_version", "osversion" ->
                     return arrayOf(
@@ -753,7 +753,7 @@ internal class Evaluator {
 
     private fun getFromUser(user: StatsigUser, field: String): Any? {
         var value: Any? = null
-        when (field.toLowerCase()) {
+        when (field.lowercase()) {
             "userid", "user_id" -> value = user.userID
             "email" -> value = user.email
             "ip", "ipaddress", "ip_address" -> value = user.ip
@@ -763,19 +763,19 @@ internal class Evaluator {
             "appversion", "app_version" -> value = user.appVersion
         }
         if ((value == null || value == "") && user.custom != null) {
-            value = user.custom?.get(field) ?: user.custom?.get(field.toLowerCase())
+            value = user.custom?.get(field) ?: user.custom?.get(field.lowercase())
         }
         if ((value == null || value == "") && user.privateAttributes != null) {
             value =
                     user.privateAttributes?.get(field)
-                            ?: user.privateAttributes?.get(field.toLowerCase())
+                            ?: user.privateAttributes?.get(field.lowercase())
         }
         return value
     }
 
     private fun getFromEnvironment(user: StatsigUser, field: String): String? {
         return user.statsigEnvironment?.get(field)
-                ?: user.statsigEnvironment?.get(field.toLowerCase())
+                ?: user.statsigEnvironment?.get(field.lowercase())
     }
 
     private fun computeUserHash(input: String): ULong {
