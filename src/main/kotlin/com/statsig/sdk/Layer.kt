@@ -1,6 +1,6 @@
 package com.statsig.sdk
 
-typealias OnLayerExposure = (layer: Layer, parameterName: String, metadata: String) -> Unit
+typealias OnLayerExposure = (layerExposureEventData: LayerExposureEventData) -> Unit
 internal typealias OnLayerExposureInternal = (layer: Layer, parameterName: String) -> Unit
 
 /**

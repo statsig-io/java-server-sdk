@@ -1,8 +1,14 @@
-package com.statsig.sdk
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
+import com.statsig.sdk.LayerExposureEventData
+import com.statsig.sdk.LogEventInput
+import com.statsig.sdk.StatsigE2ETest
+import com.statsig.sdk.StatsigEvent
+import com.statsig.sdk.StatsigOptions
+import com.statsig.sdk.StatsigServer
+import com.statsig.sdk.StatsigUser
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -10,8 +16,7 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
@@ -205,22 +210,20 @@ class LayerExposureTest {
 
     @Test
     fun testCustomExposureLogging() = runBlocking {
-        var calledLayer: Layer? = null
-        var calledParam: String? = null
-        var calledMetadata: String? = null
+        var calledExposureEventData: LayerExposureEventData? = null
 
         driver.initialize()
-        val layer = driver.getLayerWithCustomExposureLogging(user, "unallocated_layer") { layer, param, metadata ->
-            calledLayer = layer
-            calledParam = param
-            calledMetadata = metadata
+        val layer = driver.getLayerWithCustomExposureLogging(user, "unallocated_layer") { exposureEventData ->
+            calledExposureEventData = exposureEventData
         }
         layer.getInt("an_int", 0)
         driver.shutdown()
 
         assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
-        assertEquals(layer, calledLayer)
-        assertEquals("an_int", calledParam)
+        assertEquals(layer, calledExposureEventData?.layer)
+        assertEquals("statsig::layer_exposure", calledExposureEventData?.eventName)
+        assertNull(calledExposureEventData?.eventValue)
+        assertEquals("an_int", calledExposureEventData?.parameterName)
         assertEquals("""
             {
                 "config":"unallocated_layer",
@@ -230,7 +233,7 @@ class LayerExposureTest {
                 "isExplicitParameter":"false",
                 "secondaryExposures":[]
             }
-        """.replace("\\s".toRegex(), ""), calledMetadata)
+        """.replace("\\s".toRegex(), ""), calledExposureEventData?.metadata)
     }
 
     /***

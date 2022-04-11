@@ -439,8 +439,14 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             val metadata = createLayerExposureMetadata(layer, paramName, result)
 
             if (onExposure != null) {
-                val json = Gson().toJson(metadata)
-                onExposure(layer, paramName, json)
+                onExposure(
+                    LayerExposureEventData(
+                        normalizedUser,
+                        layer,
+                        paramName,
+                        Gson().toJson(metadata)
+                    )
+                )
             } else {
                 statsigScope.launch {
                     logger.logLayerExposure(
