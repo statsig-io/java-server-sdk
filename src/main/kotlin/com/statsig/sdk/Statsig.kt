@@ -154,7 +154,7 @@ class Statsig {
         }
 
         @JvmStatic
-        fun getLayerWithExposureLoggingDisabledAsync(
+        fun getLayerWithCustomExposureLoggingAsync(
             user: StatsigUser,
             layerName: String,
             onExposure: OnLayerExposure
