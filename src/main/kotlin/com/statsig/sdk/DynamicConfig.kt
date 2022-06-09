@@ -11,6 +11,12 @@ class DynamicConfig(
     val ruleID: String? = null,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()) {
 
+    internal companion object {
+        fun empty(name: String = ""): DynamicConfig {
+            return DynamicConfig(name, mapOf())
+        }
+    }
+
     init { }
 
     /**

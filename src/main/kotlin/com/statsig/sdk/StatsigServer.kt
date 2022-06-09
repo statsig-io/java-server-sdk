@@ -13,10 +13,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.Properties
 import java.util.concurrent.CompletableFuture
 
 sealed class StatsigServer {
+    internal abstract val errorBoundary: ErrorBoundary
 
     @JvmSynthetic abstract suspend fun initialize()
 
@@ -130,38 +130,27 @@ sealed class StatsigServer {
     }
 }
 
-private const val VERSION = "0.14.2"
-
 private class StatsigServerImpl(serverSecret: String, private val options: StatsigOptions) :
         StatsigServer() {
 
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
-            throw IllegalArgumentException(
+            throw StatsigUninitializedException(
                     "Statsig Server SDKs must be initialized with a secret key"
             )
         }
     }
 
-    private val version =
-            try {
-                val properties = Properties()
-                properties.load(
-                        StatsigServerImpl::class.java.getResourceAsStream("/statsigsdk.properties")
-                )
-                properties.getProperty("version")
-            } catch (e: Exception) {
-                VERSION
-            }
-
+    override val errorBoundary = ErrorBoundary(serverSecret)
     private val coroutineExceptionHandler =
-                    CoroutineExceptionHandler { _, _ ->
-        // no-op - supervisor job should not throw when a child fails
-    }
+        CoroutineExceptionHandler { _, ex ->
+            // no-op - supervisor job should not throw when a child fails
+            errorBoundary.logException(ex)
+        }
     private val statsigJob = SupervisorJob()
     private val statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
     private val mutex = Mutex()
-    private val statsigMetadata = mapOf("sdkType" to "java-server", "sdkVersion" to version)
+    private val statsigMetadata = StatsigMetadata.asMap()
     private val network = StatsigNetwork(serverSecret, options, statsigMetadata)
     private var configEvaluator = Evaluator()
     private var logger: StatsigLogger = StatsigLogger(statsigScope, network, statsigMetadata)
@@ -191,69 +180,87 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun initialize() {
-        mutex.withLock { // Prevent multiple coroutines from calling this at once.
-            if (pollingJob.isActive) {
-                return // Just return. Initialize was already called.
-            }
-            if (pollingJob.isCancelled || pollingJob.isCompleted) {
-                throw IllegalStateException(
-                        "Cannot re-initialize server that has shutdown. Please recreate the server connection."
-                )
-            }
-            val downloadedConfigs = if (options.bootstrapValues != null) {
-                network.parseConfigSpecs(options.bootstrapValues)
-            } else {
-                network.downloadConfigSpecs()
-            }
-            if (downloadedConfigs != null) {
-                configEvaluator.setDownloadedConfigs(downloadedConfigs)
-                if (options.bootstrapValues == null) {
-                    // only fire the callback if this wasnt the result of a bootstrap
-                    fireRulesUpdatedCallback(downloadedConfigs)
+        errorBoundary.swallow {
+            mutex.withLock { // Prevent multiple coroutines from calling this at once.
+                if (pollingJob.isActive) {
+                    return@swallow // Just return. Initialize was already called.
                 }
+                if (pollingJob.isCancelled || pollingJob.isCompleted) {
+                    throw StatsigIllegalStateException(
+                        "Cannot re-initialize server that has shutdown. Please recreate the server connection."
+                    )
+                }
+                val downloadedConfigs = if (options.bootstrapValues != null) {
+                    network.parseConfigSpecs(options.bootstrapValues)
+                } else {
+                    network.downloadConfigSpecs()
+                }
+                if (downloadedConfigs != null) {
+                    configEvaluator.setDownloadedConfigs(downloadedConfigs)
+                    if (options.bootstrapValues == null) {
+                        // only fire the callback if this wasnt the result of a bootstrap
+                        fireRulesUpdatedCallback(downloadedConfigs)
+                    }
+                }
+                network.getAllIDLists(configEvaluator)
+                pollingJob.start()
+                idListPollingJob.start()
             }
-            network.getAllIDLists(configEvaluator)
-            pollingJob.start()
-            idListPollingJob.start()
         }
     }
 
     override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
         enforceActive()
-        val normalizedUser = normalizeUser(user)
-        var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
-        if (result.fetchFromServer) {
-            result = network.checkGate(normalizedUser, gateName)
-        } else {
-            logger.logGateExposure(
+
+        return errorBoundary.capture({
+            val normalizedUser = normalizeUser(user)
+            var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
+            if (result.fetchFromServer) {
+                result = network.checkGate(normalizedUser, gateName)
+            } else {
+                logger.logGateExposure(
                     normalizedUser,
                     gateName,
                     result.booleanValue,
                     result.ruleID,
                     result.secondaryExposures,
-            )
-        }
-        return result.booleanValue
+                )
+            }
+            return@capture result.booleanValue
+        }, { return@capture false })
+
     }
 
     override suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
-        enforceActive()
-        val normalizedUser = normalizeUser(user)
-        return getConfigHelper(normalizedUser, dynamicConfigName, false)
+        return this.errorBoundary.capture({
+            enforceActive()
+            val normalizedUser = normalizeUser(user)
+            return@capture getConfigHelper(normalizedUser, dynamicConfigName, false)
+        }, {
+            return@capture DynamicConfig.empty(dynamicConfigName)
+        })
     }
 
     override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
-        enforceActive()
-        return getConfig(user, experimentName)
+        return this.errorBoundary.capture({
+            enforceActive()
+            return@capture getConfig(user, experimentName)
+        }, {
+            return@capture DynamicConfig.empty(experimentName)
+        })
     }
 
     override suspend fun getExperimentWithExposureLoggingDisabled(
             user: StatsigUser,
             experimentName: String
     ): DynamicConfig {
-        enforceActive()
-        val normalizedUser = normalizeUser(user)
-        return getConfigHelper(normalizedUser, experimentName, true)
+        return this.errorBoundary.capture({
+            enforceActive()
+            val normalizedUser = normalizeUser(user)
+            return@capture getConfigHelper(normalizedUser, experimentName, true)
+        }, {
+            return@capture DynamicConfig.empty(experimentName)
+        })
     }
 
     override suspend fun getExperimentInLayerForUser(
@@ -261,81 +268,96 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             layerName: String,
             disableExposure: Boolean
     ): DynamicConfig {
-        enforceActive()
-        val normalizedUser = normalizeUser(user)
-        val experiments =
-                configEvaluator.layers[layerName] ?: return DynamicConfig("", hashMapOf(), "")
-        for (expName in experiments) {
-            if (configEvaluator.isUserOverriddenToExperiment(user, expName)) {
-                return getConfigHelper(normalizedUser, expName, disableExposure)
+        return this.errorBoundary.capture({
+            enforceActive()
+            val normalizedUser = normalizeUser(user)
+            val experiments =
+                configEvaluator.layers[layerName] ?: return@capture DynamicConfig.empty()
+            for (expName in experiments) {
+                if (configEvaluator.isUserOverriddenToExperiment(user, expName)) {
+                    return@capture getConfigHelper(normalizedUser, expName, disableExposure)
+                }
             }
-        }
-        for (expName in experiments) {
-            if (configEvaluator.isUserAllocatedToExperiment(user, expName)) {
-                return getConfigHelper(normalizedUser, expName, disableExposure)
+            for (expName in experiments) {
+                if (configEvaluator.isUserAllocatedToExperiment(user, expName)) {
+                    return@capture getConfigHelper(normalizedUser, expName, disableExposure)
+                }
             }
-        }
-        // User is not allocated to any experiment at this point
-        return DynamicConfig("", mapOf())
+            // User is not allocated to any experiment at this point
+            return@capture DynamicConfig.empty()
+        }, {
+            return@capture DynamicConfig.empty()
+        })
     }
 
     override suspend fun getLayer(user: StatsigUser, layerName: String): Layer {
-       return getLayerImpl(user, layerName)
+        return this.errorBoundary.capture({
+            return@capture getLayerImpl(user, layerName)
+        }, {
+            return@capture Layer.empty(layerName)
+        })
     }
 
     override suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer {
-        return getLayerImpl(user, layerName, onExposure)
+        return this.errorBoundary.capture({
+            return@capture getLayerImpl(user, layerName, onExposure)
+        }, {
+            return@capture Layer.empty(layerName)
+        })
     }
 
     override fun logEvent(
-            user: StatsigUser?,
-            eventName: String,
-            value: String?,
-            metadata: Map<String, String>?
+        user: StatsigUser?,
+        eventName: String,
+        value: String?,
+        metadata: Map<String, String>?
     ) {
-        enforceActive()
-        statsigScope.launch {
-            val normalizedUser = normalizeUser(user)
-            val event =
-                    StatsigEvent(
-                            eventName = eventName,
-                            eventValue = value,
-                            eventMetadata = metadata,
-                            user = normalizedUser,
-                    )
-            logger.log(event)
-        }
+        this.logEventImpl(user, eventName, null, value, metadata)
     }
 
     override fun logEvent(
-            user: StatsigUser?,
-            eventName: String,
-            value: Double,
-            metadata: Map<String, String>?
+        user: StatsigUser?,
+        eventName: String,
+        value: Double,
+        metadata: Map<String, String>?
     ) {
-        enforceActive()
-        statsigScope.launch {
+        this.logEventImpl(user, eventName, value, null, metadata)
+    }
+
+    private fun logEventImpl(
+        user: StatsigUser?,
+        eventName: String,
+        doubleValue: Double?,
+        stringValue: String?,
+        metadata: Map<String, String>?
+    ) {
+        errorBoundary.swallowSync {
+            enforceActive()
             val normalizedUser = normalizeUser(user)
             val event =
-                    StatsigEvent(
-                            eventName = eventName,
-                            eventValue = value,
-                            eventMetadata = metadata,
-                            user = normalizedUser,
-                    )
-            logger.log(event)
+                StatsigEvent(
+                    eventName = eventName,
+                    eventValue = doubleValue ?: stringValue,
+                    eventMetadata = metadata,
+                    user = normalizedUser,
+                )
+            statsigScope.launch {
+                logger.log(event)
+            }
         }
     }
 
     override suspend fun shutdownSuspend() {
-        enforceActive()
-        // CAUTION: Order matters here! Need to clean up jobs and post logs before
-        // shutting down the network and supervisor scope
-        pollingJob.cancelAndJoin()
-        logger.shutdown()
-        network.shutdown()
-        statsigJob.cancelAndJoin()
-        statsigScope.cancel()
+        errorBoundary.swallow {
+            enforceActive()
+            // CAUTION: Order matters here! Need to clean up jobs and post logs before
+            // shutting down the network and supervisor scope
+            pollingJob.cancelAndJoin()
+            logger.shutdown()
+            network.shutdown()
+            statsigJob.cancelAndJoin()
+            statsigScope.cancel()
+        }
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {
@@ -421,41 +443,46 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     private suspend fun getLayerImpl(user: StatsigUser, layerName: String, onExposure: OnLayerExposure? = null): Layer {
-        enforceActive()
-        val normalizedUser = normalizeUser(user)
+        return this.errorBoundary.capture({
+            enforceActive()
+            val normalizedUser = normalizeUser(user)
 
-        var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
-        if (result.fetchFromServer) {
-            result = network.getConfig(user, layerName)
-        }
+            var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
+            if (result.fetchFromServer) {
+                result = network.getConfig(user, layerName)
+            }
 
-        val value = (result.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
+            val value = (result.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
 
-        return Layer(
-            layerName,
-            result.ruleID,
-            value as Map<String, Any>
-        ) { layer, paramName ->
-            val metadata = createLayerExposureMetadata(layer, paramName, result)
+            return@capture Layer(
+                layerName,
+                result.ruleID,
+                value as Map<String, Any>
+            ) { layer, paramName ->
+                val metadata = createLayerExposureMetadata(layer, paramName, result)
 
-            if (onExposure != null) {
-                onExposure(
-                    LayerExposureEventData(
-                        normalizedUser,
-                        layer,
-                        paramName,
-                        Gson().toJson(metadata)
+                if (onExposure != null) {
+                    onExposure(
+                        LayerExposureEventData(
+                            normalizedUser,
+                            layer,
+                            paramName,
+                            Gson().toJson(metadata)
+                        )
                     )
-                )
-            } else {
-                statsigScope.launch {
-                    logger.logLayerExposure(
-                        user,
-                        metadata
-                    )
+                } else {
+                    statsigScope.launch {
+                        logger.logLayerExposure(
+                            user,
+                            metadata
+                        )
+                    }
                 }
             }
-        }
+        }, {
+          return@capture Layer.empty(layerName)
+        })
+
     }
 
     private fun normalizeUser(user: StatsigUser?): StatsigUser {
@@ -468,10 +495,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     private fun enforceActive() {
         if (statsigJob.isCancelled || statsigJob.isCompleted) {
-            throw IllegalStateException("StatsigServer was shutdown")
+            throw StatsigIllegalStateException("StatsigServer was shutdown")
         }
         if (!pollingJob.isActive) { // If the server was never initialized
-            throw IllegalStateException("Must initialize a server before calling other APIs")
+            throw StatsigIllegalStateException("Must initialize a server before calling other APIs")
         }
     }
 

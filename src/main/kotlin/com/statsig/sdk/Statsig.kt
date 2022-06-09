@@ -6,7 +6,7 @@ import java.util.concurrent.CompletableFuture
 class Statsig {
     companion object {
 
-        @Volatile private lateinit var statsigServer: StatsigServer
+        @Volatile internal lateinit var statsigServer: StatsigServer
 
         suspend fun initialize(
                 serverSecret: String,

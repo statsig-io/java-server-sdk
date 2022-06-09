@@ -11,8 +11,9 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import org.junit.Test
+import org.junit.After
 import org.junit.Before
+import org.junit.Test
 
 internal data class LogEventInput(
     @SerializedName("events") val events: Array<StatsigEvent>,
@@ -56,6 +57,7 @@ class StatsigE2ETest {
         downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
         
         server = MockWebServer()
+        server.start(8899)
         server.apply {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
@@ -195,6 +197,11 @@ class StatsigE2ETest {
 
         randomUser = StatsigUser("random")
         driver = StatsigServer.create("secret-testcase", options)
+    }
+
+    @After
+    fun afterEach() {
+        server.shutdown()
     }
 
     @Test

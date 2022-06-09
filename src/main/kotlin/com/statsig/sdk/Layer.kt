@@ -13,6 +13,11 @@ class Layer internal constructor(
     private val onExposure: OnLayerExposureInternal? = null
 ) {
 
+    internal companion object {
+        fun empty(name: String): Layer {
+            return Layer(name, null, mapOf())
+        }
+    }
     /**
      * Gets a value from the config, falling back to the provided default value
      * @param key the index within the Layer to fetch a value from
