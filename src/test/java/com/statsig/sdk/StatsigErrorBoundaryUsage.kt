@@ -142,14 +142,14 @@ class StatsigErrorBoundaryUsage {
     }
 
     @Test
-    fun testErrorsWithLogStringEvent() {
+    fun testErrorsWithLogStringEvent() = runBlocking {
         statsig.logEvent(user, "an_event", "a_value")
         onRequestWaiter.await(1, TimeUnit.SECONDS)
         assertEquals(requests.size, 1)
     }
 
     @Test
-    fun testErrorsWithLogDoubleEvent() {
+    fun testErrorsWithLogDoubleEvent() = runBlocking {
         statsig.logEvent(user, "an_event", 1.2)
         onRequestWaiter.await(1, TimeUnit.SECONDS)
         assertEquals(requests.size, 1)
