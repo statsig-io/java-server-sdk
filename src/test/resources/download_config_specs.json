@@ -6,6 +6,7 @@
       "salt": "50ad5c60-9e7a-42ce-86c6-c49035185b14",
       "enabled": true,
       "defaultValue": { "number": 4, "string": "default", "boolean": true },
+      "entity": "dynamic_config",
       "rules": [
         {
           "name": "1kNmlB23wylPFZi1M0Divl",
@@ -32,6 +33,7 @@
       "salt": "f8aeba58-18fb-4f36-9bbd-4c611447a912",
       "enabled": true,
       "defaultValue": { "experiment_param": "control" },
+      "entity": "experiment",
       "rules": [
         {
           "name": "",
@@ -188,6 +190,7 @@
       "salt": "47403b4e-7829-43d1-b1ac-3992a5c1b4ac",
       "enabled": true,
       "defaultValue": false,
+      "entity": "feature_gate",
       "rules": [
         {
           "name": "6N6Z8ODekNYZ7F8gFdoLP5",
@@ -214,6 +217,7 @@
       "salt": "4ab7fc7b-c8a0-4ef1-b869-889467678688",
       "enabled": true,
       "defaultValue": false,
+      "entity": "feature_gate",
       "rules": [
         {
           "name": "7w9rbTSffLT89pxqpyhuqK",
@@ -231,6 +235,33 @@
           "returnValue": true,
           "id": "7w9rbTSffLT89pxqpyhuqK",
           "salt": "e452510f-bd5b-42cb-a71e-00498a7903fc"
+        }
+      ]
+    },
+    {
+      "name": "on_for_id_list",
+      "type": "feature_gate",
+      "salt": "4ab7fc7b-c8a0-4ef1-b869-8894676786aa",
+      "enabled": true,
+      "defaultValue": false,
+      "entity": "feature_gate",
+      "rules": [
+        {
+          "name": "7w9rbTSffLT89pxqpyhuqA",
+          "groupName": "on for people in id list",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_field",
+              "targetValue": "list_1",
+              "operator": "in_segment_list",
+              "field": "userID",
+              "additionalValues": {}
+            }
+          ],
+          "returnValue": true,
+          "id": "7w9rbTSffLT89pxqpyhuqA",
+          "salt": "e452510f-bd5b-42cb-a71e-00498a7903fD"
         }
       ]
     }

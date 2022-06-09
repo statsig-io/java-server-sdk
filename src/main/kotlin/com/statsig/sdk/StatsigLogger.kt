@@ -8,7 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-const val MAX_EVENTS: Int = 500
+const val MAX_EVENTS: Int = 1000
 const val FLUSH_TIMER_MS: Long = 60000
 
 const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
