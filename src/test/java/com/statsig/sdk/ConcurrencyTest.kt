@@ -2,17 +2,21 @@
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import com.statsig.sdk.*
+import com.statsig.sdk.CONFIG_SYNC_INTERVAL_MS
+import com.statsig.sdk.ID_LISTS_SYNC_INTERVAL_MS
 import com.statsig.sdk.LogEventInput
+import com.statsig.sdk.StatsigE2ETest
+import com.statsig.sdk.StatsigOptions
+import com.statsig.sdk.StatsigServer
+import com.statsig.sdk.StatsigUser
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.lang.Thread.sleep
@@ -136,5 +140,17 @@ class ConcurrencyTest {
 
         driver.shutdown()
         assertEquals(3600, flushedEventCount)
+    }
+
+    @Test
+    fun testCallingLogEventThenShutdown() = runBlocking {
+        driver.initialize()
+
+        for (i in 1..20) {
+            driver.logEvent(StatsigUser(userID = "a-user"), "an_event_$i")
+        }
+
+        driver.shutdown()
+        assertEquals(20, flushedEventCount)
     }
 }

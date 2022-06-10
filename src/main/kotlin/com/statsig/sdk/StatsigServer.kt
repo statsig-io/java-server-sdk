@@ -331,8 +331,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         stringValue: String?,
         metadata: Map<String, String>?
     ) {
-        errorBoundary.swallowSync {
-            enforceActive()
+        enforceActive()
+        statsigScope.launch {
             val normalizedUser = normalizeUser(user)
             val event =
                 StatsigEvent(
@@ -341,9 +341,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                     eventMetadata = metadata,
                     user = normalizedUser,
                 )
-            statsigScope.launch {
-                logger.log(event)
-            }
+
+            logger.log(event)
         }
     }
 
