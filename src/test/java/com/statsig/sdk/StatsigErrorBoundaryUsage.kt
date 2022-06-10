@@ -66,8 +66,8 @@ class StatsigErrorBoundaryUsage {
         server.dispatcher =
             object : Dispatcher() {
                 override fun dispatch(request: RecordedRequest): MockResponse {
-                    onRequestWaiter.countDown()
                     requests.add(request)
+                    onRequestWaiter.countDown()
                     return MockResponse().setResponseCode(202)
                 }
             }
@@ -85,7 +85,7 @@ class StatsigErrorBoundaryUsage {
         coEvery { anyConstructed<StatsigNetwork>().downloadConfigSpecs() } throws exception
 
         localStatsig.initialize()
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
@@ -93,65 +93,65 @@ class StatsigErrorBoundaryUsage {
         val localStatsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
         localStatsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
         localStatsig.initialize()
-        assertEquals(requests.size, 0)
+        assertEquals(0, requests.size)
 
         localStatsig.shutdown()
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithCheckGate() = runBlocking {
         statsig.checkGate(user, "a_gate")
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetConfig() = runBlocking {
         statsig.getConfig(user, "a_config")
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetExperiment() = runBlocking {
         statsig.getExperiment(user, "an_experiment")
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetExperimentWithExposureLoggingDisabled() = runBlocking {
         statsig.getExperimentWithExposureLoggingDisabled(user, "an_experiment")
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetExperimentInLayerForUser() = runBlocking {
         statsig.getExperimentInLayerForUser(user, "a_layer")
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetLayer() = runBlocking {
         statsig.getLayer(user, "a_layer")
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetLayerWithCustomExposureLogging() = runBlocking {
         statsig.getLayerWithCustomExposureLogging(user, "a_layer") {}
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithLogStringEvent() = runBlocking {
         statsig.logEvent(user, "an_event", "a_value")
         onRequestWaiter.await(1, TimeUnit.SECONDS)
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithLogDoubleEvent() = runBlocking {
         statsig.logEvent(user, "an_event", 1.2)
         onRequestWaiter.await(1, TimeUnit.SECONDS)
-        assertEquals(requests.size, 1)
+        assertEquals(1, requests.size)
     }
 }
