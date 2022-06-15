@@ -530,9 +530,11 @@ internal class Evaluator {
                                 MessageDigest.getInstance("SHA-256")
                                         .digest(stringValue.toByteArray())
                         val base64 = Base64.getEncoder().encodeToString(bytes)
+                        val containsID = idList.contains(base64.substring(0, 8))
                         return ConfigEvaluation(
                                 fetchFromServer = false,
-                                idList.contains(base64.substring(0, 8))
+                            if (condition.operator == "in_segment_list") containsID
+                            else !containsID,
                         )
                     }
                     return ConfigEvaluation(fetchFromServer = false, false)
@@ -803,5 +805,5 @@ internal enum class ConfigCondition {
     CURRENT_TIME,
     ENVIRONMENT_FIELD,
     USER_BUCKET,
-    UNIT_ID,
+    UNIT_ID
 }
