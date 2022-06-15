@@ -141,16 +141,4 @@ class ConcurrencyTest {
         driver.shutdown()
         assertEquals(3600, flushedEventCount)
     }
-
-    @Test
-    fun testCallingLogEventThenShutdown() = runBlocking {
-        driver.initialize()
-
-        for (i in 1..20) {
-            driver.logEvent(StatsigUser(userID = "a-user"), "an_event_$i")
-        }
-
-        driver.shutdown()
-        assertEquals(20, flushedEventCount)
-    }
 }
