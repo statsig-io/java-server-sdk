@@ -65,6 +65,11 @@ class Statsig {
             return statsigServer.getLayerWithCustomExposureLogging(user, layerName, onExposure)
         }
 
+        suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
+            enforceInitialized()
+            return statsigServer.getLayerWithExposureLoggingDisabled(user, layerName)
+        }
+
         suspend fun shutdownSuspend() {
             statsigServer.shutdownSuspend()
         }
@@ -161,6 +166,15 @@ class Statsig {
         ): CompletableFuture<Layer> {
             enforceInitialized()
             return statsigServer.getLayerWithCustomExposureLoggingAsync(user, layerName, onExposure)
+        }
+
+        @JvmStatic
+        fun getLayerWithExposureLoggingDisabledAsync(
+            user: StatsigUser,
+            layerName: String,
+        ): CompletableFuture<Layer> {
+            enforceInitialized()
+            return statsigServer.getLayerWithExposureLoggingDisabledAsync(user, layerName)
         }
 
         @JvmStatic

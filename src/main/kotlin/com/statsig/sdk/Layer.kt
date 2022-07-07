@@ -1,5 +1,7 @@
 package com.statsig.sdk
 
+import com.google.gson.Gson
+
 typealias OnLayerExposure = (layerExposureEventData: LayerExposureEventData) -> Unit
 internal typealias OnLayerExposureInternal = (layer: Layer, parameterName: String) -> Unit
 
@@ -10,6 +12,8 @@ class Layer internal constructor(
     val name: String,
     val ruleID: String? = null,
     val value: Map<String, Any>,
+    private val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    private val allocatedExperiment: String = "",
     private val onExposure: OnLayerExposureInternal? = null
 ) {
 
@@ -111,6 +115,20 @@ class Layer internal constructor(
             )
             else -> null
         }
+    }
+
+    /**
+     * Legacy exposure data at the layer level. Should NOT be used in new code as this will cause over exposure.
+     */
+    fun getLegacyExposureMetadata(): String {
+        return Gson().toJson(
+            mapOf(
+                "config" to this.name,
+                "ruleID" to this.ruleID,
+                "secondaryExposures" to this.secondaryExposures,
+                "allocatedExperiment" to this.allocatedExperiment
+            )
+        )
     }
 
     private fun logParameterExposure(key: String) {
