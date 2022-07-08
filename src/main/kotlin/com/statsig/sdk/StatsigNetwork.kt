@@ -58,6 +58,8 @@ internal class StatsigNetwork(
                 .addHeader("STATSIG-API-KEY", sdkKey)
                 .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
                 .addHeader("STATSIG-SERVER-SESSION-ID", serverSessionID)
+                .addHeader("STATSIG-SDK-TYPE", statsigMetadata["sdkType"] ?: "")
+                .addHeader("STATSIG-SDK-VERSION", statsigMetadata["sdkVersion"] ?: "")
                 .method(original.method, original.body)
                 .build()
             it.proceed(request)

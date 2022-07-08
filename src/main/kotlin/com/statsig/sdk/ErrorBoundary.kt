@@ -1,13 +1,19 @@
 package com.statsig.sdk
 
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 
 internal class ErrorBoundary(private val apiKey: String) {
     internal var uri = URI("https://statsigapi.net/v1/sdk_exception")
     internal val seen = HashSet<String>()
+
+    private val client = OkHttpClient()
+    private companion object {
+        val MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+    }
 
     fun <T> swallowSync(task: () -> T) {
         try {
@@ -40,18 +46,19 @@ internal class ErrorBoundary(private val apiKey: String) {
 
             seen.add(ex.javaClass.name)
 
-            val body = """
-            {
+            val body = """{
                 "exception": "${ex.javaClass.name}",
                 "info": "${ex.stackTraceToString()}",
                 "statsigMetadata": ${StatsigMetadata.asJson()}
-            }
-        """.trimIndent()
-            val client = HttpClient.newBuilder().build()
-            val req = HttpRequest.newBuilder(uri)
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .header("STATSIG-API-KEY", apiKey).build()
-            client.send(req, HttpResponse.BodyHandlers.ofString())
+            }""".trimIndent()
+            val req =
+                Request.Builder()
+                    .url(uri.toString())
+                    .header("STATSIG-API-KEY", apiKey)
+                    .post(body.toRequestBody(MEDIA_TYPE))
+                    .build()
+
+            client.newCall(req).execute()
         } catch (_: Throwable) {
             // no-op
         }
@@ -59,7 +66,8 @@ internal class ErrorBoundary(private val apiKey: String) {
 
     private fun onException(ex: Throwable) {
         if (ex is StatsigIllegalStateException
-            || ex is StatsigUninitializedException) {
+            || ex is StatsigUninitializedException
+        ) {
             throw ex;
         }
 
