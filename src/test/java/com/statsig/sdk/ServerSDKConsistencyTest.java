@@ -11,6 +11,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -100,6 +102,10 @@ public class ServerSDKConsistencyTest {
                         sdkVal = sdkValue.get().getInt(valEntry.getKey(), -1);
                     } else if (valEntry.getValue() instanceof Boolean) {
                         sdkVal = sdkValue.get().getBoolean(valEntry.getKey(), false);
+                    } else if (valEntry.getValue() instanceof List) {
+                        sdkVal = sdkValue.get().getArray(valEntry.getKey(), new Object[]{});
+                    } else if (valEntry.getValue() instanceof Map) {
+                        sdkVal = sdkValue.get().getDictionary(valEntry.getKey(), new HashMap<>());
                     } else {
                         sdkVal = sdkValue.get().getString(valEntry.getKey(), "ERR");
                     }
