@@ -479,7 +479,7 @@ internal class Evaluator {
                                     )
                     return ConfigEvaluation(
                             fetchFromServer = false,
-                            booleanValue = strValue.matches(Regex(condition.targetValue as String))
+                            booleanValue = Regex(condition.targetValue as String).containsMatchIn(strValue)
                     )
                 }
                 "eq" -> {
