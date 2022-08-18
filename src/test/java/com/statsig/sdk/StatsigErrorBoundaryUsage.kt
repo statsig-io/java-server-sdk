@@ -9,6 +9,7 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -26,11 +27,11 @@ class StatsigErrorBoundaryUsage {
         private lateinit var onRequestWaiter: CountDownLatch
         private lateinit var statsig: StatsigServer
         private val requests = arrayListOf<RecordedRequest>()
+        private var throwOnDownloadConfigSpecs = false
 
         @BeforeClass
         @JvmStatic
         internal fun beforeAll() {
-
             mockkConstructor(Evaluator::class)
             every { anyConstructed<Evaluator>().layers } throws exception
 
@@ -43,23 +44,35 @@ class StatsigErrorBoundaryUsage {
             mockkConstructor(StatsigLogger::class)
             coEvery { anyConstructed<StatsigLogger>().log(any()) } throws exception
 
-            statsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
-
-            runBlocking {
-                statsig.initialize()
+            coEvery { anyConstructed<StatsigNetwork>().downloadConfigSpecs() } coAnswers {
+                if (throwOnDownloadConfigSpecs) {
+                    throw exception
+                }
+                callOriginal()
             }
         }
 
         @AfterClass
         @JvmStatic
         fun afterAll() {
-            server.shutdown()
             unmockkAll()
         }
     }
 
+    @After
+    internal fun after() {
+        server.shutdown()
+    }
+
     @Before
     internal fun beforeEach() {
+        throwOnDownloadConfigSpecs = false
+
+        statsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
+        runBlocking {
+            statsig.initialize()
+        }
+
         server = MockWebServer()
         statsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
 
@@ -82,7 +95,7 @@ class StatsigErrorBoundaryUsage {
     fun testErrorsWithInitialize() = runBlocking {
         val localStatsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
         localStatsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
-        coEvery { anyConstructed<StatsigNetwork>().downloadConfigSpecs() } throws exception
+        throwOnDownloadConfigSpecs = true
 
         localStatsig.initialize()
         assertEquals(1, requests.size)
