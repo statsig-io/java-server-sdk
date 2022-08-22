@@ -12,8 +12,8 @@ class Layer internal constructor(
     val name: String,
     val ruleID: String? = null,
     val value: Map<String, Any>,
-    private val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-    private val allocatedExperiment: String = "",
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    val allocatedExperiment: String = "",
     private val onExposure: OnLayerExposureInternal? = null
 ) {
 
