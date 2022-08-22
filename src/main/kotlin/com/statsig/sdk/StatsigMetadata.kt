@@ -2,7 +2,7 @@ package com.statsig.sdk
 
 import java.util.Properties
 
-private const val VERSION = "0.16.2"
+private const val VERSION = "0.17.0"
 
 internal class StatsigMetadata {
     companion object {
