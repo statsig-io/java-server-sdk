@@ -9,7 +9,6 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import org.junit.After
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -23,9 +22,7 @@ class StatsigErrorBoundaryUsage {
 
     companion object {
         private lateinit var server: MockWebServer
-        private val exception = Exception("Test Exception")
         private lateinit var onRequestWaiter: CountDownLatch
-        private lateinit var statsig: StatsigServer
         private val requests = arrayListOf<RecordedRequest>()
         private var throwOnDownloadConfigSpecs = false
 
@@ -33,129 +30,135 @@ class StatsigErrorBoundaryUsage {
         @JvmStatic
         internal fun beforeAll() {
             mockkConstructor(Evaluator::class)
-            every { anyConstructed<Evaluator>().layers } throws exception
+            every { anyConstructed<Evaluator>().layers } throws Exception("Test Evaluator Layers")
 
             mockkConstructor(StatsigNetwork::class)
-            every { anyConstructed<StatsigNetwork>().shutdown() } throws exception
+            every { anyConstructed<StatsigNetwork>().shutdown() } throws Exception("Test Network Shutdown")
 
             mockkConstructor(ConfigEvaluation::class)
-            every { anyConstructed<ConfigEvaluation>().fetchFromServer } throws exception
+            every { anyConstructed<ConfigEvaluation>().fetchFromServer } throws Exception("Test Config Eval")
 
             mockkConstructor(StatsigLogger::class)
-            coEvery { anyConstructed<StatsigLogger>().log(any()) } throws exception
+            coEvery { anyConstructed<StatsigLogger>().log(any()) } throws Exception("Test Logger Log")
 
             coEvery { anyConstructed<StatsigNetwork>().downloadConfigSpecs() } coAnswers {
                 if (throwOnDownloadConfigSpecs) {
-                    throw exception
+                    throw Exception("Bad Config Specs")
                 }
                 callOriginal()
             }
+
+            server = MockWebServer()
+            server.dispatcher =
+                object : Dispatcher() {
+                    override fun dispatch(request: RecordedRequest): MockResponse {
+                        requests.add(request)
+                        onRequestWaiter.countDown()
+                        return MockResponse().setResponseCode(202)
+                    }
+                }
         }
 
         @AfterClass
         @JvmStatic
         fun afterAll() {
             unmockkAll()
+            server.shutdown()
         }
     }
 
-    @After
-    internal fun after() {
-        server.shutdown()
+    private fun getStatsigInstance(shouldInitialize: Boolean = true) = runBlocking {
+        val statsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
+        if (shouldInitialize) {
+            runBlocking {
+                statsig.initialize()
+            }
+        }
+
+        statsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
+        return@runBlocking statsig
     }
 
     @Before
     internal fun beforeEach() {
         throwOnDownloadConfigSpecs = false
-
-        statsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
-        runBlocking {
-            statsig.initialize()
-        }
-
-        server = MockWebServer()
-        statsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
-
-        server.dispatcher =
-            object : Dispatcher() {
-                override fun dispatch(request: RecordedRequest): MockResponse {
-                    requests.add(request)
-                    onRequestWaiter.countDown()
-                    return MockResponse().setResponseCode(202)
-                }
-            }
-
-
         onRequestWaiter = CountDownLatch(1)
         requests.clear()
-        statsig.errorBoundary.seen.clear()
     }
 
     @Test
     fun testErrorsWithInitialize() = runBlocking {
-        val localStatsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
-        localStatsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
+        val statsig = getStatsigInstance(shouldInitialize = false)
         throwOnDownloadConfigSpecs = true
 
-        localStatsig.initialize()
+        runBlocking {
+            statsig.initialize()
+        }
+
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithShutdown() = runBlocking {
-        val localStatsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost"))
-        localStatsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
-        localStatsig.initialize()
+        val statsig = getStatsigInstance()
         assertEquals(0, requests.size)
 
-        localStatsig.shutdown()
+        statsig.shutdown()
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithCheckGate() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.checkGate(user, "a_gate")
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetConfig() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.getConfig(user, "a_config")
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetExperiment() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.getExperiment(user, "an_experiment")
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetExperimentWithExposureLoggingDisabled() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.getExperimentWithExposureLoggingDisabled(user, "an_experiment")
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetExperimentInLayerForUser() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.getExperimentInLayerForUser(user, "a_layer")
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetLayer() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.getLayer(user, "a_layer")
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithGetLayerWithCustomExposureLogging() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.getLayerWithCustomExposureLogging(user, "a_layer") {}
         assertEquals(1, requests.size)
     }
 
     @Test
     fun testErrorsWithLogStringEvent() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.logEvent(user, "an_event", "a_value")
         onRequestWaiter.await(1, TimeUnit.SECONDS)
         assertEquals(1, requests.size)
@@ -163,6 +166,7 @@ class StatsigErrorBoundaryUsage {
 
     @Test
     fun testErrorsWithLogDoubleEvent() = runBlocking {
+        val statsig = getStatsigInstance()
         statsig.logEvent(user, "an_event", 1.2)
         onRequestWaiter.await(1, TimeUnit.SECONDS)
         assertEquals(1, requests.size)
