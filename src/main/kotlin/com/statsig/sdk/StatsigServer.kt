@@ -49,6 +49,10 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract suspend fun shutdownSuspend()
 
+    @JvmSynthetic abstract fun overrideGate(gateName: String, gateValue: Boolean)
+
+    @JvmSynthetic abstract fun overrideConfig(configName: String, configValue: Map<String, Any>)
+
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
     }
@@ -148,7 +152,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
     }
 
-    override val errorBoundary = ErrorBoundary(serverSecret)
+    override val errorBoundary = ErrorBoundary(serverSecret, options)
     private val coroutineExceptionHandler =
         CoroutineExceptionHandler { _, ex ->
             // no-op - supervisor job should not throw when a child fails
@@ -372,6 +376,14 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             statsigJob.cancelAndJoin()
             statsigScope.cancel()
         }
+    }
+
+    override fun overrideGate(gateName: String, gateValue: Boolean) {
+        configEvaluator.overrideGate(gateName, gateValue)
+    }
+
+    override fun overrideConfig(configName: String, configValue: Map<String, Any>) {
+        configEvaluator.overrideConfig(configName, configValue)
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {

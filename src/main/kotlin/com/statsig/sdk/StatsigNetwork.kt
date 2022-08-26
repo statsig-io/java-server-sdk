@@ -14,9 +14,12 @@ import okhttp3.Interceptor
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import java.util.UUID
 
 private const val BACKOFF_MULTIPLIER: Int = 10
@@ -47,7 +50,7 @@ internal class StatsigNetwork(
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     private val serverSessionID = UUID.randomUUID().toString();
 
-    private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object: TypeToken<T>() {}.type)
+    private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     init {
         val clientBuilder = OkHttpClient.Builder()
@@ -64,6 +67,19 @@ internal class StatsigNetwork(
                 .build()
             it.proceed(request)
         })
+
+        clientBuilder.addInterceptor(Interceptor {
+            if (options.localMode) {
+                return@Interceptor Response.Builder().code(200)
+                    .body("{}".toResponseBody("application/json; charset=utf-8".toMediaType()))
+                    .protocol(Protocol.HTTP_2)
+                    .request(it.request())
+                    .message("Request blocked due to localMode being active")
+                    .build()
+            }
+            it.proceed(it.request())
+        })
+
         statsigHttpClient = clientBuilder.build()
         httpClient = OkHttpClient.Builder().build()
     }
@@ -84,7 +100,12 @@ internal class StatsigNetwork(
             .build()
         statsigHttpClient.newCall(request).await().use { response ->
             val apiGate = gson.fromJson(response.body?.charStream(), APIFeatureGate::class.java)
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = apiGate.value, apiGate.value.toString(), apiGate.ruleID ?: "")
+            return ConfigEvaluation(
+                fetchFromServer = false,
+                booleanValue = apiGate.value,
+                apiGate.value.toString(),
+                apiGate.ruleID ?: ""
+            )
         }
     }
 
@@ -104,7 +125,12 @@ internal class StatsigNetwork(
             .build()
         statsigHttpClient.newCall(request).await().use { response ->
             val apiConfig = gson.fromJson(response.body?.charStream(), APIDynamicConfig::class.java)
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false, apiConfig.value, apiConfig.ruleID ?: "")
+            return ConfigEvaluation(
+                fetchFromServer = false,
+                booleanValue = false,
+                apiConfig.value,
+                apiConfig.ruleID ?: ""
+            )
         }
     }
 
@@ -114,7 +140,8 @@ internal class StatsigNetwork(
         }
         try {
             return gson.fromJson(specs, APIDownloadedConfigs::class.java)
-        } catch (e: Exception) {}
+        } catch (_: Exception) {
+        }
         return null
     }
 
@@ -134,7 +161,8 @@ internal class StatsigNetwork(
                 lastSyncTime = configs.time
                 return configs
             }
-        } catch (e: Exception) {}
+        } catch (_: Exception) {
+        }
 
         return null
     }
@@ -177,7 +205,8 @@ internal class StatsigNetwork(
                     list.size = list.size + contentLength
                 }
             }
-        } catch (e: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     suspend fun getAllIDLists(evaluator: Evaluator) {
@@ -196,7 +225,7 @@ internal class StatsigNetwork(
                         for ((name, serverList) in jsonResponse) {
                             var localList = allLocalLists[name]
                             if (localList == null) {
-                                localList = IDList(name=name)
+                                localList = IDList(name = name)
                                 allLocalLists[name] = localList
                             }
                             if (serverList.url == null || serverList.fileID == null || serverList.creationTime < localList.creationTime) {
@@ -206,10 +235,10 @@ internal class StatsigNetwork(
                             // check if fileID has changed and it is indeed a newer file. If so, reset the list
                             if (serverList.fileID != localList.fileID && serverList.creationTime >= localList.creationTime) {
                                 localList = IDList(
-                                    name=name,
-                                    url=serverList.url,
-                                    fileID=serverList.fileID,
-                                    size=0,
+                                    name = name,
+                                    url = serverList.url,
+                                    fileID = serverList.fileID,
+                                    size = 0,
                                     creationTime = serverList.creationTime
                                 )
                                 allLocalLists[name] = localList
@@ -234,7 +263,8 @@ internal class StatsigNetwork(
                         }
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -262,7 +292,12 @@ internal class StatsigNetwork(
         retryPostLogs(events, statsigMetadata, 5, 1)
     }
 
-    suspend fun retryPostLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>, retries: Int, backoff: Int) {
+    suspend fun retryPostLogs(
+        events: List<StatsigEvent>,
+        statsigMetadata: Map<String, String>,
+        retries: Int,
+        backoff: Int
+    ) {
         if (events.isEmpty()) {
             return
         }
@@ -285,7 +320,8 @@ internal class StatsigNetwork(
                             return@coroutineScope
                         }
                     }
-                } catch (e: Exception) { }
+                } catch (_: Exception) {
+                }
 
                 val count = retries - --currRetry
                 delay(backoff * (backoffMultiplier * count) * MS_IN_S)

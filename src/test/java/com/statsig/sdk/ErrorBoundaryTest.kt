@@ -30,7 +30,7 @@ class ErrorBoundaryTest {
             }
         }
 
-        boundary = ErrorBoundary("secret-key")
+        boundary = ErrorBoundary("secret-key", StatsigOptions())
         boundary.uri = server.url("/v1/sdk_exception").toUri()
     }
 

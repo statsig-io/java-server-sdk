@@ -74,6 +74,16 @@ class Statsig {
             statsigServer.shutdownSuspend()
         }
 
+        fun overrideGate(gateName: String, gateValue: Boolean) {
+            enforceInitialized()
+            statsigServer.overrideGate(gateName, gateValue)
+        }
+
+        fun overrideConfig(configName: String, configValue: Map<String, Any>) {
+            enforceInitialized()
+            statsigServer.overrideConfig(configName, configValue)
+        }
+
         @JvmStatic
         @JvmOverloads
         fun logEvent(

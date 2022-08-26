@@ -6,9 +6,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
 
-internal class ErrorBoundary(private val apiKey: String) {
+internal class ErrorBoundary(private val apiKey: String, private val options: StatsigOptions) {
     internal var uri = URI("https://statsigapi.net/v1/sdk_exception")
-    internal val seen = HashSet<String>()
+    private val seen = HashSet<String>()
 
     private val client = OkHttpClient()
     private companion object {
@@ -40,7 +40,7 @@ internal class ErrorBoundary(private val apiKey: String) {
 
     internal fun logException(ex: Throwable) {
         try {
-            if (seen.contains(ex.javaClass.name)) {
+            if (options.localMode || seen.contains(ex.javaClass.name)) {
                 return
             }
 
@@ -68,7 +68,7 @@ internal class ErrorBoundary(private val apiKey: String) {
         if (ex is StatsigIllegalStateException
             || ex is StatsigUninitializedException
         ) {
-            throw ex;
+            throw ex
         }
 
         println("[Statsig]: An unexpected exception occurred.")

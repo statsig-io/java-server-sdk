@@ -23,6 +23,7 @@ class StatsigOptions(
     var initTimeoutMs: Long? = DEFAULT_INIT_TIME_OUT_MS,
     var bootstrapValues: String? = null,
     var rulesUpdatedCallback: ((rules: String) -> Unit)? = null,
+    var localMode: Boolean = false
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
 
