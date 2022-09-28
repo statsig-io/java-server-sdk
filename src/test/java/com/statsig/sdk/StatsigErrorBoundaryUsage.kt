@@ -39,7 +39,7 @@ class StatsigErrorBoundaryUsage {
             every { anyConstructed<ConfigEvaluation>().fetchFromServer } throws Exception("Test Config Eval")
 
             mockkConstructor(StatsigLogger::class)
-            coEvery { anyConstructed<StatsigLogger>().log(any()) } throws Exception("Test Logger Log")
+            every { anyConstructed<StatsigLogger>().log(any()) } throws Exception("Test Logger Log")
 
             coEvery { anyConstructed<StatsigNetwork>().downloadConfigSpecs() } coAnswers {
                 if (throwOnDownloadConfigSpecs) {

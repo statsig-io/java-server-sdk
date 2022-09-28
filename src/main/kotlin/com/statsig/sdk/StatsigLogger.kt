@@ -16,7 +16,7 @@ const val LAYER_EXPOSURE_EVENT = "statsig::layer_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
 
 internal class StatsigLogger(
-    coroutineScope: CoroutineScope,
+    private val coroutineScope: CoroutineScope,
     private val network: StatsigNetwork,
     private val statsigMetadata: Map<String, String>,
 ) {
@@ -31,18 +31,17 @@ internal class StatsigLogger(
         }
     }
 
-    suspend fun log(event: StatsigEvent) {
-        withContext(singleThreadDispatcher) {
+    fun log(event: StatsigEvent) {
+        coroutineScope.launch(singleThreadDispatcher) {
             events.add(event)
 
             if (events.size >= MAX_EVENTS) {
                 flush()
-                return@withContext
             }
         }
     }
 
-    suspend fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String,
+    fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String,
                                 secondaryExposures: ArrayList<Map<String, String>>) {
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
@@ -55,7 +54,7 @@ internal class StatsigLogger(
         log(event)
     }
 
-    suspend fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String,
+    fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String,
                                   secondaryExposures: ArrayList<Map<String, String>>) {
         val metadata = mutableMapOf("config" to configName, "ruleID" to ruleID)
 
@@ -70,7 +69,7 @@ internal class StatsigLogger(
         log(event)
     }
 
-    suspend fun logLayerExposure(user: StatsigUser?, layerExposureMetadata: LayerExposureMetadata) {
+    fun logLayerExposure(user: StatsigUser?, layerExposureMetadata: LayerExposureMetadata) {
         val event = StatsigEvent(
             LAYER_EXPOSURE_EVENT,
             eventValue = null,

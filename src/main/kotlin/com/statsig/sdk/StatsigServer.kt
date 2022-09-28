@@ -351,7 +351,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         metadata: Map<String, String>?
     ) {
         enforceActive()
-        statsigScope.launch {
+        errorBoundary.swallowSync {
             val normalizedUser = normalizeUser(user)
             val event =
                 StatsigEvent(
@@ -366,8 +366,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun shutdownSuspend() {
+        enforceActive()
         errorBoundary.swallow {
-            enforceActive()
             // CAUTION: Order matters here! Need to clean up jobs and post logs before
             // shutting down the network and supervisor scope
             pollingJob.cancelAndJoin()
@@ -510,12 +510,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                         )
                     )
                 } else {
-                    statsigScope.launch {
-                        logger.logLayerExposure(
-                            user,
-                            metadata
-                        )
-                    }
+                    logger.logLayerExposure(
+                        user,
+                        metadata
+                    )
                 }
             }
         }, {
