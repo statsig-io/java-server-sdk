@@ -9,7 +9,8 @@ enum class Tier {
 private const val TIER_KEY: String = "tier"
 private const val DEFAULT_API_URL_BASE: String = "https://statsigapi.net/v1"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
-
+private const val CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000
+private const val ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
 
 /**
  * An object of properties for initializing the sdk with advanced options
@@ -23,7 +24,9 @@ class StatsigOptions(
     var initTimeoutMs: Long? = DEFAULT_INIT_TIME_OUT_MS,
     var bootstrapValues: String? = null,
     var rulesUpdatedCallback: ((rules: String) -> Unit)? = null,
-    var localMode: Boolean = false
+    var localMode: Boolean = false,
+    var rulesetsSyncIntervalMs: Long = CONFIG_SYNC_INTERVAL_MS,
+    var idListsSyncIntervalMs: Long = ID_LISTS_SYNC_INTERVAL_MS,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
 

@@ -54,8 +54,9 @@ class StatsigE2ETest {
         gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
         eventLogInputCompletable = CompletableDeferred()
-        downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
-        
+        downloadConfigSpecsResponse =
+            StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
+
         server = MockWebServer()
         server.start(8899)
         server.apply {
@@ -157,7 +158,7 @@ class StatsigE2ETest {
                         }
                         "/v1/list_1" -> {
                             val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range.length-1).toIntOrNull()
+                            val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
                             download_list_1_count++
 
                             var content: String = when (download_list_1_count) {
@@ -170,7 +171,7 @@ class StatsigE2ETest {
                         }
                         "/v1/list_2" -> {
                             val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range.length-1).toIntOrNull()
+                            val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
                             download_list_2_count++
 
                             var content: String = when (download_list_2_count) {
@@ -232,19 +233,19 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventMetadata!!["gate"].equals("always_on_gate"))
         assert(eventLogInput.events[0].eventMetadata!!["gateValue"].equals("true"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("6N6Z8ODekNYZ7F8gFdoLP5"))
-        assert(eventLogInput.events[0].time!!/1000 == now/1000)
+        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
 
         assert(eventLogInput.events[1].eventName == "statsig::gate_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["gate"].equals("on_for_statsig_email"))
         assert(eventLogInput.events[1].eventMetadata!!["gateValue"].equals("true"))
         assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("7w9rbTSffLT89pxqpyhuqK"))
-        assert(eventLogInput.events[1].time!!/1000 == now/1000)
+        assert(eventLogInput.events[1].time!! / 1000 == now / 1000)
 
         assert(eventLogInput.events[2].eventName == "statsig::gate_exposure")
         assert(eventLogInput.events[2].eventMetadata!!["gate"].equals("on_for_statsig_email"))
         assert(eventLogInput.events[2].eventMetadata!!["gateValue"].equals("false"))
         assert(eventLogInput.events[2].eventMetadata!!["ruleID"].equals("default"))
-        assert(eventLogInput.events[2].time!!/1000 == now/1000)
+        assert(eventLogInput.events[2].time!! / 1000 == now / 1000)
     }
 
     @Test
@@ -282,12 +283,12 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[0].eventMetadata!!["config"].equals("test_config"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("1kNmlB23wylPFZi1M0Divl"))
-        assert(eventLogInput.events[0].time!!/1000 == now/1000)
+        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
 
         assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["config"].equals("test_config"))
         assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("default"))
-        assert(eventLogInput.events[1].time!!/1000 == now/1000)
+        assert(eventLogInput.events[1].time!! / 1000 == now / 1000)
     }
 
     @Test
@@ -319,12 +320,12 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[0].eventMetadata!!["config"].equals("sample_experiment"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("2RamGujUou6h2bVNQWhtNZ"))
-        assert(eventLogInput.events[0].time!!/1000 == now/1000)
+        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
 
         assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["config"].equals("sample_experiment"))
         assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("2RamGsERWbWMIMnSfOlQuX"))
-        assert(eventLogInput.events[1].time!!/1000 == now/1000)
+        assert(eventLogInput.events[1].time!! / 1000 == now / 1000)
     }
 
     @Test
@@ -352,25 +353,45 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventName == "purchase")
         assert(eventLogInput.events[0].eventValue == 2.99)
         assert(eventLogInput.events[0].eventMetadata!!["item_name"].equals("remove_ads"))
-        assert(eventLogInput.events[0].time!!/1000 == now/1000)
+        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
     }
 
     @Test
     fun testBackgroundSync() = runBlocking {
         download_config_count = 0
+        options = StatsigOptions().apply {
+            api = server.url("/v1").toString()
+            rulesetsSyncIntervalMs = 1000
+            idListsSyncIntervalMs = 1000
+        }
+
+        driver = StatsigServer.create("secret-testcase", options)
         backgroundSyncHelper()
     }
 
-    private fun bootstrap() = runBlocking {
-        options = StatsigOptions(bootstrapValues = downloadConfigSpecsResponse, rulesUpdatedCallback = { bootstrap_callback_count++ }).apply {
-            api = server.url("/v1").toString()
+    private fun bootstrap(withFastSync: Boolean = false) = runBlocking {
+        if (withFastSync) {
+            options = StatsigOptions(
+                bootstrapValues = downloadConfigSpecsResponse,
+                rulesUpdatedCallback = { bootstrap_callback_count++ }).apply {
+                api = server.url("/v1").toString()
+                rulesetsSyncIntervalMs = 1000
+                idListsSyncIntervalMs = 1000
+            }
+        } else {
+            options = StatsigOptions(
+                bootstrapValues = downloadConfigSpecsResponse,
+                rulesUpdatedCallback = { bootstrap_callback_count++ }).apply {
+                api = server.url("/v1").toString()
+            }
         }
+
         driver = StatsigServer.create("secret-testcase", options)
     }
 
     @Test
     fun testBackgroundSyncWithBootstrap() = runBlocking {
-        bootstrap()
+        bootstrap(true)
         // the initialize is synchronous, and wont trigger a call to download_config_specs
         // this normalizes the count so the remainder of the test works
         download_config_count = 1
@@ -385,9 +406,6 @@ class StatsigE2ETest {
         download_id_list_count = 0
         download_list_1_count = 0
         download_list_2_count = 0
-
-        CONFIG_SYNC_INTERVAL_MS = 1000
-        ID_LISTS_SYNC_INTERVAL_MS = 1000
 
         driver.initialize()
         val privateEvaluatorField = driver.javaClass.getDeclaredField("configEvaluator")

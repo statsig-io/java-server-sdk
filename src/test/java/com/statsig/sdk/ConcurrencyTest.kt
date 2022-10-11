@@ -2,8 +2,6 @@
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import com.statsig.sdk.CONFIG_SYNC_INTERVAL_MS
-import com.statsig.sdk.ID_LISTS_SYNC_INTERVAL_MS
 import com.statsig.sdk.LogEventInput
 import com.statsig.sdk.StatsigE2ETest
 import com.statsig.sdk.StatsigOptions
@@ -92,16 +90,16 @@ class ConcurrencyTest {
 
         val options = StatsigOptions().apply {
             api = server.url("/v1").toString()
+
+            // set sync interval to be short, so we are modifying and checking values at the same time
+            rulesetsSyncIntervalMs = 10
+            idListsSyncIntervalMs = 10
         }
         driver = StatsigServer.create("secret-testcase", options)
     }
 
     @Test
     fun testCallingAPIsFromDifferentThreads() = runBlocking {
-        // set sync interval to be short so we are modifying and checking values at the same time
-        CONFIG_SYNC_INTERVAL_MS = 10
-        ID_LISTS_SYNC_INTERVAL_MS = 10
-
         driver.initialize()
         val threads = arrayListOf<Thread>()
         for (i in 1..20) {

@@ -24,8 +24,6 @@ import java.util.UUID
 
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
-internal var CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000
-internal var ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
 
 internal class StatsigNetwork(
     private val sdkKey: String,
@@ -270,7 +268,7 @@ internal class StatsigNetwork(
 
     suspend fun syncIDLists(evaluator: Evaluator) {
         while (true) {
-            delay(ID_LISTS_SYNC_INTERVAL_MS)
+            delay(options.idListsSyncIntervalMs)
             getAllIDLists(evaluator)
         }
     }
@@ -278,7 +276,7 @@ internal class StatsigNetwork(
     fun pollForChanges(): Flow<APIDownloadedConfigs?> {
         return flow {
             while (true) {
-                delay(CONFIG_SYNC_INTERVAL_MS)
+                delay(options.rulesetsSyncIntervalMs)
                 val response = downloadConfigSpecs()
                 if (response != null) {
                     lastSyncTime = response.time
