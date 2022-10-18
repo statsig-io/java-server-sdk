@@ -3,9 +3,8 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.*
 
 plugins {
-    kotlin("jvm") version "1.5.0"
+    kotlin("jvm") version "1.6.0"
     idea
-    maven
 }
 
 group = "com.statsig"
@@ -16,16 +15,16 @@ repositories {
 }
 
 dependencies {
-    testImplementation("junit:junit:4.13")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.9.1")
-    testImplementation("io.mockk:mockk:1.10.6")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.1")
-    implementation("com.google.code.gson:gson:2.8.9")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.0")
-    implementation("com.squareup.okhttp3:okhttp:4.9.1")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
+    testImplementation("io.mockk:mockk:1.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("com.github.statsig-io:ip3country-kotlin:0.1.0")
-    implementation("com.github.ua-parser:uap-java:1.5.2")
+    implementation("com.github.ua-parser:uap-java:1.5.3")
 }
 
 tasks.test {
@@ -51,5 +50,5 @@ inline fun <reified C> Project.configure(name: String, configuration: C.() -> Un
 }
 
 tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
 }
