@@ -19,10 +19,11 @@ internal data class ConfigEvaluation(
     val jsonValue: Any? = null,
     val ruleID: String = "",
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-    val undelegatedSecondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val explicitParameters: Array<String> = arrayOf(),
     val configDelegate: String? = null
-)
+) {
+    var undelegatedSecondaryExposures: ArrayList<Map<String, String>> = secondaryExposures
+}
 
 internal class Evaluator {
     private var featureGates: MutableMap<String, APIConfig> = HashMap()
@@ -196,7 +197,7 @@ internal class Evaluator {
             booleanValue = false,
             config.defaultValue,
             "default",
-            secondaryExposures
+            secondaryExposures,
         )
     }
 
@@ -211,16 +212,17 @@ internal class Evaluator {
             undelegatedSecondaryExposures.addAll(secondaryExposures)
             secondaryExposures.addAll(delegatedResult.secondaryExposures)
 
-            return ConfigEvaluation(
+            var evaluation = ConfigEvaluation(
                 fetchFromServer = delegatedResult.fetchFromServer,
                 booleanValue = delegatedResult.booleanValue,
                 jsonValue = delegatedResult.jsonValue,
                 ruleID = delegatedResult.ruleID,
                 secondaryExposures = secondaryExposures,
-                undelegatedSecondaryExposures = undelegatedSecondaryExposures,
                 configDelegate = rule.configDelegate,
                 explicitParameters = it.explicitParameters ?: arrayOf()
             )
+            evaluation.undelegatedSecondaryExposures = undelegatedSecondaryExposures
+            return evaluation
         }
 
         return null
