@@ -1,10 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.*
+import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
     kotlin("jvm") version "1.6.0"
     idea
+    id("com.vanniktech.maven.publish") version "0.22.0"
 }
 
 group = "com.statsig"
