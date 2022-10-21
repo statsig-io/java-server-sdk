@@ -53,3 +53,8 @@ inline fun <reified C> Project.configure(name: String, configuration: C.() -> Un
 tasks.withType<KotlinCompile>() {
     kotlinOptions.jvmTarget = "11"
 }
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
