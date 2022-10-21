@@ -5,13 +5,14 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat.*
 plugins {
     kotlin("jvm") version "1.6.0"
     idea
+    id("com.vanniktech.maven.publish") version "0.22.0"
 }
 
 group = "com.statsig"
+version = project.properties["VERSION_NAME"]!!
 
 repositories {
     mavenCentral()
-    maven { setUrl("https://jitpack.io") }
 }
 
 dependencies {
@@ -23,8 +24,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
-    implementation("com.github.statsig-io:ip3country-kotlin:0.1.0")
     implementation("com.github.ua-parser:uap-java:1.5.3")
+    implementation("com.statsig:ip3country:0.1.2")
 }
 
 tasks.test {
