@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.annotations.SerializedName
+import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -373,7 +374,9 @@ class StatsigE2ETest {
         if (withFastSync) {
             options = StatsigOptions(
                 bootstrapValues = downloadConfigSpecsResponse,
-                rulesUpdatedCallback = { bootstrap_callback_count++ }).apply {
+                rulesUpdatedCallback = {
+                    bootstrap_callback_count++
+                }).apply {
                 api = server.url("/v1").toString()
                 rulesetsSyncIntervalMs = 1000
                 idListsSyncIntervalMs = 1000
@@ -396,13 +399,28 @@ class StatsigE2ETest {
         // this normalizes the count so the remainder of the test works
         download_config_count = 1
         bootstrap_callback_count = 0
-        backgroundSyncHelper()
+        backgroundSyncHelper(true)
+
         // callback will fire 1 less time than the total download count
         // because the initial bootstrap counts as a download config count
         assert(bootstrap_callback_count == download_config_count - 1)
     }
 
-    private fun backgroundSyncHelper() = runBlocking {
+    private fun waitFor(expected: Any?, action: () -> Any?) = runBlocking {
+        var i = 0
+        var value = action()
+        while (i < 100 && value != expected) {
+            Thread.sleep(100)
+            i++
+            value = action()
+        }
+
+        if (value != expected) {
+            throw Exception("Value never matched, expected: $expected, actual: $value")
+        }
+    }
+
+    private fun backgroundSyncHelper(withBootstrap: Boolean = false) = runBlocking {
         download_id_list_count = 0
         download_list_1_count = 0
         download_list_2_count = 0
@@ -412,41 +430,49 @@ class StatsigE2ETest {
         privateEvaluatorField.isAccessible = true
 
         val evaluator = privateEvaluatorField[driver] as Evaluator
-        assert(download_config_count == 1)
-        assert(download_id_list_count == 1)
+        assertEquals(1, download_config_count)
+        assertEquals(1, download_id_list_count)
 
-        assert(evaluator.idLists["list_1"]?.ids == mutableSetOf("1", "2"))
-        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("a", "b"))
-        assert(evaluator.idLists["list_1"]?.creationTime == 1L)
-        assert(evaluator.idLists["list_2"]?.creationTime == 1L)
+        assertEquals(mutableSetOf("1", "2"), evaluator.idLists["list_1"]?.ids)
+        assertEquals(mutableSetOf("a", "b"), evaluator.idLists["list_2"]?.ids)
+        assertEquals(1L, evaluator.idLists["list_1"]?.creationTime)
+        assertEquals(1L, evaluator.idLists["list_2"]?.creationTime)
 
-        Thread.sleep(1100)
-        assert(download_config_count == 2)
-        assert(download_id_list_count == 2)
-        assert(evaluator.idLists["list_1"]?.ids == mutableSetOf("2", "3", "4"))
-        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("c", "d"))
-        assert(evaluator.idLists["list_1"]?.creationTime == 1L)
-        assert(evaluator.idLists["list_2"]?.creationTime == 1L)
+        waitFor(mutableSetOf("c", "d")) { evaluator.idLists["list_2"]?.ids }
 
-        Thread.sleep(1100)
-        assert(download_config_count == 3)
-        assert(download_id_list_count == 3)
-        assert(evaluator.idLists["list_1"] == null)
-        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("c", "d"))
-        assert(evaluator.idLists["list_2"]?.creationTime == 2L)
+        assertEquals(2, download_config_count)
+        assertEquals(2, download_id_list_count)
+        assertEquals(mutableSetOf("2", "3", "4"), evaluator.idLists["list_1"]?.ids)
+        assertEquals(mutableSetOf("c", "d"), evaluator.idLists["list_2"]?.ids)
+        assertEquals(1L, evaluator.idLists["list_1"]?.creationTime)
+        assertEquals(1L, evaluator.idLists["list_2"]?.creationTime)
 
-        Thread.sleep(1100)
-        assert(download_config_count == 4)
-        assert(download_id_list_count == 4)
-        assert(evaluator.idLists["list_1"]?.ids == mutableSetOf("2", "3", "4", "5"))
-        assert(evaluator.idLists["list_2"]?.ids == mutableSetOf("c", "d"))
-        assert(evaluator.idLists["list_1"]?.creationTime == 1L)
-        assert(evaluator.idLists["list_2"]?.creationTime == 2L)
+        waitFor(2L) { evaluator.idLists["list_2"]?.creationTime }
+        waitFor(3) { download_config_count }
+
+        assertEquals(3, download_config_count)
+        assertEquals(3, download_id_list_count)
+        assertEquals(null, evaluator.idLists["list_1"])
+        assertEquals(mutableSetOf("c", "d"), evaluator.idLists["list_2"]?.ids)
+        assertEquals(2L, evaluator.idLists["list_2"]?.creationTime)
+
+        waitFor(1L) { evaluator.idLists["list_1"]?.creationTime }
+        waitFor(4) { download_config_count }
+
+        assertEquals(4, download_config_count)
+        assertEquals(4, download_id_list_count)
+        assertEquals(mutableSetOf("2", "3", "4", "5"), evaluator.idLists["list_1"]?.ids)
+        assertEquals(mutableSetOf("c", "d"), evaluator.idLists["list_2"]?.ids)
+        assertEquals(1L, evaluator.idLists["list_1"]?.creationTime)
+        assertEquals(2L, evaluator.idLists["list_2"]?.creationTime)
+
+        if (withBootstrap) {
+            waitFor(3) { bootstrap_callback_count }
+        }
 
         driver.shutdown()
 
-        Thread.sleep(2000)
-        assert(download_config_count == 4)
-        assert(download_id_list_count == 4)
+        assertEquals(4, download_config_count)
+        assertEquals(4, download_id_list_count)
     }
 }
