@@ -1,6 +1,6 @@
 package com.statsig.sdk
 
-class LayerExposureEventData internal constructor (
+class LayerExposureEventData internal constructor(
     val user: StatsigUser,
     val layer: Layer,
     val parameterName: String,

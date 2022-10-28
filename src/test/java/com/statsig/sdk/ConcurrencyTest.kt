@@ -61,22 +61,24 @@ class ConcurrencyTest {
                         "/v1/get_id_lists" -> {
                             getIDListCount++
                             return MockResponse().setResponseCode(200).setBody(
-                                Gson().toJson(mapOf("list_1" to
+                                Gson().toJson(
                                     mapOf(
-                                        "name" to "list_1",
-                                        "size" to 3 * getIDListCount,
-                                        "url" to server.url("/list_1").toString(),
-                                        "creationTime" to 1,
-                                        "fileID" to "file_id_1"
-                                    ))
+                                        "list_1" to
+                                            mapOf(
+                                                "name" to "list_1",
+                                                "size" to 3 * getIDListCount,
+                                                "url" to server.url("/list_1").toString(),
+                                                "creationTime" to 1,
+                                                "fileID" to "file_id_1"
+                                            )
+                                    )
                                 )
                             )
                         }
                         "/list_1" -> {
                             downloadList1Count++
                             var body = "+7/rrkvF6\n"
-                            if (downloadList1Count > 1)
-                            {
+                            if (downloadList1Count > 1) {
                                 body = "+$downloadList1Count\n-$downloadList1Count\n"
                             }
                             return MockResponse().setResponseCode(200).setBody(body)
@@ -104,31 +106,31 @@ class ConcurrencyTest {
         val threads = arrayListOf<Thread>()
         for (i in 1..20) {
             val t =
-            thread {
-                for (j in 1..20) {
-                    val user = StatsigUser("user_id_$i")
-                    user.email = "testuser@statsig.com"
+                thread {
+                    for (j in 1..20) {
+                        val user = StatsigUser("user_id_$i")
+                        user.email = "testuser@statsig.com"
 
-                    runBlocking {
-                        driver.logEvent(user, "test_event", 1.0, mapOf("key" to "value"))
-                        assertTrue(driver.checkGate(user, "always_on_gate"))
-                        assertTrue(driver.checkGate(user, "on_for_statsig_email"))
-                        // regular_user_id is in the id list
-                        assertTrue(driver.checkGate(StatsigUser("regular_user_id"), "on_for_id_list"))
-                        driver.logEvent(user, "test_event_2")
-                        val expParam = driver.getExperiment(user, "sample_experiment").getString("experiment_param", "default")
-                        assertTrue(expParam == "test" || expParam == "control")
-                        driver.logEvent(user, "test_event_3")
+                        runBlocking {
+                            driver.logEvent(user, "test_event", 1.0, mapOf("key" to "value"))
+                            assertTrue(driver.checkGate(user, "always_on_gate"))
+                            assertTrue(driver.checkGate(user, "on_for_statsig_email"))
+                            // regular_user_id is in the id list
+                            assertTrue(driver.checkGate(StatsigUser("regular_user_id"), "on_for_id_list"))
+                            driver.logEvent(user, "test_event_2")
+                            val expParam = driver.getExperiment(user, "sample_experiment").getString("experiment_param", "default")
+                            assertTrue(expParam == "test" || expParam == "control")
+                            driver.logEvent(user, "test_event_3")
 
-                        val config = driver.getConfig(user, "test_config")
-                        assertEquals(7, config.getInt("number", 0))
+                            val config = driver.getConfig(user, "test_config")
+                            assertEquals(7, config.getInt("number", 0))
 
-                        val layer = driver.getLayer(user, "a_layer")
-                        assertTrue(layer.getBoolean("layer_param", false))
+                            val layer = driver.getLayer(user, "a_layer")
+                            assertTrue(layer.getBoolean("layer_param", false))
+                        }
+                        sleep(10)
                     }
-                    sleep(10)
                 }
-            }
             threads.add(t)
         }
 

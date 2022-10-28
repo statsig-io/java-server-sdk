@@ -100,7 +100,6 @@ class ErrorBoundaryTest {
         assertEquals(server.requestCount, 0)
     }
 
-
     @Test
     fun testSwallow() = runBlocking {
         boundary.swallow { throw IOException() }

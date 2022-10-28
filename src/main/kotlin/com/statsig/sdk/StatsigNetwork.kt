@@ -46,37 +46,41 @@ internal class StatsigNetwork(
     private val httpClient: OkHttpClient
     private var lastSyncTime: Long = 0
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
-    private val serverSessionID = UUID.randomUUID().toString();
+    private val serverSessionID = UUID.randomUUID().toString()
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     init {
         val clientBuilder = OkHttpClient.Builder()
 
-        clientBuilder.addInterceptor(Interceptor {
-            val original = it.request()
-            val request = original.newBuilder()
-                .addHeader("STATSIG-API-KEY", sdkKey)
-                .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
-                .addHeader("STATSIG-SERVER-SESSION-ID", serverSessionID)
-                .addHeader("STATSIG-SDK-TYPE", statsigMetadata["sdkType"] ?: "")
-                .addHeader("STATSIG-SDK-VERSION", statsigMetadata["sdkVersion"] ?: "")
-                .method(original.method, original.body)
-                .build()
-            it.proceed(request)
-        })
-
-        clientBuilder.addInterceptor(Interceptor {
-            if (options.localMode) {
-                return@Interceptor Response.Builder().code(200)
-                    .body("{}".toResponseBody("application/json; charset=utf-8".toMediaType()))
-                    .protocol(Protocol.HTTP_2)
-                    .request(it.request())
-                    .message("Request blocked due to localMode being active")
+        clientBuilder.addInterceptor(
+            Interceptor {
+                val original = it.request()
+                val request = original.newBuilder()
+                    .addHeader("STATSIG-API-KEY", sdkKey)
+                    .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
+                    .addHeader("STATSIG-SERVER-SESSION-ID", serverSessionID)
+                    .addHeader("STATSIG-SDK-TYPE", statsigMetadata["sdkType"] ?: "")
+                    .addHeader("STATSIG-SDK-VERSION", statsigMetadata["sdkVersion"] ?: "")
+                    .method(original.method, original.body)
                     .build()
+                it.proceed(request)
             }
-            it.proceed(it.request())
-        })
+        )
+
+        clientBuilder.addInterceptor(
+            Interceptor {
+                if (options.localMode) {
+                    return@Interceptor Response.Builder().code(200)
+                        .body("{}".toResponseBody("application/json; charset=utf-8".toMediaType()))
+                        .protocol(Protocol.HTTP_2)
+                        .request(it.request())
+                        .message("Request blocked due to localMode being active")
+                        .build()
+                }
+                it.proceed(it.request())
+            }
+        )
 
         statsigHttpClient = clientBuilder.build()
         httpClient = OkHttpClient.Builder().build()

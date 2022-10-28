@@ -32,13 +32,13 @@ class StatsigOptions(
 
     constructor(initTimeoutMs: Long) : this(DEFAULT_API_URL_BASE, initTimeoutMs)
 
-    private var environment : MutableMap<String, String>? = null;
+    private var environment: MutableMap<String, String>? = null
 
-    fun setTier(tier : Tier) {
+    fun setTier(tier: Tier) {
         setEnvironmentParameter(TIER_KEY, tier.toString().lowercase())
     }
 
-    fun setEnvironmentParameter(key: String, value: String){
+    fun setEnvironmentParameter(key: String, value: String) {
         if (environment == null) {
             environment = mutableMapOf(key to value)
             return

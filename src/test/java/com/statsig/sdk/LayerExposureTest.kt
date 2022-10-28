@@ -224,7 +224,8 @@ class LayerExposureTest {
         assertEquals("statsig::layer_exposure", calledExposureEventData?.eventName)
         assertNull(calledExposureEventData?.eventValue)
         assertEquals("an_int", calledExposureEventData?.parameterName)
-        assertEquals("""
+        assertEquals(
+            """
             {
                 "config":"unallocated_layer",
                 "ruleID":"default",
@@ -233,7 +234,9 @@ class LayerExposureTest {
                 "isExplicitParameter":"false",
                 "secondaryExposures":[]
             }
-        """.replace("\\s".toRegex(), ""), calledExposureEventData?.metadata)
+        """.replace("\\s".toRegex(), ""),
+            calledExposureEventData?.metadata
+        )
     }
 
     /***
