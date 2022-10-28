@@ -6,6 +6,7 @@ plugins {
     kotlin("jvm") version "1.6.0"
     idea
     id("com.vanniktech.maven.publish") version "0.22.0"
+    id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
 }
 
 group = "com.statsig"
@@ -57,4 +58,8 @@ tasks.withType<KotlinCompile>() {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+}
+
+configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+    disabledRules.set(setOf("final-newline", "no-wildcard-imports"))
 }
