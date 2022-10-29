@@ -9,6 +9,7 @@ class DynamicConfig(
     val name: String,
     val value: Map<String, Any>,
     val ruleID: String? = null,
+    val groupName: String? = null,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()) {
 
     internal companion object {
@@ -121,7 +122,8 @@ class DynamicConfig(
             is Map<*, *> -> DynamicConfig(
                     key,
                     this.value[key] as Map<String, Any>,
-                    this.ruleID
+                    this.ruleID,
+                    this.groupName,
             )
             else -> null
         }
