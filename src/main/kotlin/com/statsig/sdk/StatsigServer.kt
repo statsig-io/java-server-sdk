@@ -491,6 +491,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             return@capture Layer(
                 layerName,
                 result.ruleID,
+                result.groupName,
                 value as Map<String, Any>,
                 result.secondaryExposures,
                 result.configDelegate ?: "",
@@ -562,7 +563,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             configName,
             finalResult.jsonValue as Map<String, Any>,
             finalResult.ruleID,
-            finalResult.secondaryExposures
+            finalResult.groupName,
+            finalResult.secondaryExposures,
         )
     }
 }

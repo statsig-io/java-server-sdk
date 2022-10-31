@@ -11,15 +11,16 @@ internal typealias OnLayerExposureInternal = (layer: Layer, parameterName: Strin
 class Layer internal constructor(
     val name: String,
     val ruleID: String? = null,
+    val groupName: String? = null,
     val value: Map<String, Any>,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val allocatedExperiment: String = "",
-    private val onExposure: OnLayerExposureInternal? = null
+    private val onExposure: OnLayerExposureInternal? = null,
 ) {
 
     internal companion object {
         fun empty(name: String): Layer {
-            return Layer(name, null, mapOf())
+            return Layer(name, null, null, mapOf())
         }
     }
     /**
@@ -111,7 +112,8 @@ class Layer internal constructor(
             is Map<String, Any> -> DynamicConfig(
                 key,
                 value,
-                this.ruleID
+                this.ruleID,
+                this.groupName,
             )
             else -> null
         }

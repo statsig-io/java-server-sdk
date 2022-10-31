@@ -18,6 +18,7 @@ internal data class ConfigEvaluation(
     val booleanValue: Boolean = false,
     val jsonValue: Any? = null,
     val ruleID: String = "",
+    val groupName: String? = null,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val explicitParameters: Array<String> = arrayOf(),
     val configDelegate: String? = null
@@ -188,6 +189,7 @@ internal class Evaluator {
                     pass,
                     if (pass) result.jsonValue else config.defaultValue,
                     result.ruleID,
+                    result.groupName,
                     secondaryExposures,
                 )
             }
@@ -197,6 +199,7 @@ internal class Evaluator {
             booleanValue = false,
             config.defaultValue,
             "default",
+            "",
             secondaryExposures,
         )
     }
@@ -217,6 +220,7 @@ internal class Evaluator {
                 booleanValue = delegatedResult.booleanValue,
                 jsonValue = delegatedResult.jsonValue,
                 ruleID = delegatedResult.ruleID,
+                groupName = delegatedResult.groupName,
                 secondaryExposures = secondaryExposures,
                 configDelegate = rule.configDelegate,
                 explicitParameters = it.explicitParameters ?: arrayOf()
@@ -247,6 +251,7 @@ internal class Evaluator {
             booleanValue = pass,
             rule.returnValue,
             rule.id,
+            rule.groupName,
             secondaryExposures
         )
     }
@@ -281,6 +286,7 @@ internal class Evaluator {
                         if (conditionEnum == ConfigCondition.PASS_GATE) result.booleanValue
                         else !result.booleanValue,
                         result.jsonValue,
+                        "",
                         "",
                         secondaryExposures
                     )
