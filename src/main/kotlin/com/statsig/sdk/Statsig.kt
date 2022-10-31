@@ -9,8 +9,8 @@ class Statsig {
         @Volatile internal lateinit var statsigServer: StatsigServer
 
         suspend fun initialize(
-                serverSecret: String,
-                options: StatsigOptions,
+            serverSecret: String,
+            options: StatsigOptions,
         ) {
             if (!::statsigServer.isInitialized) { // Quick check without synchronization
                 synchronized(this) {
@@ -39,17 +39,17 @@ class Statsig {
         }
 
         suspend fun getExperimentWithExposureLoggingDisabled(
-                user: StatsigUser,
-                experimentName: String
+            user: StatsigUser,
+            experimentName: String
         ): DynamicConfig {
             enforceInitialized()
             return statsigServer.getExperimentWithExposureLoggingDisabled(user, experimentName)
         }
 
         suspend fun getExperimentInLayerForUser(
-                user: StatsigUser,
-                layerName: String,
-                disableExposure: Boolean = false
+            user: StatsigUser,
+            layerName: String,
+            disableExposure: Boolean = false
         ): DynamicConfig {
             enforceInitialized()
             return statsigServer.getExperimentInLayerForUser(user, layerName, disableExposure)
@@ -89,10 +89,10 @@ class Statsig {
         @JvmStatic
         @JvmOverloads
         fun logEvent(
-                user: StatsigUser?,
-                eventName: String,
-                value: String? = null,
-                metadata: Map<String, String>? = null
+            user: StatsigUser?,
+            eventName: String,
+            value: String? = null,
+            metadata: Map<String, String>? = null
         ) {
             enforceInitialized()
             statsigServer.logEvent(user, eventName, value, metadata)
@@ -101,10 +101,10 @@ class Statsig {
         @JvmStatic
         @JvmOverloads
         fun logEvent(
-                user: StatsigUser?,
-                eventName: String,
-                value: Double,
-                metadata: Map<String, String>? = null
+            user: StatsigUser?,
+            eventName: String,
+            value: Double,
+            metadata: Map<String, String>? = null
         ) {
             enforceInitialized()
             statsigServer.logEvent(user, eventName, value, metadata)
@@ -113,8 +113,8 @@ class Statsig {
         @JvmStatic
         @JvmOverloads
         fun initializeAsync(
-                serverSecret: String,
-                options: StatsigOptions = StatsigOptions(),
+            serverSecret: String,
+            options: StatsigOptions = StatsigOptions(),
         ): CompletableFuture<Unit> {
             if (!::statsigServer.isInitialized) { // Quick check without synchronization
                 synchronized(this) {
@@ -136,8 +136,8 @@ class Statsig {
 
         @JvmStatic
         fun getConfigAsync(
-                user: StatsigUser,
-                dynamicConfigName: String
+            user: StatsigUser,
+            dynamicConfigName: String
         ): CompletableFuture<DynamicConfig> {
             enforceInitialized()
             return statsigServer.getConfigAsync(user, dynamicConfigName)
@@ -145,8 +145,8 @@ class Statsig {
 
         @JvmStatic
         fun getExperimentAsync(
-                user: StatsigUser,
-                experimentName: String
+            user: StatsigUser,
+            experimentName: String
         ): CompletableFuture<DynamicConfig> {
             enforceInitialized()
             return statsigServer.getExperimentAsync(user, experimentName)
@@ -154,8 +154,8 @@ class Statsig {
 
         @JvmStatic
         fun getExperimentWithExposureLoggingDisabledAsync(
-                user: StatsigUser,
-                experimentName: String
+            user: StatsigUser,
+            experimentName: String
         ): CompletableFuture<DynamicConfig> {
             enforceInitialized()
             return statsigServer.getExperimentWithExposureLoggingDisabledAsync(user, experimentName)
@@ -191,9 +191,9 @@ class Statsig {
 
         @JvmStatic
         fun getExperimentInLayerForUserAsync(
-                user: StatsigUser,
-                layerName: String,
-                disableExposure: Boolean
+            user: StatsigUser,
+            layerName: String,
+            disableExposure: Boolean
         ): CompletableFuture<DynamicConfig> {
             enforceInitialized()
             return statsigServer.getExperimentInLayerForUserAsync(user, layerName, disableExposure)

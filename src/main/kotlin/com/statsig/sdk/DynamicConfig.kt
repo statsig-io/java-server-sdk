@@ -10,8 +10,8 @@ class DynamicConfig(
     val value: Map<String, Any>,
     val ruleID: String? = null,
     val groupName: String? = null,
-    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()) {
-
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()
+) {
     internal companion object {
         fun empty(name: String = ""): DynamicConfig {
             return DynamicConfig(name, mapOf())
@@ -120,10 +120,11 @@ class DynamicConfig(
     fun getConfig(key: String): DynamicConfig? {
         return when (this.value[key]) {
             is Map<*, *> -> DynamicConfig(
-                    key,
-                    this.value[key] as Map<String, Any>,
-                    this.ruleID,
-                    this.groupName,
+
+                key,
+                this.value[key] as Map<String, Any>,
+                this.ruleID,
+                this.groupName,
             )
             else -> null
         }

@@ -376,7 +376,8 @@ class StatsigE2ETest {
                 bootstrapValues = downloadConfigSpecsResponse,
                 rulesUpdatedCallback = {
                     bootstrap_callback_count++
-                }).apply {
+                }
+            ).apply {
                 api = server.url("/v1").toString()
                 rulesetsSyncIntervalMs = 1000
                 idListsSyncIntervalMs = 1000
@@ -384,7 +385,8 @@ class StatsigE2ETest {
         } else {
             options = StatsigOptions(
                 bootstrapValues = downloadConfigSpecsResponse,
-                rulesUpdatedCallback = { bootstrap_callback_count++ }).apply {
+                rulesUpdatedCallback = { bootstrap_callback_count++ }
+            ).apply {
                 api = server.url("/v1").toString()
             }
         }

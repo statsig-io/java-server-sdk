@@ -1,11 +1,12 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.language.jvm.tasks.ProcessResources
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.6.0"
     idea
     id("com.vanniktech.maven.publish") version "0.22.0"
+    id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
 }
 
 group = "com.statsig"

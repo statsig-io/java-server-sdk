@@ -50,7 +50,8 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 "exception": "${ex.javaClass.name}",
                 "info": "${ex.stackTraceToString()}",
                 "statsigMetadata": ${StatsigMetadata.asJson()}
-            }""".trimIndent()
+            }
+            """.trimIndent()
             val req =
                 Request.Builder()
                     .url(uri.toString())
@@ -65,8 +66,8 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
     }
 
     private fun onException(ex: Throwable) {
-        if (ex is StatsigIllegalStateException
-            || ex is StatsigUninitializedException
+        if (ex is StatsigIllegalStateException ||
+            ex is StatsigUninitializedException
         ) {
             throw ex
         }

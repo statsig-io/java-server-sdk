@@ -1,7 +1,6 @@
 package com.statsig.sdk
 
 import com.google.gson.annotations.SerializedName
-import java.util.*
 import kotlin.collections.ArrayList
 
 internal data class StatsigEvent(

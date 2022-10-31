@@ -70,7 +70,7 @@ internal data class IDList(
     @SerializedName("url") var url: String? = null,
     @SerializedName("fileID") var fileID: String? = null,
 ) {
-    internal val ids: MutableSet<String> = ConcurrentHashMap.newKeySet();
+    internal val ids: MutableSet<String> = ConcurrentHashMap.newKeySet()
     fun contains(id: String): Boolean {
         return ids.contains(id)
     }

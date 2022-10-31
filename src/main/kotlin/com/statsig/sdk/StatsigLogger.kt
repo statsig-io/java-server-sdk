@@ -21,7 +21,7 @@ internal class StatsigLogger(
     private val statsigMetadata: Map<String, String>,
 ) {
 
-    private val executor = Executors.newSingleThreadExecutor();
+    private val executor = Executors.newSingleThreadExecutor()
     private val singleThreadDispatcher = executor.asCoroutineDispatcher()
     private var events = arrayListOf<StatsigEvent>()
     private val timer = coroutineScope.launch {
@@ -41,8 +41,13 @@ internal class StatsigLogger(
         }
     }
 
-    fun logGateExposure(user: StatsigUser?, gateName: String, value: Boolean, ruleID: String,
-                                secondaryExposures: ArrayList<Map<String, String>>) {
+    fun logGateExposure(
+        user: StatsigUser?,
+        gateName: String,
+        value: Boolean,
+        ruleID: String,
+        secondaryExposures: ArrayList<Map<String, String>>
+    ) {
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
             eventValue = null,
@@ -54,8 +59,12 @@ internal class StatsigLogger(
         log(event)
     }
 
-    fun logConfigExposure(user: StatsigUser?, configName: String, ruleID: String,
-                                  secondaryExposures: ArrayList<Map<String, String>>) {
+    fun logConfigExposure(
+        user: StatsigUser?,
+        configName: String,
+        ruleID: String,
+        secondaryExposures: ArrayList<Map<String, String>>
+    ) {
         val metadata = mutableMapOf("config" to configName, "ruleID" to ruleID)
 
         val event = StatsigEvent(

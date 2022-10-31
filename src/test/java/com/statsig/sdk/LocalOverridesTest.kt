@@ -2,7 +2,9 @@ package com.statsig.sdk
 
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
 

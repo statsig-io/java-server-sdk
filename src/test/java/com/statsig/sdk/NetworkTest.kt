@@ -1,7 +1,9 @@
 package com.statsig.sdk
 
-import io.mockk.*
-import kotlinx.coroutines.*
+import io.mockk.coVerifySequence
+import io.mockk.spyk
+import io.mockk.unmockkAll
+import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After

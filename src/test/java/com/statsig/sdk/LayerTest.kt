@@ -1,7 +1,9 @@
 package com.statsig.sdk
 
-import org.junit.Assert.*
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -83,7 +85,8 @@ class LayerTest {
                 "nestedBoolean" to true,
                 "nestedDouble" to 13.74,
                 "nestedLong" to 13L
-            ), layer.getDictionary("testNested", mapOf())
+            ),
+            layer.getDictionary("testNested", mapOf())
         )
     }
 }

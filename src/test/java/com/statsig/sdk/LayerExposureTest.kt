@@ -16,7 +16,9 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -224,7 +226,8 @@ class LayerExposureTest {
         assertEquals("statsig::layer_exposure", calledExposureEventData?.eventName)
         assertNull(calledExposureEventData?.eventValue)
         assertEquals("an_int", calledExposureEventData?.parameterName)
-        assertEquals("""
+        assertEquals(
+            """
             {
                 "config":"unallocated_layer",
                 "ruleID":"default",
@@ -233,7 +236,9 @@ class LayerExposureTest {
                 "isExplicitParameter":"false",
                 "secondaryExposures":[]
             }
-        """.replace("\\s".toRegex(), ""), calledExposureEventData?.metadata)
+        """.replace("\\s".toRegex(), ""),
+            calledExposureEventData?.metadata
+        )
     }
 
     /***
