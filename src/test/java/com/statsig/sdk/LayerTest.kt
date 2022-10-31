@@ -15,12 +15,13 @@ class LayerTest {
 
     @Test
     fun testDummy() {
-        val dummyLayer = Layer("", value = mapOf())
+        val dummyLayer = Layer("", groupName = "group_name", value = mapOf())
         assertEquals("provided default", dummyLayer.getString("test", "provided default"))
         assertEquals(true, dummyLayer.getBoolean("test", true))
         assertEquals(12, dummyLayer.getInt("test", 12))
         assertEquals("hello world", dummyLayer.getString("test", "hello world"))
         assertEquals(null, dummyLayer.ruleID)
+        assertEquals("group_name", dummyLayer.groupName)
         assertNull(dummyLayer.getString("test", null))
         assertNull(dummyLayer.getConfig("nested"))
         assertNull(dummyLayer.getString("testnodefault", null))
@@ -34,6 +35,7 @@ class LayerTest {
             "test_layer",
             value = mapOf(),
             ruleID = "default",
+            groupName = "group_name",
         )
 
         assertEquals("provided default", emptyLayer.getString("test", "provided default"))
@@ -43,6 +45,7 @@ class LayerTest {
         val arr = arrayOf("test", "one")
         assertArrayEquals(arr, emptyLayer.getArray("test_config", arr as Array<Any>))
         assertEquals("default", emptyLayer.ruleID)
+        assertEquals("group_name", emptyLayer.groupName)
         assertNull(emptyLayer.getConfig("nested"))
         assertNull(emptyLayer.getString("testnodefault", null))
         assertNull(emptyLayer.getArray("testnodefault", null))
