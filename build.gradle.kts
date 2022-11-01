@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.jetbrains.kotlin.gradle.plugin.statistics.ReportStatisticsToElasticSearch.url
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -28,6 +29,20 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("com.github.ua-parser:uap-java:1.5.3")
     implementation("com.statsig:ip3country:0.1.3")
+}
+
+val sourcesJar by tasks.registering(Jar::class) {
+    classifier = "sources"
+    from(sourceSets.main.get().allSource)
+}
+
+publishing {
+    publications {
+        register("mavenJava", MavenPublication::class) {
+            from(components["java"])
+            artifact(sourcesJar.get())
+        }
+    }
 }
 
 tasks.test {
