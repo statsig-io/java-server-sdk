@@ -7,7 +7,7 @@ plugins {
     idea
     id("com.vanniktech.maven.publish") version "0.22.0"
     id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
-    maven
+    id("maven-publish")
 }
 
 group = "com.statsig"
@@ -15,6 +15,7 @@ version = project.properties["VERSION_NAME"]!!
 
 repositories {
     mavenCentral()
+    maven { setUrl("https://jitpack.io") }
 }
 
 dependencies {
