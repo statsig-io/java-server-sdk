@@ -5,14 +5,10 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.ToNumberPolicy;
 import org.junit.Before;
 import org.junit.Test;
-import sun.security.util.IOUtils;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.net.*;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
