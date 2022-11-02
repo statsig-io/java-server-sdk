@@ -1,3 +1,4 @@
+
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -16,6 +17,10 @@ version = project.properties["VERSION_NAME"]!!
 repositories {
     mavenCentral()
     maven { setUrl("https://jitpack.io") }
+}
+
+configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+    verbose.set(true)
 }
 
 dependencies {
