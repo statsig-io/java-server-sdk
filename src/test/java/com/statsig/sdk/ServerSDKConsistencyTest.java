@@ -5,16 +5,20 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.ToNumberPolicy;
 import org.junit.Before;
 import org.junit.Test;
+import sun.security.util.IOUtils;
 
+import java.io.*;
 import java.lang.reflect.Field;
-import java.net.URI;
+import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
@@ -32,17 +36,34 @@ public class ServerSDKConsistencyTest {
         }
     }
 
+    private String postRequestRulesetsTest(String api) throws Exception {
+        URL url = new URL(api + "/rulesets_e2e_test");
+        URLConnection con = url.openConnection();
+        HttpURLConnection http = (HttpURLConnection)con;
+        http.setRequestMethod("POST");
+        http.setDoOutput(true);
+
+        byte[] out = "{}".getBytes(StandardCharsets.UTF_8);
+        int length = out.length;
+
+        http.setFixedLengthStreamingMode(length);
+        http.setRequestProperty("STATSIG-API-KEY", secret);
+        http.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        http.connect();
+        try(OutputStream os = http.getOutputStream()) {
+            os.write(out);
+        }
+        try(InputStream in = http.getInputStream()) {
+            String result = new BufferedReader(new InputStreamReader(in))
+                .lines().collect(Collectors.joining("\n"));
+            return result;
+        }
+    }
+
     public void testConsistency(String api) throws Exception {
         System.out.println("Testing for " + api);
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(api + "/rulesets_e2e_test"))
-                .headers("STATSIG-API-KEY", secret, "Content-Type", "application/json; charset=UTF-8")
-                .POST(HttpRequest.BodyPublishers.ofString("{}"))
-                .build();
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        APITestDataSet[] data = gson.fromJson(response.body(), APIEvaluationConsistencyTestData.class).getData();
+        String response = this.postRequestRulesetsTest(api);
+        APITestDataSet[] data = gson.fromJson(response, APIEvaluationConsistencyTestData.class).getData();
         StatsigServer driver = StatsigServer.create(secret, new StatsigOptions(api));
         Future initFuture = driver.initializeAsync();
         initFuture.get();
