@@ -7,6 +7,7 @@ plugins {
     kotlin("jvm") version "1.6.0"
     idea
     id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
+    id("com.vanniktech.maven.publish") version "0.22.0"
     id("maven-publish")
 }
 
@@ -68,10 +69,10 @@ inline fun <reified C> Project.configure(name: String, configuration: C.() -> Un
 }
 
 tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "1.8"
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
