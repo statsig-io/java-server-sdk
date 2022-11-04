@@ -228,7 +228,7 @@ class Statsig {
 }
 
 /**
- * A SAM for Java compatability
+ * A SAM for Java compatibility
  */
 @FunctionalInterface
 fun interface LayerExposureCallback {
