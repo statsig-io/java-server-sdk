@@ -174,10 +174,15 @@ class Statsig {
         fun getLayerWithCustomExposureLoggingAsync(
             user: StatsigUser,
             layerName: String,
-            onExposure: OnLayerExposure
+            onExposureCallback: LayerExposureCallback
         ): CompletableFuture<Layer> {
             enforceInitialized()
-            return statsigServer.getLayerWithCustomExposureLoggingAsync(user, layerName, onExposure)
+
+            // The Java API uses a SAM (i.e. LayerExposureCallback) instead of OnLayerExposure
+            // This prevents leaking Kotlin std-lib to Java consumers as OnLayerExposure returns Kotlin's Unit type
+            return statsigServer.getLayerWithCustomExposureLoggingAsync(user, layerName) { data ->
+                onExposureCallback.accept(data)
+            }
         }
 
         @JvmStatic
@@ -220,4 +225,12 @@ class Statsig {
             }
         }
     }
+}
+
+/**
+ * A SAM for Java compatability
+ */
+@FunctionalInterface
+fun interface LayerExposureCallback {
+    fun accept(layerExposureEventData: LayerExposureEventData)
 }
