@@ -46,23 +46,9 @@ class Statsig {
             return statsigServer.getExperimentWithExposureLoggingDisabled(user, experimentName)
         }
 
-        suspend fun getExperimentInLayerForUser(
-            user: StatsigUser,
-            layerName: String,
-            disableExposure: Boolean = false
-        ): DynamicConfig {
-            enforceInitialized()
-            return statsigServer.getExperimentInLayerForUser(user, layerName, disableExposure)
-        }
-
         suspend fun getLayer(user: StatsigUser, layerName: String): Layer {
             enforceInitialized()
             return statsigServer.getLayer(user, layerName)
-        }
-
-        suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer {
-            enforceInitialized()
-            return statsigServer.getLayerWithCustomExposureLogging(user, layerName, onExposure)
         }
 
         suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
@@ -199,10 +185,6 @@ class Statsig {
             return statsigServer.getExperimentInLayerForUserAsync(user, layerName, disableExposure)
         }
 
-        /**
-         * @deprecated
-         * - we make no promises of support for this API
-         */
         @JvmStatic
         fun _getExperimentGroups(experimentName: String): Map<String, Map<String, Any>> {
             enforceInitialized()
