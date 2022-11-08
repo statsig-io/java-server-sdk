@@ -4,6 +4,12 @@
 
 The Statsig Java/Kotlin SDK for multi-user, server side environments. If you need a SDK for another language or single user client environment, check out our [other SDKs](https://docs.statsig.com/#sdks).
 
+## Installation
+
+SDK versions below 1.0.0 are available via jitpack.  Starting with v1.0.0, we started publishing the SDK only to MavenCentral.
+
+## What is Statsig
+
 Statsig helps you move faster with Feature Gates (Feature Flags) and Dynamic Configs. It also allows you to run A/B tests to validate your new features and understand their impact on your KPIs. If you're new to Statsig, create an account at [statsig.com](https://www.statsig.com).
 
 ## Getting Started

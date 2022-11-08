@@ -8,6 +8,7 @@ plugins {
     idea
     id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
     id("maven-publish")
+    id("com.vanniktech.maven.publish") version "0.22.0"
 }
 
 group = "com.statsig"
