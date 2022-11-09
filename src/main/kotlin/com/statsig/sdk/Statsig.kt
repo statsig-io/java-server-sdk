@@ -42,11 +42,11 @@ class Statsig {
         }
 
         /**
-         * Get the values of a dynamic config, evaluated against the given user.
-         * An exposure event will automatically be logged for the dynamic config.
+         * Get the values of a DynamicConfig, evaluated against the given user.
+         * An exposure event will automatically be logged for the DynamicConfig.
          *
          * @param user A StatsigUser object used for evaluation
-         * @param dynamicConfigName The name of the dynamic config
+         * @param dynamicConfigName The name of the DynamicConfig
          * @return DynamicConfig object evaluated for the selected StatsigUser
          */
         suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
@@ -73,7 +73,7 @@ class Statsig {
          *
          * @param user A StatsigUser object used for the evaluation
          * @param experimentName The name of the experiment
-         * @return DynamicConfig object evaluated for the selected StatsigUser with event exposers disabled
+         * @return DynamicConfig object evaluated for the selected StatsigUser
          */
         suspend fun getExperimentWithExposureLoggingDisabled(
             user: StatsigUser,
@@ -256,7 +256,7 @@ class Statsig {
 
         /**
          * Asynchronously get the values of an experiment, evaluated against the given user.
-         * Exposure events will not be fired on resulting DynamicConfig class.
+         * Does not trigger an exposure event.
          * (Java Compatible)
          *
          * @param user A StatsigUser object used for the evaluation
@@ -307,7 +307,7 @@ class Statsig {
          *
          * @param user A StatsigUser object used for evaluation
          * @param layerName The name of the layer
-         * @return Layer object evaluated for the selected StatsigUser with event exposers disabled
+         * @return Layer object evaluated for the selected StatsigUser
          */
         @JvmStatic
         fun getLayerWithExposureLoggingDisabledAsync(
@@ -338,7 +338,7 @@ class Statsig {
         }
 
         /**
-         * Asynchronously get experiment groups for the selected Experiment.
+         * Get experiment groups for the selected Experiment.
          *
          * @param experimentName The name of the experiment
          * @return A Map of the selected experiment's groups
