@@ -83,7 +83,6 @@ class Statsig {
             return statsigServer.getExperimentWithExposureLoggingDisabled(user, experimentName)
         }
 
-        // TODO double check exposure events are described properly
         /**
          * Get the values of a layer, evaluated against the given user.
          * Exposure events will be fired when get is called on resulting Layer class.
@@ -118,7 +117,7 @@ class Statsig {
         /**
          * Sets a value to be returned for the given gate instead of the actual evaluated value.
          *
-         * @param gateName The name of the gate to be overriden
+         * @param gateName The name of the gate to be overridden
          * @param gateValue The value that will be returned
          */
         @JvmStatic
