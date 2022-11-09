@@ -109,7 +109,9 @@ class Statsig {
             return statsigServer.getLayerWithExposureLoggingDisabled(user, layerName)
         }
 
-        // TODO
+        /**
+         * Stops all Statsig activity and flushes any pending events.
+         */
         suspend fun shutdownSuspend() {
             statsigServer.shutdownSuspend()
         }
