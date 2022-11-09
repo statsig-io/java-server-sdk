@@ -31,7 +31,7 @@ class Statsig {
 
         /**
          * Get the boolean result of a gate, evaluated against a given user.
-         * Exposure event will automatically be logged for the gate.
+         * An exposure event will automatically be logged for the gate.
          *
          * @param user A StatsigUser object used for evaluation
          * @param gateName The name of the gate being evaluated
@@ -69,7 +69,7 @@ class Statsig {
 
         /**
          * Get the values of an experiment, evaluated against the given user.
-         * Does not trigger an exposure event
+         * Does not trigger an exposure event.
          *
          * @param user A StatsigUser object used for the evaluation
          * @param experimentName The name of the experiment
@@ -207,7 +207,7 @@ class Statsig {
 
         /**
          * Asynchronously get the boolean result of a gate, evaluated against a given user.
-         * Exposure event will automatically be logged for the gate.
+         * An exposure event will automatically be logged for the gate.
          * (Java compatible)
          *
          * @param user A StatsigUser object used for evaluation
