@@ -85,7 +85,7 @@ class Statsig {
 
         /**
          * Get the values of a layer, evaluated against the given user.
-         * Exposure events will be fired when get is called on resulting Layer class.
+         * Exposure events will be fired when get is called on resulting Layer object.
          *
          * @param user A StatsigUser object used for the evaluation
          * @param layerName The name of the layer
@@ -98,7 +98,7 @@ class Statsig {
 
         /**
          * Get the values of a layer, evaluated against the given user.
-         * Exposure events will not be fired on resulting Layer class.
+         * Exposure events will not be fired on resulting Layer object.
          *
          * @param user A StatsigUser object used for evaluation
          * @param layerName The name of the layer
@@ -274,7 +274,7 @@ class Statsig {
 
         /**
          * Asynchronously get the values of a layer, evaluated against the given user.
-         * Exposure events will be fired when get is called on resulting Layer class.
+         * Exposure events will be fired when get is called on resulting Layer object.
          * (Java Compatible)
          *
          * @param user A StatsigUser object used for the evaluation
@@ -302,7 +302,7 @@ class Statsig {
 
         /**
          * Asynchronously get the values of a layer, evaluated against the given user.
-         * Exposure events will not be fired on resulting Layer class.
+         * Exposure events will not be fired on resulting Layer object.
          * (Java Compatible)
          *
          * @param user A StatsigUser object used for evaluation
