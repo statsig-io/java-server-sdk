@@ -11,7 +11,7 @@ class Statsig {
         /**
          * Initializes the Statsig SDK.
          *
-         * @param serverSecret The server SDK key copied from console.statsig.com
+         * @param serverSecret The server SDK key copied from the project's API Keys
          * @param options The StatsigOptions object used to configure the SDK
          */
         suspend fun initialize(
@@ -69,7 +69,7 @@ class Statsig {
 
         /**
          * Get the values of an experiment, evaluated against the given user.
-         * Exposure events will not be fired on resulting DynamicConfig class.
+         * Does not trigger an exposure event
          *
          * @param user A StatsigUser object used for the evaluation
          * @param experimentName The name of the experiment
@@ -102,7 +102,7 @@ class Statsig {
          *
          * @param user A StatsigUser object used for evaluation
          * @param layerName The name of the layer
-         * @return Layer object evaluated for the selected StatsigUser with event exposers disabled
+         * @return Layer object evaluated for the selected StatsigUser
          */
         suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
             enforceInitialized()
@@ -261,7 +261,7 @@ class Statsig {
          *
          * @param user A StatsigUser object used for the evaluation
          * @param experimentName The name of the experiment
-         * @return DynamicConfig object evaluated for the selected StatsigUser with event exposers disabled
+         * @return DynamicConfig object evaluated for the selected StatsigUser
          */
         @JvmStatic
         fun getExperimentWithExposureLoggingDisabledAsync(
@@ -338,8 +338,6 @@ class Statsig {
         }
 
         /**
-         * @deprecated
-         * we make no promises of support for this API
          * Asynchronously get experiment groups for the selected Experiment.
          *
          * @param experimentName The name of the experiment
@@ -359,9 +357,6 @@ class Statsig {
             runBlocking { statsigServer.shutdown() }
         }
 
-        /**
-         * Ensure initialize has been called.
-         */
         private fun enforceInitialized() {
             assert(::statsigServer.isInitialized) {
                 "You must call 'initialize()' before using Statsig"
