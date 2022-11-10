@@ -21,7 +21,7 @@ jobs:
       - name: Setup Kotlin Server
         run: |
           cd kong/bridges/kotlin-server
-          ./pull-and-build-sdk.sh $GITHUB_SHA
+          ./pull-and-build-sdk.sh $GITHUB_REPOSITORY $GITHUB_HEAD_REF
           ./gradlew build
         env:
           repo_pat: ${{ secrets.KONG_REPO_PAT }}

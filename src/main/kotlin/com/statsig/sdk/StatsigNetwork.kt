@@ -160,7 +160,9 @@ internal class StatsigNetwork(
                     return@use
                 }
                 val configs = gson.fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
-                lastSyncTime = configs.time
+                if (configs.hasUpdates) {
+                    this.lastSyncTime = configs.time
+                }
                 return configs
             }
         } catch (_: Exception) {
@@ -283,7 +285,6 @@ internal class StatsigNetwork(
                 delay(options.rulesetsSyncIntervalMs)
                 val response = downloadConfigSpecs()
                 if (response != null) {
-                    lastSyncTime = response.time
                     emit(response)
                 }
             }
