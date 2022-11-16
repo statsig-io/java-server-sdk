@@ -26,8 +26,8 @@ data class StatsigUser private constructor(
     @SerializedName("customIDs")
     var customIDs: Map<String, String>?
 ) {
-    constructor(userID: String): this(userID, null)
-    constructor(customIDs: Map<String, String>): this(null, customIDs)
+    constructor(userID: String) : this(userID, null)
+    constructor(customIDs: Map<String, String>) : this(null, customIDs)
 
     @SerializedName("email")
     var email: String? = null
@@ -57,7 +57,7 @@ data class StatsigUser private constructor(
     internal var statsigEnvironment: Map<String, String>? = null
 
     internal fun getCopyForLogging(): StatsigUser {
-        val userCopy = StatsigUser(null, null);
+        val userCopy = StatsigUser(null, null)
         userCopy.userID = userID
         userCopy.email = email
         userCopy.ip = ip
