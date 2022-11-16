@@ -405,7 +405,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {
-        if (!isSDKInitialized()) {
+        if (isSDKInitialized()) {
             return CompletableFuture.completedFuture(Unit)
         }
         return statsigScope.future { initialize() }
