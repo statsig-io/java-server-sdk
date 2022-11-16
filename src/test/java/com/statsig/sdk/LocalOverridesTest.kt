@@ -10,7 +10,7 @@ import org.junit.Test
 
 class LocalOverridesTest {
     private val userA = StatsigUser(userID = "user-a")
-    private val userB = StatsigUser(userID = "user-b")
+    private val userB = StatsigUser(customIDs = mapOf("customID" to "user-b"))
 
     companion object {
         @BeforeClass
