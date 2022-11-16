@@ -1,0 +1,69 @@
+package com.statsig.sdk;
+
+import kotlin.jvm.JvmStatic;
+import org.junit.*;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Future;
+
+public class LocalOverridesTestJava {
+    private Evaluator evaluator;
+    private StatsigServer driver;
+    private StatsigUser userA = new StatsigUser("user-a");
+    private StatsigUser userB = new StatsigUser(new HashMap<String, String>() {{
+        put("customID", "abc123");
+    }});
+
+    @Before
+    @JvmStatic
+    public void setUp() throws Exception {
+
+        StatsigOptions options = new StatsigOptions();
+        options.setLocalMode(true);
+
+        driver = StatsigServer.create("secret-local", options);
+        Future initFuture = driver.initializeAsync();
+        initFuture.get();
+
+        Field privateEvaluatorField = StatsigServerImpl.class.getDeclaredField("configEvaluator");
+        privateEvaluatorField.setAccessible(true);
+
+        evaluator = (Evaluator) privateEvaluatorField.get(driver);
+    }
+
+    @Test
+    public void testGateOverrides() throws Exception {
+            assertFalse(driver.checkGateAsync(userA, "override_me").get());
+            evaluator.overrideGate("override_me", true);
+            assertTrue(driver.checkGateAsync(userA, "override_me").get());
+            assertTrue(driver.checkGateAsync(userB, "override_me").get());
+            evaluator.overrideGate("override_me", false);
+            assertFalse(driver.checkGateAsync(userB, "override_me").get());
+    }
+
+    @Test
+    public void testConfigOverrides() throws Exception {
+        Map<String, String> emptyMap = new HashMap<>();
+
+        assertEquals(driver.getConfigAsync(userA, "override_me").get().getValue(), emptyMap);
+
+        Map<String, String> overriddenValue = new HashMap<>();
+        overriddenValue.put("hello", "its me");
+        evaluator.overrideConfig("override_me", overriddenValue);
+
+        assertEquals(driver.getConfigAsync(userA, "override_me").get().getValue(), overriddenValue);
+
+        overriddenValue.put("hello", "its no longer me");
+        evaluator.overrideConfig("override_me", overriddenValue);
+        assertEquals(driver.getConfigAsync(userB, "override_me").get().getValue(), overriddenValue);
+
+        evaluator.overrideConfig("override_me", emptyMap);
+        assertEquals(driver.getConfigAsync(userB, "override_me").get().getValue(), emptyMap);
+    }
+}
