@@ -9,7 +9,7 @@ import java.lang.StringBuilder
  * A dictionary of additional fields can be provided under the "custom" field
  * userID or at least a customID is expected: learn more https://docs.statsig.com/messages/serverRequiredUserID
  * @property userID  a unique identifier for the user.
- * @property customIDs  a unique identifier for the user.
+ * @property customIDs  a map of key-value pairs representing the ID type and value for the user
  * @property email an email associated with the current user
  * @property ip the ip address of the requests for the user
  * @property userAgent the user agent of the requests for this user
