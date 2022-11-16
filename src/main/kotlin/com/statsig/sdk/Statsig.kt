@@ -37,7 +37,9 @@ class Statsig {
          * @param gateName The name of the gate being evaluated
          */
         suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return false
+            }
             return statsigServer.checkGate(user, gateName)
         }
 
@@ -50,7 +52,9 @@ class Statsig {
          * @return DynamicConfig object evaluated for the selected StatsigUser
          */
         suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return DynamicConfig.empty(dynamicConfigName)
+            }
             return statsigServer.getConfig(user, dynamicConfigName)
         }
 
@@ -63,7 +67,9 @@ class Statsig {
          * @return DynamicConfig object evaluated for the selected StatsigUser
          */
         suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return DynamicConfig.empty(experimentName)
+            }
             return statsigServer.getExperiment(user, experimentName)
         }
 
@@ -79,7 +85,9 @@ class Statsig {
             user: StatsigUser,
             experimentName: String
         ): DynamicConfig {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return DynamicConfig.empty(experimentName)
+            }
             return statsigServer.getExperimentWithExposureLoggingDisabled(user, experimentName)
         }
 
@@ -92,7 +100,9 @@ class Statsig {
          * @return Layer object evaluated for the selected StatsigUser
          */
         suspend fun getLayer(user: StatsigUser, layerName: String): Layer {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return Layer.empty(layerName)
+            }
             return statsigServer.getLayer(user, layerName)
         }
 
@@ -105,7 +115,9 @@ class Statsig {
          * @return Layer object evaluated for the selected StatsigUser
          */
         suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return Layer.empty(layerName)
+            }
             return statsigServer.getLayerWithExposureLoggingDisabled(user, layerName)
         }
 
@@ -113,6 +125,9 @@ class Statsig {
          * Stops all Statsig activity and flushes any pending events.
          */
         suspend fun shutdownSuspend() {
+            if (!checkInitialized()) {
+                return
+            }
             statsigServer.shutdownSuspend()
         }
 
@@ -124,7 +139,9 @@ class Statsig {
          */
         @JvmStatic
         fun overrideGate(gateName: String, gateValue: Boolean) {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return
+            }
             statsigServer.overrideGate(gateName, gateValue)
         }
 
@@ -136,7 +153,9 @@ class Statsig {
          */
         @JvmStatic
         fun overrideConfig(configName: String, configValue: Map<String, Any>) {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return
+            }
             statsigServer.overrideConfig(configName, configValue)
         }
 
@@ -156,7 +175,9 @@ class Statsig {
             value: String? = null,
             metadata: Map<String, String>? = null
         ) {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return
+            }
             statsigServer.logEvent(user, eventName, value, metadata)
         }
 
@@ -176,7 +197,9 @@ class Statsig {
             value: Double,
             metadata: Map<String, String>? = null
         ) {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return
+            }
             statsigServer.logEvent(user, eventName, value, metadata)
         }
 
@@ -215,7 +238,9 @@ class Statsig {
          */
         @JvmStatic
         fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(false)
+            }
             return statsigServer.checkGateAsync(user, gateName)
         }
 
@@ -232,7 +257,9 @@ class Statsig {
             user: StatsigUser,
             dynamicConfigName: String
         ): CompletableFuture<DynamicConfig> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(DynamicConfig.empty(dynamicConfigName))
+            }
             return statsigServer.getConfigAsync(user, dynamicConfigName)
         }
 
@@ -250,7 +277,9 @@ class Statsig {
             user: StatsigUser,
             experimentName: String
         ): CompletableFuture<DynamicConfig> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(DynamicConfig.empty(experimentName))
+            }
             return statsigServer.getExperimentAsync(user, experimentName)
         }
 
@@ -268,7 +297,9 @@ class Statsig {
             user: StatsigUser,
             experimentName: String
         ): CompletableFuture<DynamicConfig> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(DynamicConfig.empty(experimentName))
+            }
             return statsigServer.getExperimentWithExposureLoggingDisabledAsync(user, experimentName)
         }
 
@@ -286,7 +317,9 @@ class Statsig {
             user: StatsigUser,
             layerName: String
         ): CompletableFuture<Layer> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(Layer.empty(layerName))
+            }
             return statsigServer.getLayerAsync(user, layerName)
         }
 
@@ -296,7 +329,9 @@ class Statsig {
             layerName: String,
             onExposure: OnLayerExposure
         ): CompletableFuture<Layer> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(Layer.empty(layerName))
+            }
             return statsigServer.getLayerWithCustomExposureLoggingAsync(user, layerName, onExposure)
         }
 
@@ -314,7 +349,9 @@ class Statsig {
             user: StatsigUser,
             layerName: String,
         ): CompletableFuture<Layer> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(Layer.empty(layerName))
+            }
             return statsigServer.getLayerWithExposureLoggingDisabledAsync(user, layerName)
         }
 
@@ -333,7 +370,9 @@ class Statsig {
             layerName: String,
             disableExposure: Boolean
         ): CompletableFuture<DynamicConfig> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(DynamicConfig.empty())
+            }
             return statsigServer.getExperimentInLayerForUserAsync(user, layerName, disableExposure)
         }
 
@@ -345,7 +384,9 @@ class Statsig {
          */
         @JvmStatic
         fun _getExperimentGroups(experimentName: String): Map<String, Map<String, Any>> {
-            enforceInitialized()
+            if (!checkInitialized()) {
+                return mapOf()
+            }
             return statsigServer._getExperimentGroups(experimentName)
         }
 
@@ -354,13 +395,18 @@ class Statsig {
          */
         @JvmStatic
         fun shutdown() {
+            if (!checkInitialized()) {
+                return
+            }
             runBlocking { statsigServer.shutdown() }
         }
 
-        private fun enforceInitialized() {
-            assert(::statsigServer.isInitialized) {
-                "You must call 'initialize()' before using Statsig"
+        private fun checkInitialized(): Boolean {
+            if (!::statsigServer.isInitialized) {
+                println("Call and wait for initialize to complete before calling SDK methods.")
+                return false
             }
+            return true
         }
     }
 }

@@ -7,7 +7,6 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -221,7 +220,9 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
-        enforceActive()
+        if (!isSDKInitialized()) {
+            return false
+        }
 
         return errorBoundary.capture({
             val normalizedUser = normalizeUser(user)
@@ -242,8 +243,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+        if (!isSDKInitialized()) {
+            return DynamicConfig.empty(dynamicConfigName)
+        }
         return this.errorBoundary.capture({
-            enforceActive()
             val normalizedUser = normalizeUser(user)
             return@capture getConfigHelper(normalizedUser, dynamicConfigName, false)
         }, {
@@ -252,8 +255,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
+        if (!isSDKInitialized()) {
+            return DynamicConfig.empty(experimentName)
+        }
         return this.errorBoundary.capture({
-            enforceActive()
             return@capture getConfig(user, experimentName)
         }, {
             return@capture DynamicConfig.empty(experimentName)
@@ -264,8 +269,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         user: StatsigUser,
         experimentName: String
     ): DynamicConfig {
+        if (!isSDKInitialized()) {
+            return DynamicConfig.empty(experimentName)
+        }
         return this.errorBoundary.capture({
-            enforceActive()
             val normalizedUser = normalizeUser(user)
             return@capture getConfigHelper(normalizedUser, experimentName, true)
         }, {
@@ -278,8 +285,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         layerName: String,
         disableExposure: Boolean
     ): DynamicConfig {
+        if (!isSDKInitialized()) {
+            return DynamicConfig.empty()
+        }
         return this.errorBoundary.capture({
-            enforceActive()
             val normalizedUser = normalizeUser(user)
             val experiments =
                 configEvaluator.layers[layerName] ?: return@capture DynamicConfig.empty()
@@ -349,7 +358,9 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         stringValue: String?,
         metadata: Map<String, String>?
     ) {
-        enforceActive()
+        if (!isSDKInitialized()) {
+            return
+        }
         errorBoundary.swallowSync {
             val normalizedUser = normalizeUser(user)
             val event =
@@ -365,7 +376,9 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun shutdownSuspend() {
-        enforceActive()
+        if (!isSDKInitialized()) {
+            return
+        }
         errorBoundary.swallow {
             // CAUTION: Order matters here! Need to clean up jobs and post logs before
             // shutting down the network and supervisor scope
@@ -378,14 +391,23 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override fun overrideGate(gateName: String, gateValue: Boolean) {
+        if (!isSDKInitialized()) {
+            return
+        }
         configEvaluator.overrideGate(gateName, gateValue)
     }
 
     override fun overrideConfig(configName: String, configValue: Map<String, Any>) {
+        if (!isSDKInitialized()) {
+            return
+        }
         configEvaluator.overrideConfig(configName, configValue)
     }
 
     override fun initializeAsync(): CompletableFuture<Unit> {
+        if (isSDKInitialized()) {
+            return CompletableFuture.completedFuture(Unit)
+        }
         return statsigScope.future { initialize() }
     }
 
@@ -473,12 +495,15 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun flush() {
+        if (!isSDKInitialized()) {
+            return
+        }
         logger.flush()
     }
 
     private suspend fun getLayerImpl(user: StatsigUser, layerName: String, disableExposure: Boolean, onExposure: OnLayerExposure? = null): Layer {
         return this.errorBoundary.capture({
-            enforceActive()
+            isSDKInitialized()
             val normalizedUser = normalizeUser(user)
 
             var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
@@ -529,13 +554,16 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         return normalizedUser
     }
 
-    private fun enforceActive() {
+    private fun isSDKInitialized(): Boolean {
         if (statsigJob.isCancelled || statsigJob.isCompleted) {
-            throw StatsigIllegalStateException("StatsigServer was shutdown")
+            println("StatsigServer was shutdown")
+            return false
         }
         if (!pollingJob.isActive) { // If the server was never initialized
-            throw StatsigIllegalStateException("Must initialize a server before calling other APIs")
+            println("Must initialize a server before calling other APIs")
+            return false
         }
+        return true
     }
 
     private suspend fun getConfigHelper(

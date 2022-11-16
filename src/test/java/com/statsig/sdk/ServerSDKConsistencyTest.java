@@ -68,7 +68,6 @@ public class ServerSDKConsistencyTest {
         privateEvaluatorField.setAccessible(true);
 
         Evaluator evaluator = (Evaluator) privateEvaluatorField.get(driver);
-
         for (APITestDataSet d: data) {
             StatsigUser user = d.getUser();
             for (Map.Entry<String, APIFeatureGate> entry : d.getGates().entrySet()) {

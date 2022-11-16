@@ -18,7 +18,7 @@ class Layer internal constructor(
     private val onExposure: OnLayerExposureInternal? = null,
 ) {
 
-    internal companion object {
+    companion object {
         fun empty(name: String): Layer {
             return Layer(name, null, null, mapOf())
         }
