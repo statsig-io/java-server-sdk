@@ -3,14 +3,12 @@ package com.statsig.sdk;
 import kotlin.jvm.JvmStatic;
 import org.junit.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
+
+import static org.junit.Assert.*;
 
 public class LocalOverridesTestJava {
     private Evaluator evaluator;
@@ -23,6 +21,9 @@ public class LocalOverridesTestJava {
     @Before
     @JvmStatic
     public void setUp() throws Exception {
+        assertEquals(userA.getCopyForLogging$StatsigSDK().getUserID(), "user-a");
+        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().get("customID"), "abc123");
+        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().size(), 1);
 
         StatsigOptions options = new StatsigOptions();
         options.setLocalMode(true);
@@ -39,12 +40,14 @@ public class LocalOverridesTestJava {
 
     @Test
     public void testGateOverrides() throws Exception {
-            assertFalse(driver.checkGateAsync(userA, "override_me").get());
-            evaluator.overrideGate("override_me", true);
-            assertTrue(driver.checkGateAsync(userA, "override_me").get());
-            assertTrue(driver.checkGateAsync(userB, "override_me").get());
-            evaluator.overrideGate("override_me", false);
-            assertFalse(driver.checkGateAsync(userB, "override_me").get());
+        assertFalse(driver.checkGateAsync(userA, "override_me").get());
+
+        evaluator.overrideGate("override_me", true);
+        assertTrue(driver.checkGateAsync(userA, "override_me").get());
+        assertTrue(driver.checkGateAsync(userB, "override_me").get());
+
+        evaluator.overrideGate("override_me", false);
+        assertFalse(driver.checkGateAsync(userB, "override_me").get());
     }
 
     @Test
