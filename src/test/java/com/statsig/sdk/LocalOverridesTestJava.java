@@ -21,10 +21,6 @@ public class LocalOverridesTestJava {
     @Before
     @JvmStatic
     public void setUp() throws Exception {
-        assertEquals(userA.getCopyForLogging$StatsigSDK().getUserID(), "user-a");
-        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().get("customID"), "abc123");
-        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().size(), 1);
-
         StatsigOptions options = new StatsigOptions();
         options.setLocalMode(true);
 
@@ -40,6 +36,10 @@ public class LocalOverridesTestJava {
 
     @Test
     public void testGateOverrides() throws Exception {
+        assertEquals(userA.getCopyForLogging$StatsigSDK().getUserID(), "user-a");
+        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().get("customID"), "abc123");
+        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().size(), 1);
+
         assertFalse(driver.checkGateAsync(userA, "override_me").get());
 
         evaluator.overrideGate("override_me", true);
@@ -52,6 +52,10 @@ public class LocalOverridesTestJava {
 
     @Test
     public void testConfigOverrides() throws Exception {
+        assertEquals(userA.getCopyForLogging$StatsigSDK().getUserID(), "user-a");
+        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().get("customID"), "abc123");
+        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().size(), 1);
+
         Map<String, String> emptyMap = new HashMap<>();
 
         assertEquals(driver.getConfigAsync(userA, "override_me").get().getValue(), emptyMap);
