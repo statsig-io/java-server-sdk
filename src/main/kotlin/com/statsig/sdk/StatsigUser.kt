@@ -7,7 +7,9 @@ import java.lang.StringBuilder
  * An object of properties relating to the current user
  * Provide as many as possible to take advantage of advanced conditions in the Statsig console
  * A dictionary of additional fields can be provided under the "custom" field
- * @property userID - REQUIRED - a unique identifier for the user.  Why is this required?  See https://docs.statsig.com/messages/serverRequiredUserID/
+ * userID or at least a customID is expected: learn more https://docs.statsig.com/messages/serverRequiredUserID
+ * @property userID  a unique identifier for the user.
+ * @property customIDs  a unique identifier for the user.
  * @property email an email associated with the current user
  * @property ip the ip address of the requests for the user
  * @property userAgent the user agent of the requests for this user
@@ -17,10 +19,16 @@ import java.lang.StringBuilder
  * @property custom any additional custom user attributes for custom conditions in the console
  * @property privateAttributes any user attributes that should be used in evaluation only and removed in any logs.
  */
-data class StatsigUser(
+data class StatsigUser private constructor(
     @SerializedName("userID")
-    var userID: String,
+    var userID: String?,
+
+    @SerializedName("customIDs")
+    var customIDs: Map<String, String>?
 ) {
+    constructor(userID: String): this(userID, null)
+    constructor(customIDs: Map<String, String>): this(null, customIDs)
+
     @SerializedName("email")
     var email: String? = null
 
@@ -48,11 +56,9 @@ data class StatsigUser(
     @SerializedName("statsigEnvironment")
     internal var statsigEnvironment: Map<String, String>? = null
 
-    @SerializedName("customIDs")
-    var customIDs: Map<String, String>? = null
-
     internal fun getCopyForLogging(): StatsigUser {
-        val userCopy = StatsigUser(userID)
+        val userCopy = StatsigUser(null, null);
+        userCopy.userID = userID
         userCopy.email = email
         userCopy.ip = ip
         userCopy.userAgent = userAgent
