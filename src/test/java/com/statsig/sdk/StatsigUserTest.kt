@@ -37,5 +37,12 @@ class StatsigUserTest {
         copy = userUserID.getCopyForLogging()
         assertEquals(copy.userID, userID)
         assertNull(copy.customIDs)
+
+        var userBothIDs = StatsigUser(userID)
+        userBothIDs.customIDs = customIDs
+
+        copy = userBothIDs.getCopyForLogging()
+        assertEquals(copy.userID, userID)
+        assertEquals(copy.customIDs, customIDs)
     }
 }
