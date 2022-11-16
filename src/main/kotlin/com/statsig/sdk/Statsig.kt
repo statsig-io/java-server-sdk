@@ -1,6 +1,5 @@
 package com.statsig.sdk
 
-import com.sun.org.apache.xpath.internal.operations.Bool
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 
