@@ -9,7 +9,7 @@ import java.lang.StringBuilder
  * A dictionary of additional fields can be provided under the "custom" field
  *
  * userID or at least a customID is expected: learn more https://docs.statsig.com/messages/serverRequiredUserID
- * 
+ *
  * @property userID  a unique identifier for the user.
  * @property customIDs  a map of key-value pairs representing the ID type and value for the user
  * @property email an email associated with the current user
@@ -59,8 +59,7 @@ data class StatsigUser private constructor(
     internal var statsigEnvironment: Map<String, String>? = null
 
     internal fun getCopyForLogging(): StatsigUser {
-        val userCopy = StatsigUser(null, null)
-        userCopy.userID = userID
+        val userCopy = StatsigUser(userID, customIDs)
         userCopy.email = email
         userCopy.ip = ip
         userCopy.userAgent = userAgent
@@ -69,7 +68,6 @@ data class StatsigUser private constructor(
         userCopy.appVersion = appVersion
         userCopy.custom = custom
         userCopy.statsigEnvironment = statsigEnvironment
-        userCopy.customIDs = customIDs
         // DO NOT copy privateAttributes to the logging copy!
         userCopy.privateAttributes = null
 
