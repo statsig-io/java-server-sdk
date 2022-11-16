@@ -7,7 +7,9 @@ import java.lang.StringBuilder
  * An object of properties relating to the current user
  * Provide as many as possible to take advantage of advanced conditions in the Statsig console
  * A dictionary of additional fields can be provided under the "custom" field
+ *
  * userID or at least a customID is expected: learn more https://docs.statsig.com/messages/serverRequiredUserID
+ * 
  * @property userID  a unique identifier for the user.
  * @property customIDs  a map of key-value pairs representing the ID type and value for the user
  * @property email an email associated with the current user
