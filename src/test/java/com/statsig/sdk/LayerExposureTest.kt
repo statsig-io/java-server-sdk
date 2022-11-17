@@ -210,37 +210,6 @@ class LayerExposureTest {
         assertEquals("statsig::layer_exposure", events[0].eventName)
     }
 
-    @Test
-    fun testCustomExposureLogging() = runBlocking {
-        var calledExposureEventData: LayerExposureEventData? = null
-
-        driver.initialize()
-        val layer = driver.getLayerWithCustomExposureLogging(user, "unallocated_layer") { exposureEventData ->
-            calledExposureEventData = exposureEventData
-        }
-        layer.getInt("an_int", 0)
-        driver.shutdown()
-
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
-        assertEquals(layer, calledExposureEventData?.layer)
-        assertEquals("statsig::layer_exposure", calledExposureEventData?.eventName)
-        assertNull(calledExposureEventData?.eventValue)
-        assertEquals("an_int", calledExposureEventData?.parameterName)
-        assertEquals(
-            """
-            {
-                "config":"unallocated_layer",
-                "ruleID":"default",
-                "allocatedExperiment":"",
-                "parameterName":"an_int",
-                "isExplicitParameter":"false",
-                "secondaryExposures":[]
-            }
-        """.replace("\\s".toRegex(), ""),
-            calledExposureEventData?.metadata
-        )
-    }
-
     /***
      * Used to ensure event logs have different timestamps
      */

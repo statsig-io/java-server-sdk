@@ -323,20 +323,6 @@ class Statsig {
             return statsigServer.getLayerAsync(user, layerName)
         }
 
-        @JvmStatic
-        fun getLayerWithCustomExposureLoggingAsync(
-            user: StatsigUser,
-            layerName: String,
-            onExposureCallback: LayerExposureCallback
-        ): CompletableFuture<Layer> {
-            if (!checkInitialized()) {
-                return CompletableFuture.completedFuture(Layer.empty(layerName))
-            }
-            return statsigServer.getLayerWithCustomExposureLoggingAsync(user, layerName) { data ->
-                onExposureCallback.accept(data)
-            }
-        }
-
         /**
          * Asynchronously get the values of a layer, evaluated against the given user.
          * Exposure events will not be fired on resulting Layer object.
@@ -411,12 +397,4 @@ class Statsig {
             return true
         }
     }
-}
-
-/**
- * A SAM for Java compatibility
- */
-@FunctionalInterface
-fun interface LayerExposureCallback {
-    fun accept(layerExposureEventData: LayerExposureEventData)
 }

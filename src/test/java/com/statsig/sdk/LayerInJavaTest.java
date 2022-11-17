@@ -39,13 +39,5 @@ public class LayerInJavaTest {
         Layer layer = futureLayer.get();
 
         assertEquals(layer.getBoolean("default_bool", true), true);
-
-        futureLayer = driver.getLayerWithCustomExposureLoggingAsync(user, "empty_layer", layerExposureEventData -> {
-            System.out.println("layer exposure");
-            return null;
-        });
-        layer = futureLayer.get();
-        assertEquals(layer.getBoolean("default_bool", true), true);
     }
-
 }

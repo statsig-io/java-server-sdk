@@ -42,8 +42,6 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract suspend fun getLayer(user: StatsigUser, layerName: String): Layer
 
-    @JvmSynthetic abstract suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer
-
     @JvmSynthetic abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
 
     @JvmSynthetic abstract suspend fun shutdownSuspend()
@@ -106,12 +104,6 @@ sealed class StatsigServer {
     abstract fun getLayerAsync(
         user: StatsigUser,
         layerName: String
-    ): CompletableFuture<Layer>
-
-    abstract fun getLayerWithCustomExposureLoggingAsync(
-        user: StatsigUser,
-        layerName: String,
-        onExposure: OnLayerExposure
     ): CompletableFuture<Layer>
 
     abstract fun getLayerWithExposureLoggingDisabledAsync(
@@ -317,14 +309,6 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         })
     }
 
-    override suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer {
-        return this.errorBoundary.capture({
-            return@capture getLayerImpl(user, layerName, false, onExposure)
-        }, {
-            return@capture Layer.empty(layerName)
-        })
-    }
-
     override suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
         return this.errorBoundary.capture({
             return@capture getLayerImpl(user, layerName, true)
@@ -460,16 +444,6 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     ): CompletableFuture<Layer> {
         return statsigScope.future {
             return@future getLayer(user, layerName)
-        }
-    }
-
-    override fun getLayerWithCustomExposureLoggingAsync(
-        user: StatsigUser,
-        layerName: String,
-        onExposure: OnLayerExposure
-    ): CompletableFuture<Layer> {
-        return statsigScope.future {
-            return@future getLayerWithCustomExposureLogging(user, layerName, onExposure)
         }
     }
 

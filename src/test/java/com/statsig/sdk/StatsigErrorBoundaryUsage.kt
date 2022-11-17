@@ -150,13 +150,6 @@ class StatsigErrorBoundaryUsage {
     }
 
     @Test
-    fun testErrorsWithGetLayerWithCustomExposureLogging() = runBlocking {
-        val statsig = getStatsigInstance()
-        statsig.getLayerWithCustomExposureLogging(user, "a_layer") {}
-        assertEquals(1, requests.size)
-    }
-
-    @Test
     fun testErrorsWithLogStringEvent() = runBlocking {
         val statsig = getStatsigInstance()
         statsig.logEvent(user, "an_event", "a_value")
