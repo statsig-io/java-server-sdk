@@ -13,6 +13,15 @@ private const val CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000
 private const val ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
 
 /**
+ * A SAM for Java compatibility
+ */
+@FunctionalInterface
+fun interface RulesUpdatedCallback {
+    fun accept(rules: String)
+}
+
+
+/**
  * An object of properties for initializing the sdk with advanced options
  * @property api the api endpoint to use for initialization and logging
  * @property initTimeoutMs the amount of time to wait for an initialize() response from the server
@@ -23,7 +32,7 @@ class StatsigOptions(
     var api: String = DEFAULT_API_URL_BASE,
     var initTimeoutMs: Long? = DEFAULT_INIT_TIME_OUT_MS,
     var bootstrapValues: String? = null,
-    var rulesUpdatedCallback: ((rules: String) -> Unit)? = null,
+    var rulesUpdatedCallback: RulesUpdatedCallback? = null,
     var localMode: Boolean = false,
     var rulesetsSyncIntervalMs: Long = CONFIG_SYNC_INTERVAL_MS,
     var idListsSyncIntervalMs: Long = ID_LISTS_SYNC_INTERVAL_MS,
