@@ -42,8 +42,6 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract suspend fun getLayer(user: StatsigUser, layerName: String): Layer
 
-    @JvmSynthetic abstract suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer
-
     @JvmSynthetic abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
 
     @JvmSynthetic abstract suspend fun shutdownSuspend()
@@ -78,7 +76,7 @@ sealed class StatsigServer {
         metadata: Map<String, String>? = null
     )
 
-    abstract fun initializeAsync(): CompletableFuture<Unit>
+    abstract fun initializeAsync(): CompletableFuture<Void?>
 
     abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
 
@@ -106,12 +104,6 @@ sealed class StatsigServer {
     abstract fun getLayerAsync(
         user: StatsigUser,
         layerName: String
-    ): CompletableFuture<Layer>
-
-    abstract fun getLayerWithCustomExposureLoggingAsync(
-        user: StatsigUser,
-        layerName: String,
-        onExposure: OnLayerExposure
     ): CompletableFuture<Layer>
 
     abstract fun getLayerWithExposureLoggingDisabledAsync(
@@ -185,7 +177,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
         try {
             val configString = configSpecs.toString()
-            options.rulesUpdatedCallback?.invoke(configString)
+            options.rulesUpdatedCallback?.accept(configString)
         } catch (e: Exception) {}
     }
 
@@ -317,14 +309,6 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         })
     }
 
-    override suspend fun getLayerWithCustomExposureLogging(user: StatsigUser, layerName: String, onExposure: OnLayerExposure): Layer {
-        return this.errorBoundary.capture({
-            return@capture getLayerImpl(user, layerName, false, onExposure)
-        }, {
-            return@capture Layer.empty(layerName)
-        })
-    }
-
     override suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
         return this.errorBoundary.capture({
             return@capture getLayerImpl(user, layerName, true)
@@ -404,11 +388,11 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         configEvaluator.overrideConfig(configName, configValue)
     }
 
-    override fun initializeAsync(): CompletableFuture<Unit> {
-        if (isSDKInitialized()) {
-            return CompletableFuture.completedFuture(Unit)
+    override fun initializeAsync(): CompletableFuture<Void?> {
+        return statsigScope.future {
+            initialize()
+            null
         }
-        return statsigScope.future { initialize() }
     }
 
     override fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
@@ -463,16 +447,6 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
     }
 
-    override fun getLayerWithCustomExposureLoggingAsync(
-        user: StatsigUser,
-        layerName: String,
-        onExposure: OnLayerExposure
-    ): CompletableFuture<Layer> {
-        return statsigScope.future {
-            return@future getLayerWithCustomExposureLogging(user, layerName, onExposure)
-        }
-    }
-
     override fun getLayerWithExposureLoggingDisabledAsync(
         user: StatsigUser,
         layerName: String,
@@ -502,8 +476,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     private suspend fun getLayerImpl(user: StatsigUser, layerName: String, disableExposure: Boolean, onExposure: OnLayerExposure? = null): Layer {
+        if (!isSDKInitialized()) {
+            return Layer.empty(layerName)
+        }
         return this.errorBoundary.capture({
-            isSDKInitialized()
             val normalizedUser = normalizeUser(user)
 
             var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)

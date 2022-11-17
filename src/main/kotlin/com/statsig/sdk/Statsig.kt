@@ -215,7 +215,7 @@ class Statsig {
         fun initializeAsync(
             serverSecret: String,
             options: StatsigOptions = StatsigOptions(),
-        ): CompletableFuture<Unit> {
+        ): CompletableFuture<Void?> {
             if (!::statsigServer.isInitialized) { // Quick check without synchronization
                 synchronized(this) {
                     if (!::statsigServer.isInitialized
@@ -225,7 +225,7 @@ class Statsig {
                 }
                 return statsigServer.initializeAsync()
             }
-            return CompletableFuture.completedFuture(Unit)
+            return CompletableFuture.completedFuture(null)
         }
 
         /**
@@ -321,18 +321,6 @@ class Statsig {
                 return CompletableFuture.completedFuture(Layer.empty(layerName))
             }
             return statsigServer.getLayerAsync(user, layerName)
-        }
-
-        @JvmStatic
-        fun getLayerWithCustomExposureLoggingAsync(
-            user: StatsigUser,
-            layerName: String,
-            onExposure: OnLayerExposure
-        ): CompletableFuture<Layer> {
-            if (!checkInitialized()) {
-                return CompletableFuture.completedFuture(Layer.empty(layerName))
-            }
-            return statsigServer.getLayerWithCustomExposureLoggingAsync(user, layerName, onExposure)
         }
 
         /**
