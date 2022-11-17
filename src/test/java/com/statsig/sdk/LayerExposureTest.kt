@@ -1,8 +1,6 @@
-
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import com.statsig.sdk.LayerExposureEventData
 import com.statsig.sdk.LogEventInput
 import com.statsig.sdk.StatsigE2ETest
 import com.statsig.sdk.StatsigEvent
@@ -18,7 +16,6 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
