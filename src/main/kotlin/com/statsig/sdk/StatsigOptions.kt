@@ -20,7 +20,6 @@ fun interface RulesUpdatedCallback {
     fun accept(rules: String)
 }
 
-
 /**
  * An object of properties for initializing the sdk with advanced options
  * @property api the api endpoint to use for initialization and logging
