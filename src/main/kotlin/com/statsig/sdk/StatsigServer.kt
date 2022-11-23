@@ -44,12 +44,18 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
 
+    @JvmSynthetic abstract fun overrideLayer(layerName: String, value: Map<String, Any>)
+
+    @JvmSynthetic abstract fun removeLayerOverride(layerName: String)
+
     @JvmSynthetic abstract suspend fun shutdownSuspend()
 
     @JvmSynthetic abstract fun overrideGate(gateName: String, gateValue: Boolean)
 
+    @JvmSynthetic abstract fun removeGateOverride(gateName: String)
     @JvmSynthetic abstract fun overrideConfig(configName: String, configValue: Map<String, Any>)
 
+    @JvmSynthetic abstract fun removeConfigOverride(configName: String)
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
     }
@@ -110,6 +116,11 @@ sealed class StatsigServer {
         user: StatsigUser,
         layerName: String,
     ): CompletableFuture<Layer>
+
+    abstract fun overrideLayerAsync(layerName: String, value: Map<String, Any>): CompletableFuture<Unit>
+    abstract fun removeLayerOverrideAsync(layerName: String): CompletableFuture<Unit>
+    abstract fun removeConfigOverrideAsync(configName: String): CompletableFuture<Unit>
+    abstract fun removeGateOverrideAsync(gateName: String): CompletableFuture<Unit>
 
     /**
      * @deprecated
@@ -317,6 +328,19 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         })
     }
 
+    override fun overrideLayer(layerName: String, value: Map<String, Any>) {
+        this.errorBoundary.captureSync({
+            isSDKInitialized()
+            configEvaluator.overrideLayer(layerName, value)
+        }, { return@captureSync })
+    }
+    override fun removeLayerOverride(layerName: String) {
+        this.errorBoundary.captureSync({
+            isSDKInitialized()
+            configEvaluator.removeLayerOverride(layerName)
+        }, { return@captureSync })
+    }
+
     override fun logEvent(
         user: StatsigUser?,
         eventName: String,
@@ -375,17 +399,31 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override fun overrideGate(gateName: String, gateValue: Boolean) {
-        if (!isSDKInitialized()) {
-            return
-        }
-        configEvaluator.overrideGate(gateName, gateValue)
+        errorBoundary.captureSync({
+            isSDKInitialized()
+            configEvaluator.overrideGate(gateName, gateValue)
+        }, { return@captureSync })
+    }
+
+    override fun removeGateOverride(gateName: String) {
+        errorBoundary.captureSync({
+            isSDKInitialized()
+            configEvaluator.removeGateOverride(gateName)
+        }, { return@captureSync })
     }
 
     override fun overrideConfig(configName: String, configValue: Map<String, Any>) {
-        if (!isSDKInitialized()) {
-            return
-        }
-        configEvaluator.overrideConfig(configName, configValue)
+        errorBoundary.captureSync({
+            isSDKInitialized()
+            configEvaluator.overrideConfig(configName, configValue)
+        }, { return@captureSync })
+    }
+
+    override fun removeConfigOverride(configName: String) {
+        errorBoundary.captureSync({
+            isSDKInitialized()
+            configEvaluator.removeConfigOverride(configName)
+        }, { return@captureSync })
     }
 
     override fun initializeAsync(): CompletableFuture<Void?> {
@@ -453,6 +491,28 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     ): CompletableFuture<Layer> {
         return statsigScope.future {
             return@future getLayerWithExposureLoggingDisabled(user, layerName)
+        }
+    }
+
+    override fun overrideLayerAsync(layerName: String, value: Map<String, Any>): CompletableFuture<Unit> {
+        return statsigScope.future {
+            return@future overrideLayer(layerName, value)
+        }
+    }
+
+    override fun removeLayerOverrideAsync(layerName: String): CompletableFuture<Unit> {
+        return statsigScope.future {
+            return@future removeLayerOverride(layerName)
+        }
+    }
+    override fun removeConfigOverrideAsync(configName: String): CompletableFuture<Unit> {
+        return statsigScope.future {
+            return@future removeConfigOverride(configName)
+        }
+    }
+    override fun removeGateOverrideAsync(gateName: String): CompletableFuture<Unit> {
+        return statsigScope.future {
+            return@future removeGateOverride(gateName)
         }
     }
 

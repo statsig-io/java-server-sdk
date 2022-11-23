@@ -35,6 +35,7 @@ internal class Evaluator {
     private var uaParser: Parser = Parser()
     private var gateOverrides: MutableMap<String, Boolean> = HashMap()
     private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
+    private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
 
     init {
         CountryLookup.initialize()
@@ -118,6 +119,22 @@ internal class Evaluator {
         configOverrides[configName] = configValue
     }
 
+    fun overrideLayer(layerName: String, layerValue: Map<String, Any>) {
+        layerOverrides[layerName] = layerValue
+    }
+
+    fun removeLayerOverride(layerName: String) {
+        layerOverrides.remove(layerName)
+    }
+
+    fun removeConfigOverride(configName: String) {
+        configOverrides.remove(configName)
+    }
+
+    fun removeGateOverride(gateName: String) {
+        gateOverrides.remove(gateName)
+    }
+
     fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
         if (configOverrides.containsKey(dynamicConfigName)) {
             return ConfigEvaluation(
@@ -129,6 +146,10 @@ internal class Evaluator {
     }
 
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
+        if (layerOverrides.containsKey(layerName)) {
+            val value = layerOverrides[layerName] ?: mapOf<String, Any>()
+            return ConfigEvaluation(jsonValue = value)
+        }
         return this.evaluateConfig(user, layerConfigs[layerName])
     }
 

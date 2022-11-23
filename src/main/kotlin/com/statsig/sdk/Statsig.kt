@@ -122,6 +122,31 @@ class Statsig {
         }
 
         /**
+         * Stores a local layer override
+         *
+         * @param layerName the layer to override
+         * @param value the json value to override the config to
+         */
+        @JvmStatic
+        fun overrideLayer(layerName: String, value: Map<String, Any>) {
+            if (checkInitialized()) {
+                statsigServer.overrideLayer(layerName, value)
+            }
+        }
+
+        /**
+         * Removes the given layer override
+         *
+         * @param layerName
+         */
+        @JvmStatic
+        fun removeLayerOverride(layerName: String) {
+            if (checkInitialized()) {
+                statsigServer.removeLayerOverride(layerName)
+            }
+        }
+
+        /**
          * Stops all Statsig activity and flushes any pending events.
          */
         suspend fun shutdownSuspend() {
@@ -144,6 +169,17 @@ class Statsig {
             }
             statsigServer.overrideGate(gateName, gateValue)
         }
+        /**
+         * Removes the given gate override
+         *
+         * @param gateName
+         */
+        @JvmStatic
+        fun removeGateOverride(gateName: String) {
+            if (checkInitialized()) {
+                statsigServer.removeGateOverride(gateName)
+            }
+        }
 
         /**
          * Sets a value to be returned for the given dynamic config/experiment instead of the actual evaluated value.
@@ -157,6 +193,17 @@ class Statsig {
                 return
             }
             statsigServer.overrideConfig(configName, configValue)
+        }
+        /**
+         * Removes the given config override
+         *
+         * @param configName
+         */
+        @JvmStatic
+        fun removeConfigOverride(configName: String) {
+            if (checkInitialized()) {
+                statsigServer.removeConfigOverride(configName)
+            }
         }
 
         /**

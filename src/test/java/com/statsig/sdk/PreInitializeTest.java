@@ -25,8 +25,15 @@ public class PreInitializeTest {
         assertEquals(layerResult.getNow((Layer.Companion.empty("any_layer"))).getValue().size(), 0);
 
         // Should not throw, should noop
-        Statsig.overrideGate("test", false);
+        Statsig.overrideGate("test_gate", false);
+        Statsig.removeGateOverride("test_gate");
+
         Statsig.overrideConfig("test_config", new HashMap<>());
+        Statsig.removeConfigOverride("test_config");
+
+        Statsig.overrideLayer("test_layer", new HashMap<>());
+        Statsig.removeLayerOverride("test_layer");
+
         Statsig.logEvent(user, "test_event");
         Statsig.logEvent(user, "test_event", "test_values");
         Statsig.logEvent(user, "test_event", 1);

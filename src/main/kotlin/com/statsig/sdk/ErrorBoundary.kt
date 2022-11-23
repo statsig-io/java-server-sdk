@@ -38,6 +38,15 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         }
     }
 
+    fun <T> captureSync(task: () -> T, recover: () -> T): T {
+        return try {
+            task()
+        } catch (ex: Throwable) {
+            onException(ex)
+            recover()
+        }
+    }
+
     internal fun logException(ex: Throwable) {
         try {
             if (options.localMode || seen.contains(ex.javaClass.name)) {
