@@ -20,12 +20,23 @@ sealed class StatsigServer {
     @JvmSynthetic abstract suspend fun initialize()
 
     @JvmSynthetic abstract suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
+    @JvmSynthetic abstract suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean
 
     @JvmSynthetic
     abstract suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig
+    @JvmSynthetic
+    abstract suspend fun getConfigWithExposureLoggingDisabled(user: StatsigUser, dynamicConfigName: String): DynamicConfig
+    @JvmSynthetic
+    abstract suspend fun manuallyLogConfigExposure(user: StatsigUser, configName: String)
 
     @JvmSynthetic
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
+
+    @JvmSynthetic
+    abstract suspend fun manuallyLogLayerParameterExposure(user: StatsigUser, layerName: String, paramName: String)
+
+    @JvmSynthetic
+    abstract suspend fun manuallyLogGateExposure(user: StatsigUser, gateName: String)
 
     @JvmSynthetic
     abstract suspend fun getExperimentWithExposureLoggingDisabled(
@@ -85,8 +96,14 @@ sealed class StatsigServer {
     abstract fun initializeAsync(): CompletableFuture<Void?>
 
     abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
+    abstract fun checkGateWithExposureLoggingDisabledAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
 
     abstract fun getConfigAsync(
+        user: StatsigUser,
+        dynamicConfigName: String
+    ): CompletableFuture<DynamicConfig>
+
+    abstract fun getConfigWithExposureLoggingDisabledAsync(
         user: StatsigUser,
         dynamicConfigName: String
     ): CompletableFuture<DynamicConfig>
@@ -223,26 +240,52 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
-        if (!isSDKInitialized()) {
-            return false
-        }
-
         return errorBoundary.capture({
-            val normalizedUser = normalizeUser(user)
-            var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
-            if (result.fetchFromServer) {
-                result = network.checkGate(normalizedUser, gateName)
-            } else {
-                logger.logGateExposure(
-                    normalizedUser,
-                    gateName,
-                    result.booleanValue,
-                    result.ruleID,
-                    result.secondaryExposures,
-                )
+            var result = checkGateImpl(user, gateName)
+            if (!result.fetchFromServer) { // If we fetched from server, we've already logged
+                logGateExposureImpl(user, gateName, result)
             }
             return@capture result.booleanValue
         }, { return@capture false })
+    }
+
+    override suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean {
+        return errorBoundary.capture({
+            val result = checkGateImpl(user, gateName)
+            return@capture result.booleanValue
+        }, { return@capture false })
+    }
+
+    private suspend fun checkGateImpl(user: StatsigUser, gateName: String): ConfigEvaluation {
+        if (!isSDKInitialized()) {
+            return ConfigEvaluation(false, false)
+        }
+        val normalizedUser = normalizeUser(user)
+
+        var result: ConfigEvaluation = configEvaluator.checkGate(normalizedUser, gateName)
+
+        if (result.fetchFromServer) {
+            result = network.checkGate(normalizedUser, gateName, true)
+        }
+        return result
+    }
+
+    override suspend fun manuallyLogGateExposure(user: StatsigUser, gateName: String) {
+        errorBoundary.swallow {
+            val result = checkGateImpl(user, gateName)
+            logGateExposureImpl(user, gateName, result, true)
+        }
+    }
+
+    private fun logGateExposureImpl(user: StatsigUser, gateName: String, evaluation: ConfigEvaluation, isManualExposure: Boolean = false) {
+        logger.logGateExposure(
+            normalizeUser(user),
+            gateName,
+            evaluation.booleanValue,
+            evaluation.ruleID,
+            evaluation.secondaryExposures,
+            isManualExposure
+        )
     }
 
     override suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
@@ -251,10 +294,33 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
         return this.errorBoundary.capture({
             val normalizedUser = normalizeUser(user)
-            return@capture getConfigHelper(normalizedUser, dynamicConfigName, false)
+            val result = getConfigImpl(user, dynamicConfigName)
+            logConfigImpl(normalizedUser, dynamicConfigName, result)
+            return@capture getDynamicConfigFromEvalResult(result, user, dynamicConfigName)
         }, {
             return@capture DynamicConfig.empty(dynamicConfigName)
         })
+    }
+
+    override suspend fun getConfigWithExposureLoggingDisabled(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+        if (!isSDKInitialized()) {
+            return DynamicConfig.empty(dynamicConfigName)
+        }
+        return this.errorBoundary.capture({
+            val normalizedUser = normalizeUser(user)
+            val result = getConfigImpl(normalizedUser, dynamicConfigName)
+            return@capture getDynamicConfigFromEvalResult(result, normalizedUser, dynamicConfigName)
+        }, {
+            return@capture DynamicConfig.empty(dynamicConfigName)
+        })
+    }
+
+    override suspend fun manuallyLogConfigExposure(user: StatsigUser, configName: String) {
+        errorBoundary.swallow {
+            val normalizedUser = normalizeUser(user)
+            val result = getConfigImpl(normalizedUser, configName)
+            logConfigImpl(normalizedUser, configName, result, isManualExposure = true)
+        }
     }
 
     override suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig {
@@ -277,7 +343,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
         return this.errorBoundary.capture({
             val normalizedUser = normalizeUser(user)
-            return@capture getConfigHelper(normalizedUser, experimentName, true)
+            val result = getConfigImpl(normalizedUser, experimentName)
+            return@capture getDynamicConfigFromEvalResult(result, user, experimentName)
         }, {
             return@capture DynamicConfig.empty(experimentName)
         })
@@ -297,12 +364,20 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                 configEvaluator.layers[layerName] ?: return@capture DynamicConfig.empty()
             for (expName in experiments) {
                 if (configEvaluator.isUserOverriddenToExperiment(user, expName)) {
-                    return@capture getConfigHelper(normalizedUser, expName, disableExposure)
+                    val result = getConfigImpl(normalizedUser, expName)
+                    if (!disableExposure) {
+                        logConfigImpl(normalizedUser, expName, result)
+                    }
+                    return@capture getDynamicConfigFromEvalResult(result, user, expName)
                 }
             }
             for (expName in experiments) {
                 if (configEvaluator.isUserAllocatedToExperiment(user, expName)) {
-                    return@capture getConfigHelper(normalizedUser, expName, disableExposure)
+                    val result = getConfigImpl(normalizedUser, expName)
+                    if (!disableExposure) {
+                        logConfigImpl(normalizedUser, expName, result)
+                    }
+                    return@capture getDynamicConfigFromEvalResult(result, user, expName)
                 }
             }
             // User is not allocated to any experiment at this point
@@ -439,12 +514,27 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
     }
 
+    override fun checkGateWithExposureLoggingDisabledAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
+        return statsigScope.future {
+            return@future checkGateWithExposureLoggingDisabled(user, gateName)
+        }
+    }
+
     override fun getConfigAsync(
         user: StatsigUser,
         dynamicConfigName: String
     ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getConfig(user, dynamicConfigName)
+        }
+    }
+
+    override fun getConfigWithExposureLoggingDisabledAsync(
+        user: StatsigUser,
+        dynamicConfigName: String
+    ): CompletableFuture<DynamicConfig> {
+        return statsigScope.future {
+            return@future getConfigWithExposureLoggingDisabled(user, dynamicConfigName)
         }
     }
 
@@ -535,7 +625,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         logger.flush()
     }
 
-    private suspend fun getLayerImpl(user: StatsigUser, layerName: String, disableExposure: Boolean, onExposure: OnLayerExposure? = null): Layer {
+    private suspend fun getLayerImpl(user: StatsigUser, layerName: String, disableExposure: Boolean, onExposure: OnLayerExposure? = null, isManualExposure: Boolean = false): Layer {
         if (!isSDKInitialized()) {
             return Layer.empty(layerName)
         }
@@ -544,7 +634,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
             var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
             if (result.fetchFromServer) {
-                result = network.getConfig(user, layerName)
+                result = network.getConfig(user, layerName, disableExposure)
             }
 
             val value = (result.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
@@ -571,15 +661,45 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                         )
                     )
                 } else {
-                    logger.logLayerExposure(
-                        user,
-                        metadata
-                    )
+                    logLayerExposureImpl(user, metadata)
                 }
             }
         }, {
             return@capture Layer.empty(layerName)
         })
+    }
+
+    override suspend fun manuallyLogLayerParameterExposure(
+        user: StatsigUser,
+        layerName: String,
+        paramName: String,
+    ) {
+        val normalizedUser = normalizeUser(user)
+        var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
+        if (result.fetchFromServer) {
+            result = network.getConfig(user, layerName, disableExposureLogging = true)
+        }
+        val value = (result.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
+
+        val layer = Layer(
+            layerName,
+            result.ruleID,
+            result.groupName,
+            value as Map<String, Any>,
+            result.secondaryExposures,
+            result.configDelegate ?: "",
+        )
+        var metadata = createLayerExposureMetadata(layer, paramName, result)
+        metadata.isManualExposure = "true"
+
+        logLayerExposureImpl(user, metadata)
+    }
+
+    private fun logLayerExposureImpl(user: StatsigUser, metadata: LayerExposureMetadata) {
+        logger.logLayerExposure(
+            user,
+            metadata
+        )
     }
 
     private fun normalizeUser(user: StatsigUser?): StatsigUser {
@@ -602,26 +722,23 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         return true
     }
 
-    private suspend fun getConfigHelper(
+    private fun getConfigImpl(
         user: StatsigUser,
         configName: String,
-        disableExposure: Boolean = false
-    ): DynamicConfig {
-        val result: ConfigEvaluation = configEvaluator.getConfig(user, configName)
-        return this.getDynamicConfigFromEvalResult(result, user, configName, disableExposure)
+    ): ConfigEvaluation {
+        return configEvaluator.getConfig(user, configName)
     }
-
+    private fun logConfigImpl(user: StatsigUser, configName: String, result: ConfigEvaluation, isManualExposure: Boolean = false) {
+        logger.logConfigExposure(user, configName, result.ruleID, result.secondaryExposures, isManualExposure)
+    }
     private suspend fun getDynamicConfigFromEvalResult(
         result: ConfigEvaluation,
         user: StatsigUser,
         configName: String,
-        disableExposure: Boolean = false
     ): DynamicConfig {
         var finalResult = result
         if (finalResult.fetchFromServer) {
-            finalResult = network.getConfig(user, configName)
-        } else if (!disableExposure) {
-            logger.logConfigExposure(user, configName, finalResult.ruleID, finalResult.secondaryExposures)
+            finalResult = network.getConfig(user, configName, disableExposureLogging = true)
         }
         return DynamicConfig(
             configName,

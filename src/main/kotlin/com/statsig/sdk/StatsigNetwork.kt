@@ -86,12 +86,13 @@ internal class StatsigNetwork(
         httpClient = OkHttpClient.Builder().build()
     }
 
-    suspend fun checkGate(user: StatsigUser?, gateName: String): ConfigEvaluation {
+    suspend fun checkGate(user: StatsigUser?, gateName: String, disableExposureLogging: Boolean): ConfigEvaluation {
+        val exposureLoggingMap = mapOf("exposureLoggingDisabled" to disableExposureLogging)
         val bodyJson = gson.toJson(
             mapOf(
                 "gateName" to gateName,
                 "user" to user,
-                "statsigMetadata" to statsigMetadata
+                "statsigMetadata" to statsigMetadata + exposureLoggingMap,
             )
         )
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
@@ -111,12 +112,13 @@ internal class StatsigNetwork(
         }
     }
 
-    suspend fun getConfig(user: StatsigUser?, configName: String): ConfigEvaluation {
+    suspend fun getConfig(user: StatsigUser?, configName: String, disableExposureLogging: Boolean): ConfigEvaluation {
+        val exposureLoggingMap = mapOf("exposureLoggingDisabled" to disableExposureLogging)
         val bodyJson = gson.toJson(
             mapOf(
                 "configName" to configName,
                 "user" to user,
-                "statsigMetadata" to statsigMetadata
+                "statsigMetadata" to statsigMetadata + exposureLoggingMap,
             )
         )
         val requestBody: RequestBody = bodyJson.toRequestBody(json)

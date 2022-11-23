@@ -70,7 +70,6 @@ class LayerExposureTest {
         }
         driver = StatsigServer.create("secret-testcase", options)
     }
-
     @Test
     fun testDoesNotLogOnGetLayer() = runBlocking {
         driver.initialize()
@@ -116,7 +115,8 @@ class LayerExposureTest {
                     "ruleID" to "default",
                     "allocatedExperiment" to "",
                     "parameterName" to "an_int",
-                    "isExplicitParameter" to "false"
+                    "isExplicitParameter" to "false",
+                    "isManualExposure" to "false"
                 )
             ),
             Gson().toJson(events[0].eventMetadata)
@@ -141,7 +141,8 @@ class LayerExposureTest {
                     "ruleID" to "alwaysPass",
                     "allocatedExperiment" to "experiment",
                     "parameterName" to "an_int",
-                    "isExplicitParameter" to "true"
+                    "isExplicitParameter" to "true",
+                    "isManualExposure" to "false"
                 )
             ),
             Gson().toJson(events[0].eventMetadata)
@@ -153,7 +154,9 @@ class LayerExposureTest {
                     "ruleID" to "alwaysPass",
                     "allocatedExperiment" to "",
                     "parameterName" to "a_string",
-                    "isExplicitParameter" to "false"
+                    "isExplicitParameter" to "false",
+                    "isManualExposure" to "false"
+
                 )
             ),
             Gson().toJson(events[1].eventMetadata)

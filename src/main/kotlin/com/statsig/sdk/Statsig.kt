@@ -44,6 +44,20 @@ class Statsig {
         }
 
         /**
+         * Get the boolean result of a gate, evaluated against a given user.
+         * Does not trigger an exposure event.
+         *
+         * @param user A StatsigUser object used for evaluation
+         * @param gateName The name of the gate being evaluated
+         */
+        suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean {
+            if (!checkInitialized()) {
+                return false
+            }
+            return statsigServer.checkGateWithExposureLoggingDisabled(user, gateName)
+        }
+
+        /**
          * Get the values of a DynamicConfig, evaluated against the given user.
          * An exposure event will automatically be logged for the DynamicConfig.
          *
@@ -56,6 +70,34 @@ class Statsig {
                 return DynamicConfig.empty(dynamicConfigName)
             }
             return statsigServer.getConfig(user, dynamicConfigName)
+        }
+
+        /**
+         * Get the values of a DynamicConfig, evaluated against the given user.
+         * Does not trigger an exposure event.
+         *
+         * @param user A StatsigUser object used for evaluation
+         * @param dynamicConfigName The name of the DynamicConfig
+         * @return DynamicConfig object evaluated for the selected StatsigUser
+         */
+        suspend fun getConfigWithExposureLoggingDisabled(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+            if (!checkInitialized()) {
+                return DynamicConfig.empty(dynamicConfigName)
+            }
+            return statsigServer.getConfigWithExposureLoggingDisabled(user, dynamicConfigName)
+        }
+
+        /**
+         * Manually log a config exposure event to Statsig.
+         *
+         * @param user A StatsigUser object to be included in the log
+         * @param configName The name of the config to be logged
+         */
+        suspend fun manuallyLogConfigExposure(user: StatsigUser, configName: String) {
+            if (!checkInitialized()) {
+                return
+            }
+            statsigServer.manuallyLogConfigExposure(user, configName)
         }
 
         /**
@@ -121,6 +163,19 @@ class Statsig {
             return statsigServer.getLayerWithExposureLoggingDisabled(user, layerName)
         }
 
+        /**
+         * Manually log a layer exposure event to Statsig.
+         *
+         * @param user A StatsigUser object to be included in the log
+         * @param layerName The name of the layer to be logged
+         * @param paramName The name of the parameter that was exposed
+         */
+        suspend fun manuallyLogLayerParameterExposure(user: StatsigUser, layerName: String, paramName: String) {
+            if (!checkInitialized()) {
+                return
+            }
+            statsigServer.manuallyLogLayerParameterExposure(user, layerName, paramName)
+        }
         /**
          * Stores a local layer override
          *
@@ -251,6 +306,22 @@ class Statsig {
         }
 
         /**
+         * Manually log a gate exposure event to Statsig.
+         *
+         * @param user A StatsigUser object to be included in the log
+         * @param gateName The name of the gate to log
+         */
+        suspend fun manuallyLogGateExposure(
+            user: StatsigUser,
+            gateName: String,
+        ) {
+            if (!checkInitialized()) {
+                return
+            }
+            statsigServer.manuallyLogGateExposure(user, gateName)
+        }
+
+        /**
          * Asynchronously initializes the Statsig SDK.
          * (Java compatible)
          *
@@ -292,6 +363,22 @@ class Statsig {
         }
 
         /**
+         * Get the boolean result of a gate, evaluated against a given user.
+         * Does not trigger an exposure event.
+         * (Java compatible)
+         *
+         * @param user A StatsigUser object used for evaluation
+         * @param gateName The name of the gate being evaluated
+         */
+        @JvmStatic
+        fun checkGateWithExposureLoggingDisabledAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(false)
+            }
+            return statsigServer.checkGateWithExposureLoggingDisabledAsync(user, gateName)
+        }
+
+        /**
          * Asynchronously get the values of a dynamic config, evaluated against the given user.
          * An exposure event will automatically be logged for the DynamicConfig.
          * (Java compatible)
@@ -308,6 +395,25 @@ class Statsig {
                 return CompletableFuture.completedFuture(DynamicConfig.empty(dynamicConfigName))
             }
             return statsigServer.getConfigAsync(user, dynamicConfigName)
+        }
+
+        /**
+         * Asynchronously get the values of a dynamic config, evaluated against the given user.
+         * Does not trigger an exposure event.
+         * (Java compatible)
+         *
+         * @param user A StatsigUser object used for evaluation
+         * @param dynamicConfigName The name of the dynamic config
+         */
+        @JvmStatic
+        fun getConfigWithExposureLoggingDisabledAsync(
+            user: StatsigUser,
+            dynamicConfigName: String
+        ): CompletableFuture<DynamicConfig> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(DynamicConfig.empty(dynamicConfigName))
+            }
+            return statsigServer.getConfigWithExposureLoggingDisabledAsync(user, dynamicConfigName)
         }
 
         /**

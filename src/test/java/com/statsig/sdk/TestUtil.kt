@@ -2,6 +2,11 @@ package com.statsig.sdk
 
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+
+private const val TEST_TIMEOUT = 10L
 
 class TestUtil {
     companion object {
@@ -40,6 +45,14 @@ class TestUtil {
                 .fromJson(string, APIRule::class.java)
 
             return obj.returnValue as Map<String, Any>
+        }
+        internal fun captureEvents(eventLogInputCompletable: CompletableDeferred<LogEventInput>): Array<StatsigEvent> = runBlocking {
+            val logs = withTimeout(TEST_TIMEOUT) {
+                eventLogInputCompletable.await()
+            }
+
+            logs.events.sortBy { it.time }
+            return@runBlocking logs.events
         }
     }
 }

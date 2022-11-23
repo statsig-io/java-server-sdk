@@ -46,12 +46,13 @@ internal class StatsigLogger(
         gateName: String,
         value: Boolean,
         ruleID: String,
-        secondaryExposures: ArrayList<Map<String, String>>
+        secondaryExposures: ArrayList<Map<String, String>>,
+        isManualExposure: Boolean = false,
     ) {
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
             eventValue = null,
-            mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID),
+            mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString()),
             user,
             statsigMetadata,
             secondaryExposures
@@ -63,9 +64,10 @@ internal class StatsigLogger(
         user: StatsigUser?,
         configName: String,
         ruleID: String,
-        secondaryExposures: ArrayList<Map<String, String>>
+        secondaryExposures: ArrayList<Map<String, String>>,
+        isManualExposure: Boolean,
     ) {
-        val metadata = mutableMapOf("config" to configName, "ruleID" to ruleID)
+        val metadata = mutableMapOf("config" to configName, "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString())
 
         val event = StatsigEvent(
             CONFIG_EXPOSURE_EVENT,
@@ -78,7 +80,12 @@ internal class StatsigLogger(
         log(event)
     }
 
-    fun logLayerExposure(user: StatsigUser?, layerExposureMetadata: LayerExposureMetadata) {
+    fun logLayerExposure(user: StatsigUser?, layerExposureMetadata: LayerExposureMetadata, isManualExposure: Boolean = false) {
+
+        if (isManualExposure) {
+            layerExposureMetadata.isManualExposure = "true"
+        }
+
         val event = StatsigEvent(
             LAYER_EXPOSURE_EVENT,
             eventValue = null,

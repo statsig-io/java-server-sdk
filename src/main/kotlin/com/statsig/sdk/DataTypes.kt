@@ -91,6 +91,7 @@ internal data class LayerExposureMetadata(
     @SerializedName("parameterName") val parameterName: String,
     @SerializedName("isExplicitParameter") val isExplicitParameter: String,
     @SerializedName("secondaryExposures") val secondaryExposures: ArrayList<Map<String, String>>,
+    @SerializedName("isManualExposure") var isManualExposure: String = "false",
 ) {
     fun toStatsigEventMetadataMap(): Map<String, String> {
         return mapOf(
@@ -99,6 +100,7 @@ internal data class LayerExposureMetadata(
             "allocatedExperiment" to allocatedExperiment,
             "parameterName" to parameterName,
             "isExplicitParameter" to isExplicitParameter,
+            "isManualExposure" to isManualExposure,
             // secondaryExposures excluded -- StatsigEvent adds secondaryExposures explicitly as a top level key
         )
     }
