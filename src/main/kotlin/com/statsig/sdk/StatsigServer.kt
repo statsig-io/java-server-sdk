@@ -50,7 +50,6 @@ sealed class StatsigServer {
         layerName: String,
         disableExposure: Boolean = false
     ): DynamicConfig
-
     @JvmSynthetic abstract suspend fun getLayer(user: StatsigUser, layerName: String): Layer
 
     @JvmSynthetic abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
@@ -139,6 +138,9 @@ sealed class StatsigServer {
     abstract fun removeConfigOverrideAsync(configName: String): CompletableFuture<Unit>
     abstract fun removeGateOverrideAsync(gateName: String): CompletableFuture<Unit>
 
+    abstract fun manuallyLogLayerParameterExposureAsync(user: StatsigUser, layerName: String, paramName: String): CompletableFuture<Void>
+    abstract fun manuallyLogGateExposureAsync(user: StatsigUser, gateName: String): CompletableFuture<Void>
+    abstract fun manuallyLogConfigExposureAsync(user: StatsigUser, configName: String): CompletableFuture<Void>
     /**
      * @deprecated
      * - we make no promises of support for this API
@@ -604,6 +606,24 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         return statsigScope.future {
             return@future removeGateOverride(gateName)
         }
+    }
+
+    override fun manuallyLogLayerParameterExposureAsync(user: StatsigUser, layerName: String, paramName: String): CompletableFuture<Void> {
+        return statsigScope.future {
+            manuallyLogLayerParameterExposure(user, layerName, paramName)
+        }.thenApply { return@thenApply null }
+    }
+
+    override fun manuallyLogGateExposureAsync(user: StatsigUser, gateName: String): CompletableFuture<Void> {
+        return statsigScope.future {
+            manuallyLogGateExposure(user, gateName)
+        }.thenApply { return@thenApply null }
+    }
+
+    override fun manuallyLogConfigExposureAsync(user: StatsigUser, configName: String): CompletableFuture<Void> {
+        return statsigScope.future {
+            manuallyLogConfigExposure(user, configName)
+        }.thenApply { return@thenApply null }
     }
 
     /**

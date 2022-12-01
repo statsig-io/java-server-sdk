@@ -379,6 +379,23 @@ class Statsig {
         }
 
         /**
+         * Manually log a gate exposure event to Statsig.
+         * (Java compatible)
+         *
+         * @param user A StatsigUser object to be included in the log
+         * @param gateName The name of the gate to log
+         */
+        @JvmStatic
+        fun manuallyLogGateExposureAsync(
+            user: StatsigUser,
+            gateName: String,
+        ): CompletableFuture<Void> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(null)
+            }
+            return statsigServer.manuallyLogGateExposureAsync(user, gateName)
+        }
+        /**
          * Asynchronously get the values of a dynamic config, evaluated against the given user.
          * An exposure event will automatically be logged for the DynamicConfig.
          * (Java compatible)
@@ -414,6 +431,21 @@ class Statsig {
                 return CompletableFuture.completedFuture(DynamicConfig.empty(dynamicConfigName))
             }
             return statsigServer.getConfigWithExposureLoggingDisabledAsync(user, dynamicConfigName)
+        }
+
+        /**
+         * Manually log a config exposure event to Statsig.
+         * (Java compatible)
+         *
+         * @param user A StatsigUser object to be included in the log
+         * @param configName The name of the config to be logged
+         */
+        @JvmStatic
+        fun manuallyLogConfigExposureAsync(user: StatsigUser, configName: String): CompletableFuture<Void> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(null)
+            }
+            return statsigServer.manuallyLogConfigExposureAsync(user, configName)
         }
 
         /**
@@ -457,6 +489,21 @@ class Statsig {
         }
 
         /**
+         * Manually log an experiment exposure event to Statsig.
+         * (Java compatible)
+         *
+         * @param user A StatsigUser object to be included in the log
+         * @param experimentName The name of the config to be logged
+         */
+        @JvmStatic
+        fun manuallyLogExperimentExposureAsync(user: StatsigUser, experimentName: String): CompletableFuture<Void> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(null)
+            }
+            return statsigServer.manuallyLogConfigExposureAsync(user, experimentName)
+        }
+
+        /**
          * Asynchronously get the values of a layer, evaluated against the given user.
          * Exposure events will be fired when get is called on resulting Layer object.
          * (Java Compatible)
@@ -494,6 +541,21 @@ class Statsig {
                 return CompletableFuture.completedFuture(Layer.empty(layerName))
             }
             return statsigServer.getLayerWithExposureLoggingDisabledAsync(user, layerName)
+        }
+        /**
+         * Manually log a layer exposure event to Statsig.
+         * (Java Compatible)
+         *
+         * @param user A StatsigUser object to be included in the log
+         * @param layerName The name of the layer to be logged
+         * @param paramName The name of the parameter that was exposed
+         */
+        @JvmStatic
+        fun manuallyLogLayerParameterExposureAsync(user: StatsigUser, layerName: String, paramName: String): CompletableFuture<Void> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(null)
+            }
+            return statsigServer.manuallyLogLayerParameterExposureAsync(user, layerName, paramName)
         }
 
         /**
