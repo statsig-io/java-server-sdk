@@ -8,8 +8,10 @@ import static org.junit.Assert.*;
 
 import com.google.gson.Gson;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.concurrent.ExecutionException;
 
 @SuppressWarnings("KotlinInternalInJava")
 public class EvaluatorTest {
@@ -18,10 +20,15 @@ public class EvaluatorTest {
     private Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     @Test
-    public void testIP3Country() {
-        Evaluator eval = new Evaluator();
+    public void testIP3Country() throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException {
+        StatsigServer driver = StatsigServer.create("secret-local", new StatsigOptions());
+        driver.initializeAsync().get();
+
+        SpecStore specStore = TestUtilJava.getSpecStoreFromStatsigServer(driver);
+        Evaluator eval = TestUtilJava.getEvaluatorFromStatsigServer(driver);
+
         APIDownloadedConfigs configs = gson.fromJson(CONFIG_SPEC, APIDownloadedConfigs.class);
-        eval.setDownloadedConfigs(configs);
+        specStore.setDownloadedConfigs(configs);
 
         // IP Passes, but ID doesnt pass rollout percentage
         StatsigUser user = new StatsigUser("123");
@@ -67,8 +74,12 @@ public class EvaluatorTest {
     };
 
     @Test
-    public void testCaseSensitivity() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        Evaluator eval = new Evaluator();
+    public void testCaseSensitivity() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException, ExecutionException, InterruptedException {
+        StatsigServer driver = StatsigServer.create("secret-local", new StatsigOptions());
+        driver.initializeAsync().get();
+
+        Evaluator eval = TestUtilJava.getEvaluatorFromStatsigServer(driver);
+
         Method privateContainsMethod = Evaluator.class.
             getDeclaredMethod("contains", Object.class, Object.class, boolean.class);
 

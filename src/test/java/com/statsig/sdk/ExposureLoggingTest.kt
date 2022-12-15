@@ -63,10 +63,6 @@ class ExposureLoggingTest {
         }
 
         driver = StatsigServer.create("secret-local", options)
-
-        val privateEvaluatorField = driver.javaClass.getDeclaredField("configEvaluator")
-        privateEvaluatorField.isAccessible = true
-        val evaluator = privateEvaluatorField[driver] as Evaluator
     }
 
     @Test

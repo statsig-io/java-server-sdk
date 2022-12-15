@@ -28,10 +28,7 @@ public class LocalOverridesTestJava {
         Future initFuture = driver.initializeAsync();
         initFuture.get();
 
-        Field privateEvaluatorField = StatsigServerImpl.class.getDeclaredField("configEvaluator");
-        privateEvaluatorField.setAccessible(true);
-
-        evaluator = (Evaluator) privateEvaluatorField.get(driver);
+        evaluator = TestUtilJava.getEvaluatorFromStatsigServer(driver);
     }
 
     @Test

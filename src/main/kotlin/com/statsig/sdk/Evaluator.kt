@@ -1,6 +1,7 @@
 package com.statsig.sdk
 
 import ip3country.CountryLookup
+import kotlinx.coroutines.CoroutineScope
 import ua_parser.Client
 import ua_parser.Parser
 import java.lang.Long.parseLong
@@ -26,27 +27,36 @@ internal data class ConfigEvaluation(
     var undelegatedSecondaryExposures: ArrayList<Map<String, String>> = secondaryExposures
 }
 
-internal class Evaluator {
-    private var featureGates: MutableMap<String, APIConfig> = HashMap()
-    private var dynamicConfigs: MutableMap<String, APIConfig> = HashMap()
-    private var layerConfigs: Map<String, APIConfig> = HashMap()
-    internal var idLists: MutableMap<String, IDList> = HashMap()
-    internal var layers: Map<String, Array<String>> = HashMap()
+internal class Evaluator(
+    private var network: StatsigNetwork,
+    private var options: StatsigOptions,
+    private val statsigScope: CoroutineScope,
+) {
+    private var specStore: SpecStore
     private var uaParser: Parser = Parser()
     private var gateOverrides: MutableMap<String, Boolean> = HashMap()
     private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
 
+    var isInitialized: Boolean = false
     init {
         CountryLookup.initialize()
+        specStore = SpecStore(this.network, this.options, StatsigMetadata(), statsigScope)
+    }
+
+    suspend fun initialize() {
+        specStore.initialize()
+        isInitialized = true
+    }
+
+    fun shutdown() {
+        specStore.shutdown()
     }
 
     fun getVariants(configName: String): Map<String, Map<String, Any>> {
         var variants: MutableMap<String, Map<String, Any>> = HashMap()
-        if (!dynamicConfigs.containsKey(configName)) {
-            return variants
-        }
-        val config = dynamicConfigs[configName]
+        val config = specStore.getConfig(configName) ?: return variants
+
         var previousAllocation = 0.0
         for (r: APIRule in config!!.rules) {
             val value = r.returnValue.toString()
@@ -61,31 +71,9 @@ internal class Evaluator {
         return variants
     }
 
-    fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs) {
-        if (!downloadedConfig.hasUpdates) {
-            return
-        }
-        val newGates: MutableMap<String, APIConfig> = HashMap()
-        val newConfigs: MutableMap<String, APIConfig> = HashMap()
-        val newLayers: MutableMap<String, APIConfig> = HashMap()
-        for (gate in downloadedConfig.featureGates) {
-            newGates[gate.name] = gate
-        }
-        for (config in downloadedConfig.dynamicConfigs) {
-            newConfigs[config.name] = config
-        }
-        for (config in downloadedConfig.layerConfigs) {
-            newLayers[config.name] = config
-        }
-        featureGates = newGates
-        dynamicConfigs = newConfigs
-        layerConfigs = newLayers
-        layers = downloadedConfig.layers ?: HashMap()
-    }
-
     // check if a user is overridden to any group for the experiment
     fun isUserOverriddenToExperiment(user: StatsigUser, expName: String): Boolean {
-        val config = dynamicConfigs[expName] ?: return false
+        val config = specStore.getConfig(expName) ?: return false
         for (rule in config.rules) {
             if (rule.id.contains("override", ignoreCase = true)) {
                 val result = evaluateRule(user, rule)
@@ -100,7 +88,7 @@ internal class Evaluator {
 
     // check if a user is allocated to a specific experiment due to layer assignment
     fun isUserAllocatedToExperiment(user: StatsigUser, expName: String): Boolean {
-        val config = dynamicConfigs[expName] ?: return false
+        val config = specStore.getConfig(expName) ?: return false
         for (rule in config.rules) {
             if (rule.id.equals("layerAssignment", ignoreCase = true)) {
                 val result = evaluateRule(user, rule)
@@ -142,7 +130,7 @@ internal class Evaluator {
             )
         }
 
-        return this.evaluateConfig(user, dynamicConfigs[dynamicConfigName])
+        return this.evaluateConfig(user, specStore.getConfig(dynamicConfigName))
     }
 
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
@@ -150,7 +138,11 @@ internal class Evaluator {
             val value = layerOverrides[layerName] ?: mapOf<String, Any>()
             return ConfigEvaluation(jsonValue = value)
         }
-        return this.evaluateConfig(user, layerConfigs[layerName])
+        return this.evaluateConfig(user, specStore.getLayerConfig(layerName))
+    }
+
+    fun getExperimentsInLayer(layerName: String): Array<String> {
+        return specStore.getLayer(layerName) ?: emptyArray()
     }
 
     fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
@@ -159,7 +151,8 @@ internal class Evaluator {
             return ConfigEvaluation(booleanValue = value, jsonValue = value)
         }
 
-        return this.evaluateConfig(user, featureGates[gateName])
+        val evalGate = specStore.getGate(gateName)
+        return this.evaluateConfig(user, evalGate)
     }
 
     private fun evaluateConfig(user: StatsigUser, config: APIConfig?): ConfigEvaluation {
@@ -230,27 +223,26 @@ internal class Evaluator {
         rule: APIRule,
         secondaryExposures: ArrayList<Map<String, String>>
     ): ConfigEvaluation? {
-        dynamicConfigs[rule.configDelegate]?.let {
-            val delegatedResult = this.evaluate(user, it)
-            val undelegatedSecondaryExposures = arrayListOf<Map<String, String>>()
-            undelegatedSecondaryExposures.addAll(secondaryExposures)
-            secondaryExposures.addAll(delegatedResult.secondaryExposures)
+        val configDelegate = rule.configDelegate ?: return null
+        val config = specStore.getConfig(configDelegate) ?: return null
 
-            var evaluation = ConfigEvaluation(
-                fetchFromServer = delegatedResult.fetchFromServer,
-                booleanValue = delegatedResult.booleanValue,
-                jsonValue = delegatedResult.jsonValue,
-                ruleID = delegatedResult.ruleID,
-                groupName = delegatedResult.groupName,
-                secondaryExposures = secondaryExposures,
-                configDelegate = rule.configDelegate,
-                explicitParameters = it.explicitParameters ?: arrayOf()
-            )
-            evaluation.undelegatedSecondaryExposures = undelegatedSecondaryExposures
-            return evaluation
-        }
+        val delegatedResult = this.evaluate(user, config)
+        val undelegatedSecondaryExposures = arrayListOf<Map<String, String>>()
+        undelegatedSecondaryExposures.addAll(secondaryExposures)
+        secondaryExposures.addAll(delegatedResult.secondaryExposures)
 
-        return null
+        var evaluation = ConfigEvaluation(
+            fetchFromServer = delegatedResult.fetchFromServer,
+            booleanValue = delegatedResult.booleanValue,
+            jsonValue = delegatedResult.jsonValue,
+            ruleID = delegatedResult.ruleID,
+            groupName = delegatedResult.groupName,
+            secondaryExposures = secondaryExposures,
+            configDelegate = rule.configDelegate,
+            explicitParameters = config.explicitParameters ?: arrayOf()
+        )
+        evaluation.undelegatedSecondaryExposures = undelegatedSecondaryExposures
+        return evaluation
     }
 
     private fun evaluateRule(user: StatsigUser, rule: APIRule): ConfigEvaluation {
@@ -567,7 +559,7 @@ internal class Evaluator {
                     )
                 }
                 "in_segment_list", "not_in_segment_list" -> {
-                    val idList = idLists[condition.targetValue]
+                    val idList = specStore.getIDList(condition.targetValue as String)
                     val stringValue = getValueAsString(value)
                     if (idList != null && stringValue != null) {
                         val bytes =

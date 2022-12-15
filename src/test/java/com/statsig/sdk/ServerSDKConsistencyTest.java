@@ -64,10 +64,8 @@ public class ServerSDKConsistencyTest {
         Future initFuture = driver.initializeAsync();
         initFuture.get();
 
-        Field privateEvaluatorField = StatsigServerImpl.class.getDeclaredField("configEvaluator");
-        privateEvaluatorField.setAccessible(true);
+        Evaluator evaluator = TestUtilJava.getEvaluatorFromStatsigServer(driver);
 
-        Evaluator evaluator = (Evaluator) privateEvaluatorField.get(driver);
         for (APITestDataSet d: data) {
             StatsigUser user = d.getUser();
             for (Map.Entry<String, APIFeatureGate> entry : d.getGates().entrySet()) {

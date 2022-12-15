@@ -7,9 +7,6 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 import okhttp3.Interceptor
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
@@ -138,158 +135,25 @@ internal class StatsigNetwork(
         }
     }
 
-    fun parseConfigSpecs(specs: String?): APIDownloadedConfigs? {
-        if (specs == null || specs.isEmpty()) {
+    suspend fun post(
+        url: String,
+        body: Map<String, Any>?,
+        headers: Map<String, String> = emptyMap(),
+    ): Response? {
+
+        var request = Request.Builder()
+            .url(url)
+
+        if (body != null) {
+            val bodyJson = gson.toJson(body)
+            request.post(bodyJson.toRequestBody(json))
+        }
+        headers.forEach { (key, value) -> request.addHeader(key, value) }
+
+        try {
+            return statsigHttpClient.newCall(request.build()).await()
+        } catch (e: Exception) {
             return null
-        }
-        try {
-            return gson.fromJson(specs, APIDownloadedConfigs::class.java)
-        } catch (_: Exception) {
-        }
-        return null
-    }
-
-    suspend fun downloadConfigSpecs(): APIDownloadedConfigs? {
-        val bodyJson = gson.toJson(mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastSyncTime))
-        val requestBody: RequestBody = bodyJson.toRequestBody(json)
-        val request: Request = Request.Builder()
-            .url(options.api + "/download_config_specs")
-            .post(requestBody)
-            .build()
-        try {
-            statsigHttpClient.newCall(request).await().use { response ->
-                if (!response.isSuccessful) {
-                    return@use
-                }
-                val configs = gson.fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
-                if (configs.hasUpdates) {
-                    this.lastSyncTime = configs.time
-                }
-                return configs
-            }
-        } catch (_: Exception) {
-        }
-
-        return null
-    }
-
-    private suspend fun downloadIDList(list: IDList, allLists: MutableMap<String, IDList>) {
-        if (list.url == null) {
-            return
-        }
-        val request = Request.Builder()
-            .url(list.url!!)
-            .addHeader("Range", "bytes=${list.size}-")
-            .build()
-
-        try {
-            httpClient.newCall(request).await().use { response ->
-                if (response.isSuccessful) {
-                    val contentLength = response.headers["content-length"]?.toIntOrNull()
-                    var content = response.body?.string()
-                    if (content == null || content.length <= 1) {
-                        return
-                    }
-                    val firstChar = content[0]
-                    if (contentLength == null || (firstChar != '-' && firstChar != '+')) {
-                        allLists.remove(list.name)
-                        return
-                    }
-                    val lines = content.lines()
-                    for (line in lines) {
-                        if (line.length <= 1) {
-                            continue
-                        }
-                        val op = line[0]
-                        val id = line.drop(1)
-                        if (op == '+') {
-                            list.add(id)
-                        } else if (op == '-') {
-                            list.remove(id)
-                        }
-                    }
-                    list.size = list.size + contentLength
-                }
-            }
-        } catch (_: Exception) {
-        }
-    }
-
-    suspend fun getAllIDLists(evaluator: Evaluator) {
-        coroutineScope {
-            try {
-                val bodyJson = gson.toJson(mapOf("statsigMetadata" to statsigMetadata))
-                val request: Request = Request.Builder()
-                    .url(options.api + "/get_id_lists")
-                    .post(bodyJson.toRequestBody(json))
-                    .build()
-                statsigHttpClient.newCall(request).await().use { response ->
-                    if (response.isSuccessful) {
-                        val body = response.body ?: return@coroutineScope
-                        val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string())
-                        val allLocalLists = evaluator.idLists
-                        for ((name, serverList) in jsonResponse) {
-                            var localList = allLocalLists[name]
-                            if (localList == null) {
-                                localList = IDList(name = name)
-                                allLocalLists[name] = localList
-                            }
-                            if (serverList.url == null || serverList.fileID == null || serverList.creationTime < localList.creationTime) {
-                                continue
-                            }
-
-                            // check if fileID has changed and it is indeed a newer file. If so, reset the list
-                            if (serverList.fileID != localList.fileID && serverList.creationTime >= localList.creationTime) {
-                                localList = IDList(
-                                    name = name,
-                                    url = serverList.url,
-                                    fileID = serverList.fileID,
-                                    size = 0,
-                                    creationTime = serverList.creationTime
-                                )
-                                allLocalLists[name] = localList
-                            }
-                            if (serverList.size <= localList.size) {
-                                continue
-                            }
-                            launch {
-                                downloadIDList(localList, allLocalLists)
-                            }
-                        }
-
-                        // remove deleted id lists
-                        val deletedLists = mutableListOf<String>()
-                        for (name in allLocalLists.keys) {
-                            if (!jsonResponse.containsKey(name)) {
-                                deletedLists.add(name)
-                            }
-                        }
-                        for (name in deletedLists) {
-                            allLocalLists.remove(name)
-                        }
-                    }
-                }
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    suspend fun syncIDLists(evaluator: Evaluator) {
-        while (true) {
-            delay(options.idListsSyncIntervalMs)
-            getAllIDLists(evaluator)
-        }
-    }
-
-    fun pollForChanges(): Flow<APIDownloadedConfigs?> {
-        return flow {
-            while (true) {
-                delay(options.rulesetsSyncIntervalMs)
-                val response = downloadConfigSpecs()
-                if (response != null) {
-                    emit(response)
-                }
-            }
         }
     }
 
@@ -336,6 +200,5 @@ internal class StatsigNetwork(
 
     fun shutdown() {
         statsigHttpClient.dispatcher.executorService.shutdown()
-        httpClient.dispatcher.executorService.shutdown()
     }
 }

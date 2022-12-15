@@ -3,12 +3,10 @@ package com.statsig.sdk
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.future.future
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -184,59 +182,20 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     private val mutex = Mutex()
     private val statsigMetadata = StatsigMetadata.asMap()
     private val network = StatsigNetwork(serverSecret, options, statsigMetadata)
-    private var configEvaluator = Evaluator()
     private var logger: StatsigLogger = StatsigLogger(statsigScope, network, statsigMetadata)
-    private val pollingJob =
-        statsigScope.launch(start = CoroutineStart.LAZY) {
-            network.pollForChanges().collect {
-                if (it == null || !it.hasUpdates) {
-                    return@collect
-                }
-                configEvaluator.setDownloadedConfigs(it)
-                fireRulesUpdatedCallback(it)
-            }
-        }
-    private val idListPollingJob =
-        statsigScope.launch(start = CoroutineStart.LAZY) {
-            network.syncIDLists(configEvaluator)
-        }
-
-    private fun fireRulesUpdatedCallback(configSpecs: APIDownloadedConfigs) {
-        if (options.rulesUpdatedCallback == null) {
-            return
-        }
-        try {
-            val configString = configSpecs.toString()
-            options.rulesUpdatedCallback?.accept(configString)
-        } catch (e: Exception) {}
-    }
+    private lateinit var configEvaluator: Evaluator
 
     override suspend fun initialize() {
         errorBoundary.swallow {
             mutex.withLock { // Prevent multiple coroutines from calling this at once.
-                if (pollingJob.isActive) {
-                    return@swallow // Just return. Initialize was already called.
-                }
-                if (pollingJob.isCancelled || pollingJob.isCompleted) {
+
+                if (this::configEvaluator.isInitialized && configEvaluator.isInitialized) {
                     throw StatsigIllegalStateException(
                         "Cannot re-initialize server that has shutdown. Please recreate the server connection."
                     )
                 }
-                val downloadedConfigs = if (options.bootstrapValues != null) {
-                    network.parseConfigSpecs(options.bootstrapValues)
-                } else {
-                    network.downloadConfigSpecs()
-                }
-                if (downloadedConfigs != null) {
-                    configEvaluator.setDownloadedConfigs(downloadedConfigs)
-                    if (options.bootstrapValues == null) {
-                        // only fire the callback if this wasnt the result of a bootstrap
-                        fireRulesUpdatedCallback(downloadedConfigs)
-                    }
-                }
-                network.getAllIDLists(configEvaluator)
-                pollingJob.start()
-                idListPollingJob.start()
+                configEvaluator = Evaluator(network, options, statsigScope)
+                configEvaluator.initialize()
             }
         }
     }
@@ -363,7 +322,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         return this.errorBoundary.capture({
             val normalizedUser = normalizeUser(user)
             val experiments =
-                configEvaluator.layers[layerName] ?: return@capture DynamicConfig.empty()
+                configEvaluator.getExperimentsInLayer(layerName)
             for (expName in experiments) {
                 if (configEvaluator.isUserOverriddenToExperiment(user, expName)) {
                     val result = getConfigImpl(normalizedUser, expName)
@@ -424,7 +383,9 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         value: String?,
         metadata: Map<String, String>?
     ) {
-        this.logEventImpl(user, eventName, null, value, metadata)
+        this.errorBoundary.captureSync({
+            this.logEventImpl(user, eventName, null, value, metadata)
+        }, { return@captureSync })
     }
 
     override fun logEvent(
@@ -433,7 +394,9 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         value: Double,
         metadata: Map<String, String>?
     ) {
-        this.logEventImpl(user, eventName, value, null, metadata)
+        this.errorBoundary.captureSync({
+            this.logEventImpl(user, eventName, value, null, metadata)
+        }, { return@captureSync })
     }
 
     private fun logEventImpl(
@@ -446,18 +409,16 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return
         }
-        errorBoundary.swallowSync {
-            val normalizedUser = normalizeUser(user)
-            val event =
-                StatsigEvent(
-                    eventName = eventName,
-                    eventValue = doubleValue ?: stringValue,
-                    eventMetadata = metadata,
-                    user = normalizedUser,
-                )
+        val normalizedUser = normalizeUser(user)
+        val event =
+            StatsigEvent(
+                eventName = eventName,
+                eventValue = doubleValue ?: stringValue,
+                eventMetadata = metadata,
+                user = normalizedUser,
+            )
 
-            logger.log(event)
-        }
+        logger.log(event)
     }
 
     override suspend fun shutdownSuspend() {
@@ -467,9 +428,9 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         errorBoundary.swallow {
             // CAUTION: Order matters here! Need to clean up jobs and post logs before
             // shutting down the network and supervisor scope
-            pollingJob.cancelAndJoin()
             logger.shutdown()
             network.shutdown()
+            configEvaluator.shutdown()
             statsigJob.cancelAndJoin()
             statsigScope.cancel()
         }
@@ -645,7 +606,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         logger.flush()
     }
 
-    private suspend fun getLayerImpl(user: StatsigUser, layerName: String, disableExposure: Boolean, onExposure: OnLayerExposure? = null, isManualExposure: Boolean = false): Layer {
+    private suspend fun getLayerImpl(user: StatsigUser, layerName: String, disableExposure: Boolean, onExposure: OnLayerExposure? = null): Layer {
         if (!isSDKInitialized()) {
             return Layer.empty(layerName)
         }
@@ -735,7 +696,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             println("StatsigServer was shutdown")
             return false
         }
-        if (!pollingJob.isActive) { // If the server was never initialized
+        if (!this::configEvaluator.isInitialized || !configEvaluator.isInitialized) { // If the server was never initialized
             println("Must initialize a server before calling other APIs")
             return false
         }

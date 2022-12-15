@@ -54,5 +54,18 @@ class TestUtil {
             logs.events.sortBy { it.time }
             return@runBlocking logs.events
         }
+
+        private fun getEvaluatorFromStatsigServer(driver: StatsigServer): Evaluator {
+            val privateEvaluatorField = driver.javaClass.getDeclaredField("configEvaluator")
+            privateEvaluatorField.isAccessible = true
+            return privateEvaluatorField[driver] as Evaluator
+        }
+
+        internal fun getSpecStoreFromStatsigServer(driver: StatsigServer): SpecStore {
+            val eval = getEvaluatorFromStatsigServer(driver)
+            val privateSpecStoreField = eval.javaClass.getDeclaredField("specStore")
+            privateSpecStoreField.isAccessible = true
+            return privateSpecStoreField[eval] as SpecStore
+        }
     }
 }
