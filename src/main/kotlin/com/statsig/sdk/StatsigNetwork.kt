@@ -7,9 +7,14 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import okhttp3.*
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import java.util.UUID
 
@@ -35,7 +40,6 @@ internal class StatsigNetwork(
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val statsigHttpClient: OkHttpClient
     private val externalHttpClient: OkHttpClient
-    private var lastSyncTime: Long = 0
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     private val serverSessionID = UUID.randomUUID().toString()
 
