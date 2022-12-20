@@ -7,15 +7,9 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import okhttp3.Interceptor
-import okhttp3.MediaType
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import java.util.UUID
 
@@ -40,7 +34,7 @@ internal class StatsigNetwork(
     )
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val statsigHttpClient: OkHttpClient
-    private val httpClient: OkHttpClient
+    private val externalHttpClient: OkHttpClient
     private var lastSyncTime: Long = 0
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     private val serverSessionID = UUID.randomUUID().toString()
@@ -80,7 +74,7 @@ internal class StatsigNetwork(
         )
 
         statsigHttpClient = clientBuilder.build()
-        httpClient = OkHttpClient.Builder().build()
+        externalHttpClient = OkHttpClient.Builder().build()
     }
 
     suspend fun checkGate(user: StatsigUser?, gateName: String, disableExposureLogging: Boolean): ConfigEvaluation {
@@ -140,18 +134,32 @@ internal class StatsigNetwork(
         body: Map<String, Any>?,
         headers: Map<String, String> = emptyMap(),
     ): Response? {
+        return postImpl(statsigHttpClient, url, body, headers)
+    }
 
-        var request = Request.Builder()
-            .url(url)
+    suspend fun postExternal(
+        url: String,
+        body: Map<String, Any>?,
+        headers: Map<String, String> = emptyMap(),
+    ): Response? {
+        return postImpl(externalHttpClient, url, body, headers)
+    }
 
-        if (body != null) {
-            val bodyJson = gson.toJson(body)
-            request.post(bodyJson.toRequestBody(json))
-        }
-        headers.forEach { (key, value) -> request.addHeader(key, value) }
-
+    private suspend fun postImpl(
+        client: OkHttpClient,
+        url: String,
+        body: Map<String, Any>?,
+        headers: Map<String, String> = emptyMap(),
+    ): Response? {
         try {
-            return statsigHttpClient.newCall(request.build()).await()
+            var request = Request.Builder()
+                .url(url)
+            if (body != null) {
+                val bodyJson = gson.toJson(body)
+                request.post(bodyJson.toRequestBody(json))
+            }
+            headers.forEach { (key, value) -> request.addHeader(key, value) }
+            return client.newCall(request.build()).await()
         } catch (e: Exception) {
             return null
         }

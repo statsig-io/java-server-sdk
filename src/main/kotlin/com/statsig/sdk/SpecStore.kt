@@ -174,7 +174,7 @@ internal class SpecStore constructor(
         }
 
         try {
-            val response = network.post(list.url!!, null, mapOf("Range" to "bytes=${list.size}-"))
+            val response = network.postExternal(list.url!!, null, mapOf("Range" to "bytes=${list.size}-"))
             if (response?.isSuccessful !== true) {
                 return
             }
