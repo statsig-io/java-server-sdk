@@ -170,6 +170,7 @@ internal fun createLayerExposureMetadata(
         allocatedExperiment,
         parameterName,
         isExplicit.toString(),
-        exposures
+        exposures,
+        evaluationDetails = configEvaluation.evaluationDetails,
     )
 }

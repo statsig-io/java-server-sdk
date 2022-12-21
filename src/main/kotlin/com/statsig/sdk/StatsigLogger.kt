@@ -15,6 +15,16 @@ const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
 const val LAYER_EXPOSURE_EVENT = "statsig::layer_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
 
+internal fun safeAddEvaluationToEvent(evaluationDetails: EvaluationDetails?, event: StatsigEvent) {
+    if (evaluationDetails == null) {
+        return
+    }
+
+    event.eventMetadata = event.eventMetadata?.plus(
+        evaluationDetails.toMap()
+    )
+}
+
 internal class StatsigLogger(
     private val coroutineScope: CoroutineScope,
     private val network: StatsigNetwork,
@@ -48,6 +58,7 @@ internal class StatsigLogger(
         ruleID: String,
         secondaryExposures: ArrayList<Map<String, String>>,
         isManualExposure: Boolean = false,
+        evaluationDetails: EvaluationDetails?
     ) {
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
@@ -57,6 +68,7 @@ internal class StatsigLogger(
             statsigMetadata,
             secondaryExposures
         )
+        safeAddEvaluationToEvent(evaluationDetails, event)
         log(event)
     }
 
@@ -66,6 +78,7 @@ internal class StatsigLogger(
         ruleID: String,
         secondaryExposures: ArrayList<Map<String, String>>,
         isManualExposure: Boolean,
+        evaluationDetails: EvaluationDetails?
     ) {
         val metadata = mutableMapOf("config" to configName, "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString())
 
@@ -77,6 +90,7 @@ internal class StatsigLogger(
             statsigMetadata,
             secondaryExposures
         )
+        safeAddEvaluationToEvent(evaluationDetails, event)
         log(event)
     }
 
@@ -94,6 +108,7 @@ internal class StatsigLogger(
             statsigMetadata,
             layerExposureMetadata.secondaryExposures
         )
+        safeAddEvaluationToEvent(layerExposureMetadata.evaluationDetails, event)
         log(event)
     }
 

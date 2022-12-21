@@ -14,4 +14,15 @@ public class TestUtilJava {
         privateSpecStoreField.setAccessible(true);
         return (SpecStore) privateSpecStoreField.get(eval);
     }
+
+    static public EvaluationReason getInitReasonFromSpecStore(SpecStore specStore) throws NoSuchFieldException, IllegalAccessException {
+        Field privateSpecStoreField = specStore.getClass().getDeclaredField("initReason");
+        privateSpecStoreField.setAccessible(true);
+        return (EvaluationReason) privateSpecStoreField.get(specStore);
+    }
+    static public void setInitReasonFromSpecStore(SpecStore specStore, EvaluationReason reason) throws NoSuchFieldException, IllegalAccessException {
+        Field privateSpecStoreField = specStore.getClass().getDeclaredField("initReason");
+        privateSpecStoreField.setAccessible(true);
+        privateSpecStoreField.set(specStore, reason);
+    }
 }

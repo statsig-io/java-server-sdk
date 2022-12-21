@@ -31,7 +31,6 @@ class ExposureLoggingTest {
         val mockGateResponse = APIFeatureGate("a_gate", true, "ruleID")
         val mockResponseBody = gson.toJson(mockGateResponse)
 
-        eventLogInputCompletable = CompletableDeferred()
         val downloadConfigSpecsResponse =
             StatsigE2ETest::class.java.getResource("/layer_exposure_download_config_specs.json")?.readText() ?: ""
 

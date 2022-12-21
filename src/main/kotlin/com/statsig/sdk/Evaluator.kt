@@ -22,7 +22,8 @@ internal data class ConfigEvaluation(
     val groupName: String? = null,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val explicitParameters: Array<String> = arrayOf(),
-    val configDelegate: String? = null
+    val configDelegate: String? = null,
+    var evaluationDetails: EvaluationDetails? = null
 ) {
     var undelegatedSecondaryExposures: ArrayList<Map<String, String>> = secondaryExposures
 }
@@ -53,6 +54,12 @@ internal class Evaluator(
         specStore.shutdown()
     }
 
+    private fun createEvaluationDetails(reason: EvaluationReason): EvaluationDetails {
+        if (reason == EvaluationReason.UNINITIALIZED) {
+            return EvaluationDetails(0, 0, reason)
+        }
+        return EvaluationDetails(specStore.getLastUpdateTime(), specStore.getInitTime(), reason)
+    }
     fun getVariants(configName: String): Map<String, Map<String, Any>> {
         var variants: MutableMap<String, Map<String, Any>> = HashMap()
         val config = specStore.getConfig(configName) ?: return variants
@@ -126,7 +133,14 @@ internal class Evaluator(
     fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
         if (configOverrides.containsKey(dynamicConfigName)) {
             return ConfigEvaluation(
-                jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>()
+                jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>(),
+                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+            )
+        }
+
+        if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
+            return ConfigEvaluation(
+                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
             )
         }
 
@@ -136,8 +150,18 @@ internal class Evaluator(
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
         if (layerOverrides.containsKey(layerName)) {
             val value = layerOverrides[layerName] ?: mapOf<String, Any>()
-            return ConfigEvaluation(jsonValue = value)
+            return ConfigEvaluation(
+                jsonValue = value,
+                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+            )
         }
+
+        if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
+            return ConfigEvaluation(
+                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            )
+        }
+
         return this.evaluateConfig(user, specStore.getLayerConfig(layerName))
     }
 
@@ -148,7 +172,17 @@ internal class Evaluator(
     fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
         if (gateOverrides.containsKey(gateName)) {
             val value = gateOverrides[gateName] ?: false
-            return ConfigEvaluation(booleanValue = value, jsonValue = value)
+            return ConfigEvaluation(
+                booleanValue = value,
+                jsonValue = value,
+                evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+            )
+        }
+
+        if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
+            return ConfigEvaluation(
+                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            )
         }
 
         val evalGate = specStore.getGate(gateName)
@@ -161,23 +195,28 @@ internal class Evaluator(
                 ?: return ConfigEvaluation(
                     fetchFromServer = false,
                     booleanValue = false,
-                    mapOf<String, Any>()
+                    mapOf<String, Any>(),
+                    evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED)
                 )
         return this.evaluate(user, unwrappedConfig)
     }
 
     private fun evaluate(user: StatsigUser, config: APIConfig): ConfigEvaluation {
+        val evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
         if (!config.enabled) {
             return ConfigEvaluation(
                 fetchFromServer = false,
                 booleanValue = false,
                 config.defaultValue,
-                "disabled"
+                "disabled",
+                evaluationDetails = evaluationDetails
             )
         }
         val secondaryExposures = arrayListOf<Map<String, String>>()
         for (rule in config.rules) {
             val result = this.evaluateRule(user, rule)
+            result.evaluationDetails = evaluationDetails
+
             if (result.fetchFromServer) {
                 return result
             }
@@ -205,6 +244,7 @@ internal class Evaluator(
                     result.ruleID,
                     result.groupName,
                     secondaryExposures,
+                    evaluationDetails = evaluationDetails
                 )
             }
         }
@@ -215,6 +255,7 @@ internal class Evaluator(
             "default",
             "",
             secondaryExposures,
+            evaluationDetails = evaluationDetails
         )
     }
 
@@ -239,7 +280,8 @@ internal class Evaluator(
             groupName = delegatedResult.groupName,
             secondaryExposures = secondaryExposures,
             configDelegate = rule.configDelegate,
-            explicitParameters = config.explicitParameters ?: arrayOf()
+            explicitParameters = config.explicitParameters ?: arrayOf(),
+            evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason())
         )
         evaluation.undelegatedSecondaryExposures = undelegatedSecondaryExposures
         return evaluation
@@ -265,7 +307,7 @@ internal class Evaluator(
             rule.returnValue,
             rule.id,
             rule.groupName,
-            secondaryExposures
+            secondaryExposures,
         )
     }
 

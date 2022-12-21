@@ -245,7 +245,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             evaluation.booleanValue,
             evaluation.ruleID,
             evaluation.secondaryExposures,
-            isManualExposure
+            isManualExposure,
+            evaluation.evaluationDetails
         )
     }
 
@@ -710,7 +711,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         return configEvaluator.getConfig(user, configName)
     }
     private fun logConfigImpl(user: StatsigUser, configName: String, result: ConfigEvaluation, isManualExposure: Boolean = false) {
-        logger.logConfigExposure(user, configName, result.ruleID, result.secondaryExposures, isManualExposure)
+        logger.logConfigExposure(user, configName, result.ruleID, result.secondaryExposures, isManualExposure, result.evaluationDetails)
     }
     private suspend fun getDynamicConfigFromEvalResult(
         result: ConfigEvaluation,
@@ -723,7 +724,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
         return DynamicConfig(
             configName,
-            finalResult.jsonValue as Map<String, Any>,
+            (finalResult.jsonValue ?: emptyMap<String, Any>()) as Map<String, Any>,
             finalResult.ruleID,
             finalResult.groupName,
             finalResult.secondaryExposures,

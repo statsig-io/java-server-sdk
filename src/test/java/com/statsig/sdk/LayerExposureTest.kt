@@ -7,6 +7,9 @@ import com.statsig.sdk.StatsigEvent
 import com.statsig.sdk.StatsigOptions
 import com.statsig.sdk.StatsigServer
 import com.statsig.sdk.StatsigUser
+import com.statsig.sdk.Utils
+import io.mockk.every
+import io.mockk.mockkConstructor
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -19,6 +22,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
+private const val TIME_NOW_MOCK: Long = 1234567890L
 private const val TEST_TIMEOUT = 10L
 
 class LayerExposureTest {
@@ -33,6 +37,9 @@ class LayerExposureTest {
     @Before
     fun setup() {
         gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+
+        mockkConstructor(Utils::class)
+        every { anyConstructed<Utils>().getTimeInMillis() } returns TIME_NOW_MOCK
 
         eventLogInputCompletable = CompletableDeferred()
         val downloadConfigSpecsResponse =
@@ -116,7 +123,11 @@ class LayerExposureTest {
                     "allocatedExperiment" to "",
                     "parameterName" to "an_int",
                     "isExplicitParameter" to "false",
-                    "isManualExposure" to "false"
+                    "isManualExposure" to "false",
+                    "reason" to "NETWORK",
+                    "configSyncTime" to "0",
+                    "initTime" to "-1",
+                    "serverTime" to TIME_NOW_MOCK.toString()
                 )
             ),
             Gson().toJson(events[0].eventMetadata)
@@ -142,7 +153,11 @@ class LayerExposureTest {
                     "allocatedExperiment" to "experiment",
                     "parameterName" to "an_int",
                     "isExplicitParameter" to "true",
-                    "isManualExposure" to "false"
+                    "isManualExposure" to "false",
+                    "reason" to "NETWORK",
+                    "configSyncTime" to "0",
+                    "initTime" to "-1",
+                    "serverTime" to TIME_NOW_MOCK.toString()
                 )
             ),
             Gson().toJson(events[0].eventMetadata)
@@ -155,7 +170,11 @@ class LayerExposureTest {
                     "allocatedExperiment" to "",
                     "parameterName" to "a_string",
                     "isExplicitParameter" to "false",
-                    "isManualExposure" to "false"
+                    "isManualExposure" to "false",
+                    "reason" to "NETWORK",
+                    "configSyncTime" to "0",
+                    "initTime" to "-1",
+                    "serverTime" to TIME_NOW_MOCK.toString()
 
                 )
             ),

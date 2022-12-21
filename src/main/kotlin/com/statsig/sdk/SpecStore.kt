@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlin.collections.HashMap
 
 internal class SpecStore constructor(
     private var network: StatsigNetwork,
@@ -18,8 +19,9 @@ internal class SpecStore constructor(
     private var statsigMetadata: StatsigMetadata,
     private var statsigScope: CoroutineScope,
 ) {
+    private var initTime: Long = 0
+    private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
     private var lastUpdateTime: Long = 0
-    private var lastSyncTime: Long = 0
     var isInitialized: Boolean = false
     var backgroundDownloadConfigs: Job? = null
     var backgroundDownloadIDLists: Job? = null
@@ -38,6 +40,7 @@ internal class SpecStore constructor(
     suspend fun initialize() {
         if (!options.localMode) {
             this.initializeSpecs()
+            this.initTime = if (lastUpdateTime == 0L) -1 else lastUpdateTime
 
             this.spawnBackgroundThreadsIfNeeded()
 
@@ -275,12 +278,26 @@ internal class SpecStore constructor(
         return this.idLists
     }
 
+    fun getInitTime(): Long {
+        return this.initTime
+    }
+    fun getEvaluationReason(): EvaluationReason {
+        return this.initReason
+    }
+    fun getLastUpdateTime(): Long {
+        return this.lastUpdateTime
+    }
+
     private suspend fun initializeSpecs() {
-        val downloadedConfigs = if (options.bootstrapValues != null) {
-            this.bootstrapConfigSpecs()
+        var downloadedConfigs: APIDownloadedConfigs?
+        if (options.bootstrapValues != null) {
+            downloadedConfigs = this.bootstrapConfigSpecs()
+            initReason = EvaluationReason.BOOTSTRAP
         } else {
-            this.downloadConfigSpecs()
+            downloadedConfigs = this.downloadConfigSpecs()
+            initReason = EvaluationReason.NETWORK
         }
+
         if (downloadedConfigs != null) {
             if (options.bootstrapValues == null) {
                 // only fire the callback if this was not the result of a bootstrap
@@ -327,12 +344,12 @@ internal class SpecStore constructor(
         try {
             val specs = this.network.post(
                 options.api + "/download_config_specs",
-                mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastSyncTime),
+                mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastUpdateTime),
                 emptyMap()
             ) ?: return null
             val configs = gson.fromJson(specs.body?.charStream(), APIDownloadedConfigs::class.java)
             if (configs.hasUpdates) {
-                this.lastSyncTime = configs.time
+                this.lastUpdateTime = configs.time
             }
             return configs
         } catch (e: Exception) {
