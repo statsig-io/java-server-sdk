@@ -376,6 +376,8 @@ class StatsigE2ETest {
                 bootstrapValues = downloadConfigSpecsResponse,
                 rulesUpdatedCallback = {
                     bootstrap_callback_count++
+                    val specs = gson.fromJson(it, APIDownloadedConfigs::class.java)
+                    assert(gson.toJson(specs) == gson.toJson(gson.fromJson(downloadConfigSpecsResponse, APIDownloadedConfigs::class.java)))
                 }
             ).apply {
                 api = server.url("/v1").toString()
@@ -385,7 +387,11 @@ class StatsigE2ETest {
         } else {
             options = StatsigOptions(
                 bootstrapValues = downloadConfigSpecsResponse,
-                rulesUpdatedCallback = { bootstrap_callback_count++ }
+                rulesUpdatedCallback = {
+                    bootstrap_callback_count++
+                    val specs = gson.fromJson(it, APIDownloadedConfigs::class.java)
+                    assert(gson.toJson(specs) == gson.toJson(gson.fromJson(downloadConfigSpecsResponse, APIDownloadedConfigs::class.java)))
+                }
             ).apply {
                 api = server.url("/v1").toString()
             }

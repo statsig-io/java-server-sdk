@@ -1,6 +1,8 @@
 package com.statsig.sdk
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -171,6 +173,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }
     }
 
+    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+
     override val errorBoundary = ErrorBoundary(serverSecret, options)
     private val coroutineExceptionHandler =
         CoroutineExceptionHandler { _, ex ->
@@ -204,7 +208,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             return
         }
         try {
-            val configString = configSpecs.toString()
+            val configString = gson.toJson(configSpecs)
             options.rulesUpdatedCallback?.accept(configString)
         } catch (e: Exception) {}
     }
