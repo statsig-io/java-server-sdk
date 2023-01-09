@@ -35,6 +35,7 @@ class StatsigOptions(
     var localMode: Boolean = false,
     var rulesetsSyncIntervalMs: Long = CONFIG_SYNC_INTERVAL_MS,
     var idListsSyncIntervalMs: Long = ID_LISTS_SYNC_INTERVAL_MS,
+    var dataStore: IDataStore? = null
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
 

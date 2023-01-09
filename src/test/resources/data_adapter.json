@@ -1,0 +1,27 @@
+{
+  "dynamic_configs": [],
+  "feature_gates": [{
+    "name": "gate_from_adapter_always_on",
+    "type": "feature_gate",
+    "salt": "64fa52a6-4195-4658-b124-aa0be3ff8860",
+    "enabled": true,
+    "defaultValue": false,
+    "rules": [{
+      "name": "6X3qJgyfwA81IJ2dxI7lYp",
+      "groupName": "public",
+      "passPercentage": 100,
+      "conditions": [{"type": "public"}],
+      "returnValue": true,
+      "id": "6X3qJgyfwA81IJ2dxI7lYp",
+      "salt": "6X3qJgyfwA81IJ2dxI7lYp",
+      "idType": "userID"
+    }],
+    "idType": "userID",
+    "entity": "feature_gate"
+  }],
+  "id_lists": {},
+  "layers": {},
+  "layer_configs": [],
+  "has_updates": true,
+  "time": 1663803098618
+}

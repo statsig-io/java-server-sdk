@@ -13,6 +13,8 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlin.collections.HashMap
 
+const val STORAGE_ADAPTER_KEY = "statsig.cache"
+
 internal class SpecStore constructor(
     private var network: StatsigNetwork,
     private var options: StatsigOptions,
@@ -290,12 +292,19 @@ internal class SpecStore constructor(
 
     private suspend fun initializeSpecs() {
         var downloadedConfigs: APIDownloadedConfigs?
-        if (options.bootstrapValues != null) {
+
+        if (options.dataStore != null) {
+            downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
+            initReason = EvaluationReason.DATA_ADAPTER
+
+            if (this.lastUpdateTime == 0L) {
+                downloadedConfigs = this.downloadConfigSpecsFromNetwork()
+            }
+        } else if (options.bootstrapValues != null) {
             downloadedConfigs = this.bootstrapConfigSpecs()
             initReason = EvaluationReason.BOOTSTRAP
         } else {
-            downloadedConfigs = this.downloadConfigSpecs()
-            initReason = EvaluationReason.NETWORK
+            downloadedConfigs = this.downloadConfigSpecsFromNetwork()
         }
 
         if (downloadedConfigs != null) {
@@ -305,6 +314,11 @@ internal class SpecStore constructor(
             }
             setDownloadedConfigs(downloadedConfigs)
         }
+    }
+
+    private suspend fun downloadConfigSpecsFromNetwork(): APIDownloadedConfigs? {
+        this.initReason = EvaluationReason.NETWORK
+        return this.downloadConfigSpecs()
     }
 
     private fun getParsedSpecs(values: Array<APIConfig>): Map<String, APIConfig> {
@@ -325,8 +339,24 @@ internal class SpecStore constructor(
             }
             return specs
         } catch (e: Exception) {
-            throw Exception("Failed to parse bootstrapvalues")
+            throw Exception("Failed to parse bootstrap values")
         }
+    }
+
+    private fun loadConfigSpecsFromStorageAdapter(): APIDownloadedConfigs? {
+        if (options.dataStore == null) {
+            return null
+        }
+        val cacheString = options.dataStore!!.get(STORAGE_ADAPTER_KEY)
+
+        val specs = parseConfigSpecs(cacheString)
+        if (specs != null) {
+            if (specs.time < this.lastUpdateTime) {
+                return null
+            }
+            this.lastUpdateTime = specs.time
+        }
+        return specs
     }
 
     private fun parseConfigSpecs(specs: String?): APIDownloadedConfigs? {
