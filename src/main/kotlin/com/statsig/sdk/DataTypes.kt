@@ -26,7 +26,7 @@ internal data class APIConfig(
 
 internal data class APIRule(
     @SerializedName("name") val name: String,
-    @SerializedName("passPercentage") val passPercentage: Int,
+    @SerializedName("passPercentage") val passPercentage: Double,
     @SerializedName("returnValue") val returnValue: Any,
     @SerializedName("id") val id: String,
     @SerializedName("salt") val salt: String?,
