@@ -98,7 +98,7 @@ internal class SpecStore constructor(
             return
         }
         try {
-            val configString = configSpecs.toString()
+            val configString = gson.toJson(configSpecs)
             options.rulesUpdatedCallback?.accept(configString)
         } catch (e: Exception) {
         }
