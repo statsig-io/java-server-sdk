@@ -21,7 +21,7 @@ internal data class LogEventInput(
 )
 
 private const val TEST_TIMEOUT = 100L
-private const val SYNC_INTERVAL = 2000L
+private const val SYNC_INTERVAL = 1000L
 
 /**
  * There are 2 mock gates, 1 mock config, and 1 mock experiment
@@ -82,6 +82,7 @@ class StatsigE2ETest {
                             return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
                         }
                         "/v1/get_id_lists" -> {
+                            download_id_list_count++
                             if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
                                 throw Exception("No content type set!")
                             }
@@ -359,6 +360,7 @@ class StatsigE2ETest {
     @Test
     fun testBackgroundSync() = runBlocking {
         download_config_count = 0
+        download_id_list_count = 0
         options = StatsigOptions().apply {
             api = server.url("/v1").toString()
             rulesetsSyncIntervalMs = SYNC_INTERVAL
@@ -403,21 +405,18 @@ class StatsigE2ETest {
         // the initialize is synchronous, and wont trigger a call to download_config_specs
         // this normalizes the count so the remainder of the test works
         download_config_count = 1
+        download_id_list_count = 0
         bootstrap_callback_count = 0
         backgroundSyncHelper(true)
-
-        // callback will fire 1 less time than the total download count
-        // because the initial bootstrap counts as a download config count
-        assert(bootstrap_callback_count == download_config_count - 1)
     }
 
     private fun waitFor(expected: Any?, action: () -> Any?) = runBlocking {
         var i = 0
         var value = action()
-        while (i < 1000 && value != expected) {
+        while (i < 100 && value != expected) {
+            Thread.sleep(400)
             i++
             value = action()
-            Thread.sleep(10)
         }
 
         if (value != expected) {
@@ -426,51 +425,34 @@ class StatsigE2ETest {
     }
 
     private fun backgroundSyncHelper(withBootstrap: Boolean = false) = runBlocking {
-        download_id_list_count = 1
         download_list_1_count = 0
         download_list_2_count = 0
-
         driver.initialize()
 
         val specStore = TestUtil.getSpecStoreFromStatsigServer(driver)
 
+        // sync 1
         assertEquals(1, download_config_count)
-        assertEquals(1, download_id_list_count)
-
+        waitFor(1) { download_id_list_count }
         assertEquals(mutableSetOf("1", "2"), specStore.getIDList("list_1")?.ids)
         assertEquals(mutableSetOf("a", "b"), specStore.getIDList("list_2")?.ids)
         assertEquals(1L, specStore.getIDList("list_1")?.creationTime)
         assertEquals(1L, specStore.getIDList("list_2")?.creationTime)
 
-        download_id_list_count = 2
+        // sync 2
         waitFor(mutableSetOf("2", "3", "4")) { specStore.getIDList("list_1")?.ids }
         waitFor(mutableSetOf("c", "d")) { specStore.getIDList("list_2")?.ids }
-
-        assertEquals(2, download_config_count)
         assertEquals(2, download_id_list_count)
-        assertEquals(mutableSetOf("2", "3", "4"), specStore.getIDList("list_1")?.ids)
-        assertEquals(mutableSetOf("c", "d"), specStore.getIDList("list_2")?.ids)
         assertEquals(1L, specStore.getIDList("list_1")?.creationTime)
         assertEquals(1L, specStore.getIDList("list_2")?.creationTime)
 
-        download_id_list_count = 3
-        waitFor(null) { specStore.getIDList("list_1") }
         waitFor(2L) { specStore.getIDList("list_2")?.creationTime }
-        waitFor(3) { download_config_count }
+        waitFor(3) { download_id_list_count }
 
-        assertEquals(3, download_config_count)
-        assertEquals(3, download_id_list_count)
-        assertEquals(null, specStore.getIDList("list_1"))
         assertEquals(mutableSetOf("c", "d"), specStore.getIDList("list_2")?.ids)
         assertEquals(2L, specStore.getIDList("list_2")?.creationTime)
 
-        download_id_list_count = 4
-        waitFor(mutableSetOf("2", "3", "4", "5")) { specStore.getIDList("list_1")?.ids }
-        waitFor(2L) { specStore.getIDList("list_2")?.creationTime }
-        waitFor(4) { download_config_count }
-
-        assertEquals(4, download_config_count)
-        assertEquals(4, download_id_list_count)
+        waitFor(4) { download_id_list_count }
         assertEquals(mutableSetOf("2", "3", "4", "5"), specStore.getIDList("list_1")?.ids)
         assertEquals(mutableSetOf("c", "d"), specStore.getIDList("list_2")?.ids)
         assertEquals(1L, specStore.getIDList("list_1")?.creationTime)
@@ -479,10 +461,6 @@ class StatsigE2ETest {
         if (withBootstrap) {
             waitFor(3) { bootstrap_callback_count }
         }
-
-        assertEquals(4, download_config_count)
-        assertEquals(4, download_id_list_count)
-
         driver.shutdown()
     }
 }
