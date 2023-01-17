@@ -56,6 +56,7 @@ class SpecStoreTests {
             false,
             emptyArray(),
             "",
+            "",
             null
         )
     }
