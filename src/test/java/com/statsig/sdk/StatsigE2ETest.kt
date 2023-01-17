@@ -360,6 +360,7 @@ class StatsigE2ETest {
     @Test
     fun testBackgroundSync() = runBlocking {
         download_config_count = 0
+        download_id_list_count = 0
         options = StatsigOptions().apply {
             api = server.url("/v1").toString()
             rulesetsSyncIntervalMs = SYNC_INTERVAL
@@ -404,6 +405,7 @@ class StatsigE2ETest {
         // the initialize is synchronous, and wont trigger a call to download_config_specs
         // this normalizes the count so the remainder of the test works
         download_config_count = 1
+        download_id_list_count = 0
         bootstrap_callback_count = 0
         backgroundSyncHelper(true)
 
@@ -427,10 +429,8 @@ class StatsigE2ETest {
     }
 
     private fun backgroundSyncHelper(withBootstrap: Boolean = false) = runBlocking {
-        download_id_list_count = 0
         download_list_1_count = 0
         download_list_2_count = 0
-
         driver.initialize()
 
         val specStore = TestUtil.getSpecStoreFromStatsigServer(driver)
