@@ -414,7 +414,7 @@ class StatsigE2ETest {
     private fun waitFor(expected: Any?, action: () -> Any?) = runBlocking {
         var i = 0
         var value = action()
-        while (i < 1000 && value < expected) {
+        while (i < 1000 && value != expected) {
             i++
             value = action()
             Thread.sleep(10)
