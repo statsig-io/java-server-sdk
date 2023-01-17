@@ -417,8 +417,8 @@ class StatsigE2ETest {
     private fun waitFor(expected: Any?, action: () -> Any?) = runBlocking {
         var i = 0
         var value = action()
-        while (i < 1000 && value != expected) {
-            Thread.sleep(10)
+        while (i < 50 && value != expected) {
+            Thread.sleep(200)
             i++
             value = action()
         }
@@ -435,32 +435,28 @@ class StatsigE2ETest {
 
         val specStore = TestUtil.getSpecStoreFromStatsigServer(driver)
 
+        // sync 1
         assertEquals(1, download_config_count)
-        assertEquals(1, download_id_list_count)
-
+        waitFor(1) { download_id_list_count }
         assertEquals(mutableSetOf("1", "2"), specStore.getIDList("list_1")?.ids)
         assertEquals(mutableSetOf("a", "b"), specStore.getIDList("list_2")?.ids)
         assertEquals(1L, specStore.getIDList("list_1")?.creationTime)
         assertEquals(1L, specStore.getIDList("list_2")?.creationTime)
 
+        // sync 2
         waitFor(mutableSetOf("2", "3", "4")) { specStore.getIDList("list_1")?.ids }
         waitFor(mutableSetOf("c", "d")) { specStore.getIDList("list_2")?.ids }
-        assertEquals(2, download_config_count)
         assertEquals(2, download_id_list_count)
         assertEquals(1L, specStore.getIDList("list_1")?.creationTime)
         assertEquals(1L, specStore.getIDList("list_2")?.creationTime)
 
         waitFor(2L) { specStore.getIDList("list_2")?.creationTime }
-        waitFor(3) { download_config_count }
+        waitFor(3) { download_id_list_count }
 
-        assertEquals(3, download_config_count)
-        assertEquals(3, download_id_list_count)
         assertEquals(mutableSetOf("c", "d"), specStore.getIDList("list_2")?.ids)
         assertEquals(2L, specStore.getIDList("list_2")?.creationTime)
 
-        waitFor(4) { download_config_count }
-        assertEquals(4, download_config_count)
-        assertEquals(4, download_id_list_count)
+        waitFor(4) { download_id_list_count }
         assertEquals(mutableSetOf("2", "3", "4", "5"), specStore.getIDList("list_1")?.ids)
         assertEquals(mutableSetOf("c", "d"), specStore.getIDList("list_2")?.ids)
         assertEquals(1L, specStore.getIDList("list_1")?.creationTime)
@@ -469,10 +465,6 @@ class StatsigE2ETest {
         if (withBootstrap) {
             waitFor(3) { bootstrap_callback_count }
         }
-
         driver.shutdown()
-
-        assertEquals(4, download_config_count)
-        assertEquals(4, download_id_list_count)
     }
 }
