@@ -25,3 +25,5 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_MAVEN_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_MAVEN_PASSWORD }}
+          test_api_key: ${{ secrets.KONG_SERVER_SDK_KEY }}
+          test_client_key: ${{ secrets.KONG_CLIENT_SDK_KEY }}
