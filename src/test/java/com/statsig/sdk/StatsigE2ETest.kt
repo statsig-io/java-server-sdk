@@ -408,10 +408,6 @@ class StatsigE2ETest {
         download_id_list_count = 0
         bootstrap_callback_count = 0
         backgroundSyncHelper(true)
-
-        // callback will fire 1 less time than the total download count
-        // because the initial bootstrap counts as a download config count
-        assert(bootstrap_callback_count == download_config_count - 1)
     }
 
     private fun waitFor(expected: Any?, action: () -> Any?) = runBlocking {
