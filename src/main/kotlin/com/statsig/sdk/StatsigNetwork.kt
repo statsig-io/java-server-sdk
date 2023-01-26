@@ -2,6 +2,7 @@ package com.statsig.sdk
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonParseException
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.coroutineScope
@@ -26,6 +27,7 @@ internal class StatsigNetwork(
     private val sdkKey: String,
     private val options: StatsigOptions,
     private val statsigMetadata: Map<String, String>,
+    private val errorBoundary: ErrorBoundary,
     private val backoffMultiplier: Int = BACKOFF_MULTIPLIER
 ) {
     private val retryCodes: Set<Int> = setOf(
@@ -157,7 +159,7 @@ internal class StatsigNetwork(
         headers: Map<String, String> = emptyMap(),
     ): Response? {
         try {
-            var request = Request.Builder()
+            val request = Request.Builder()
                 .url(url)
             if (body != null) {
                 val bodyJson = gson.toJson(body)
@@ -166,6 +168,10 @@ internal class StatsigNetwork(
             headers.forEach { (key, value) -> request.addHeader(key, value) }
             return client.newCall(request.build()).await()
         } catch (e: Exception) {
+            println("[Statsig]: An exception was caught: $e")
+            if (e is JsonParseException) {
+                errorBoundary.logException("postImpl", e)
+            }
             return null
         }
     }
@@ -202,7 +208,11 @@ internal class StatsigNetwork(
                             return@coroutineScope
                         }
                     }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    println("[Statsig]: An exception was caught: $e")
+                    if (e is JsonParseException) {
+                        errorBoundary.logException("retryPostLogs", e)
+                    }
                 }
 
                 val count = retries - --currRetry

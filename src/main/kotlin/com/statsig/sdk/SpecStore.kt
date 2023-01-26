@@ -20,6 +20,7 @@ internal class SpecStore constructor(
     private var options: StatsigOptions,
     private var statsigMetadata: StatsigMetadata,
     private var statsigScope: CoroutineScope,
+    private val errorBoundary: ErrorBoundary
 ) {
     private var initTime: Long = 0
     private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
@@ -97,11 +98,20 @@ internal class SpecStore constructor(
         if (options.rulesUpdatedCallback == null) {
             return
         }
+
+        var configString = ""
         try {
-            val configString = gson.toJson(configSpecs)
-            options.rulesUpdatedCallback?.accept(configString)
+            configString = gson.toJson(configSpecs)
         } catch (e: Exception) {
+            errorBoundary.logException("fireRulesUpdatedCallback", e)
+            println("[Statsig]: An exception was caught:  $e")
         }
+
+        if (configString.isEmpty()) {
+            return
+        }
+
+        options.rulesUpdatedCallback?.accept(configString)
     }
 
     private fun pollForChanges(): Flow<APIDownloadedConfigs?> {
@@ -207,7 +217,9 @@ internal class SpecStore constructor(
                 }
             }
             list.size = list.size + contentLength
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            errorBoundary.logException("downloadIDList", e)
+            println("[Statsig]: An exception was caught:  $e")
         }
     }
 
@@ -365,7 +377,9 @@ internal class SpecStore constructor(
         }
         try {
             return gson.fromJson(specs, APIDownloadedConfigs::class.java)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            errorBoundary.logException("parseConfigSpecs", e)
+            println("[Statsig]: An exception was caught:  $e")
         }
         return null
     }
@@ -383,6 +397,8 @@ internal class SpecStore constructor(
             }
             return configs
         } catch (e: Exception) {
+            errorBoundary.logException("downloadConfigSpecs", e)
+            println("[Statsig]: An exception was caught:  $e")
         }
         return null
     }

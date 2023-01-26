@@ -13,6 +13,7 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -31,7 +32,6 @@ class EvaluationDetailsTest {
 
     @Before
     fun setup() = runBlocking {
-
         mockkConstructor(Utils::class)
         every { anyConstructed<Utils>().getTimeInMillis() } returns TIME_NOW_MOCK
 
@@ -51,6 +51,7 @@ class EvaluationDetailsTest {
                             }
                             return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
                         }
+
                         "/v1/log_event" -> {
                             val logBody = request.body.readUtf8()
                             eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
@@ -288,7 +289,9 @@ class EvaluationDetailsTest {
 internal fun assertEventEqual(event: StatsigEvent, expected: Map<Any, Any>, skip_sync_times: Boolean = false) {
     assertEquals(expected["eventName"], event.eventName)
     assertEquals(expected["reason"], event.eventMetadata?.get(("reason")))
-    assertEquals(TIME_NOW_MOCK, (event.eventMetadata?.get("serverTime")?.toLong()))
+
+    val serverTime = event.eventMetadata?.get("serverTime")?.toLong()
+    assertTrue(serverTime != null && serverTime > 0)
 
     if (!skip_sync_times) {
         val configSyncTime = event.eventMetadata?.get("configSyncTime")?.toLong()

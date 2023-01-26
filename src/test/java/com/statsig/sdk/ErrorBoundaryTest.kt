@@ -43,14 +43,14 @@ class ErrorBoundaryTest {
     @Test
     fun testRecoveryFromErrors() = runBlocking {
         var called = false
-        boundary.capture({ throw IOException() }, { called = true })
+        boundary.capture("", { throw IOException() }, { called = true })
 
         assertTrue(called)
     }
 
     @Test
     fun testLogsToCorrectEndpoint() = runBlocking {
-        boundary.swallow { throw IOException() }
+        boundary.swallow("") { throw IOException() }
 
         val req = server.takeRequest()
         assertEquals("POST /v1/sdk_exception HTTP/1.1", req.requestLine)
@@ -60,7 +60,7 @@ class ErrorBoundaryTest {
     @Test
     fun testLogsExceptionDetails() = runBlocking {
         val err = IOException("Test")
-        boundary.swallow { throw err }
+        boundary.swallow("") { throw err }
 
         val body = Gson().fromJson(server.takeRequest().body.readUtf8(), Map::class.java)
         assertEquals(body["exception"], "java.io.IOException")
@@ -69,7 +69,7 @@ class ErrorBoundaryTest {
 
     @Test
     fun testLogsStatsigMetadata() = runBlocking {
-        boundary.swallow { throw IOException() }
+        boundary.swallow("") { throw IOException() }
 
         val body = Gson().fromJson(server.takeRequest().body.readUtf8(), Map::class.java)
         assertEquals(body["statsigMetadata"], StatsigMetadata.asMap())
@@ -77,8 +77,8 @@ class ErrorBoundaryTest {
 
     @Test
     fun testLogsTheSameErrorOnlyOnce() = runBlocking {
-        boundary.swallow { throw ClassNotFoundException() }
-        boundary.swallow { throw ClassNotFoundException() }
+        boundary.swallow("") { throw ClassNotFoundException() }
+        boundary.swallow("") { throw ClassNotFoundException() }
 
         assertEquals(server.requestCount, 1)
     }
@@ -87,13 +87,13 @@ class ErrorBoundaryTest {
     fun testDoesNotCatchIntendedExceptions() = runBlocking {
         assertThrows(StatsigIllegalStateException::class.java) {
             runBlocking {
-                boundary.swallow { throw StatsigIllegalStateException("") }
+                boundary.swallow("") { throw StatsigIllegalStateException("") }
             }
         }
 
         assertThrows(StatsigUninitializedException::class.java) {
             runBlocking {
-                boundary.swallow { throw StatsigUninitializedException("") }
+                boundary.swallow("") { throw StatsigUninitializedException("") }
             }
         }
 
@@ -102,13 +102,13 @@ class ErrorBoundaryTest {
 
     @Test
     fun testSwallow() = runBlocking {
-        boundary.swallow { throw IOException() }
+        boundary.swallow("") { throw IOException() }
         assertEquals(server.requestCount, 1)
     }
 
     @Test
     fun testSwallowSync() {
-        boundary.swallowSync { throw IOException() }
+        boundary.swallowSync("") { throw IOException() }
         assertEquals(server.requestCount, 1)
     }
 }

@@ -32,6 +32,7 @@ internal class Evaluator(
     private var network: StatsigNetwork,
     private var options: StatsigOptions,
     private val statsigScope: CoroutineScope,
+    private val errorBoundary: ErrorBoundary
 ) {
     private var specStore: SpecStore
     private var uaParser: Parser = Parser()
@@ -42,7 +43,7 @@ internal class Evaluator(
     var isInitialized: Boolean = false
     init {
         CountryLookup.initialize()
-        specStore = SpecStore(this.network, this.options, StatsigMetadata(), statsigScope)
+        specStore = SpecStore(this.network, this.options, StatsigMetadata(), statsigScope, errorBoundary)
     }
 
     suspend fun initialize() {
@@ -319,7 +320,9 @@ internal class Evaluator(
                 if (!condition.type.isNullOrEmpty()) {
                     conditionEnum = ConfigCondition.valueOf(condition.type.uppercase())
                 }
-            } catch (_E: java.lang.IllegalArgumentException) {
+            } catch (e: java.lang.IllegalArgumentException) {
+                errorBoundary.logException("evaluateCondition:condition", e)
+                println("[Statsig]: An exception was caught:  $e")
                 conditionEnum = null
             }
             when (conditionEnum) {
@@ -621,7 +624,9 @@ internal class Evaluator(
                     return ConfigEvaluation(fetchFromServer = true)
                 }
             }
-        } catch (_e: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
+            errorBoundary.logException("evaluateCondition:all", e)
+            println("[Statsig]: An exception was caught:  $e")
             return ConfigEvaluation(true)
         }
     }
@@ -693,6 +698,8 @@ internal class Evaluator(
                 val i = Instant.from(ta)
                 Date.from(i)
             } catch (e: Exception) {
+                errorBoundary.logException("getDate", e)
+                println("[Statsig]: An exception was caught:  $e")
                 null
             }
         }
@@ -747,6 +754,8 @@ internal class Evaluator(
         return try {
             compare(version1Str, version2Str)
         } catch (e: Exception) {
+            errorBoundary.logException("versionCompareHelper", e)
+            println("[Statsig]: An exception was caught:  $e")
             false
         }
     }

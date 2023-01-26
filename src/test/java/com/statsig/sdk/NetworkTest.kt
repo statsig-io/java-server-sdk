@@ -37,7 +37,8 @@ class NetworkTest {
         val options = StatsigOptions()
         options.api = server.url("/v1").toString()
 
-        val net = spyk(StatsigNetwork("secret-123", options, metadata, 1))
+        val eb = ErrorBoundary("", options)
+        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, 1))
 
         net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)
         val request = server.takeRequest()

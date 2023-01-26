@@ -15,39 +15,39 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         val MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 
-    fun <T> swallowSync(task: () -> T) {
+    fun <T> swallowSync(tag: String, task: () -> T) {
         try {
             task()
         } catch (ex: Throwable) {
-            onException(ex)
+            onException(tag, ex)
         }
     }
 
-    suspend fun swallow(task: suspend () -> Unit) {
-        capture(task) {
+    suspend fun swallow(tag: String, task: suspend () -> Unit) {
+        capture(tag, task) {
             // no-op
         }
     }
 
-    suspend fun <T> capture(task: suspend () -> T, recover: suspend () -> T): T {
+    suspend fun <T> capture(tag: String, task: suspend () -> T, recover: suspend () -> T): T {
         return try {
             task()
         } catch (ex: Throwable) {
-            onException(ex)
+            onException(tag, ex)
             recover()
         }
     }
 
-    fun <T> captureSync(task: () -> T, recover: () -> T): T {
+    fun <T> captureSync(tag: String, task: () -> T, recover: () -> T): T {
         return try {
             task()
         } catch (ex: Throwable) {
-            onException(ex)
+            onException(tag, ex)
             recover()
         }
     }
 
-    internal fun logException(ex: Throwable) {
+    internal fun logException(tag: String, ex: Throwable) {
         try {
             if (options.localMode || seen.contains(ex.javaClass.name)) {
                 return
@@ -56,6 +56,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
             seen.add(ex.javaClass.name)
 
             val body = """{
+                "tag": "$tag",
                 "exception": "${ex.javaClass.name}",
                 "info": "${ex.stackTraceToString()}",
                 "statsigMetadata": ${StatsigMetadata.asJson()}
@@ -74,7 +75,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         }
     }
 
-    private fun onException(ex: Throwable) {
+    private fun onException(tag: String, ex: Throwable) {
         if (ex is StatsigIllegalStateException ||
             ex is StatsigUninitializedException
         ) {
@@ -84,6 +85,6 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         println("[Statsig]: An unexpected exception occurred.")
         println(ex)
 
-        logException(ex)
+        logException(tag, ex)
     }
 }

@@ -7,9 +7,6 @@ import com.statsig.sdk.StatsigEvent
 import com.statsig.sdk.StatsigOptions
 import com.statsig.sdk.StatsigServer
 import com.statsig.sdk.StatsigUser
-import com.statsig.sdk.Utils
-import io.mockk.every
-import io.mockk.mockkConstructor
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -19,6 +16,7 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -38,9 +36,6 @@ class LayerExposureTest {
     fun setup() {
         gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
-        mockkConstructor(Utils::class)
-        every { anyConstructed<Utils>().getTimeInMillis() } returns TIME_NOW_MOCK
-
         eventLogInputCompletable = CompletableDeferred()
         val downloadConfigSpecsResponse =
             StatsigE2ETest::class.java.getResource("/layer_exposure_download_config_specs.json")?.readText() ?: ""
@@ -57,6 +52,7 @@ class LayerExposureTest {
                             }
                             return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
                         }
+
                         "/v1/log_event" -> {
                             val logBody = request.body.readUtf8()
                             if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
@@ -77,6 +73,7 @@ class LayerExposureTest {
         }
         driver = StatsigServer.create("secret-testcase", options)
     }
+
     @Test
     fun testDoesNotLogOnGetLayer() = runBlocking {
         driver.initialize()
@@ -115,6 +112,12 @@ class LayerExposureTest {
 
         val events = captureEvents()
         assertEquals(1, events.size)
+
+        val serverTime = events[0].eventMetadata?.get("serverTime")?.toLong()
+        assertTrue(serverTime != null && serverTime > 0)
+
+        val metadata = events[0].eventMetadata?.toMutableMap() ?: mutableMapOf()
+        metadata["serverTime"] = TIME_NOW_MOCK.toString()
         assertEquals(
             Gson().toJson(
                 mapOf(
@@ -130,7 +133,7 @@ class LayerExposureTest {
                     "serverTime" to TIME_NOW_MOCK.toString()
                 )
             ),
-            Gson().toJson(events[0].eventMetadata)
+            Gson().toJson(metadata)
         )
     }
 
@@ -144,6 +147,12 @@ class LayerExposureTest {
 
         val events = captureEvents()
         assertEquals(2, events.size)
+
+        var serverTime = events[0].eventMetadata?.get("serverTime")?.toLong()
+        assertTrue(serverTime != null && serverTime > 0)
+
+        var metadata = events[0].eventMetadata?.toMutableMap() ?: mutableMapOf()
+        metadata["serverTime"] = TIME_NOW_MOCK.toString()
 
         assertEquals(
             Gson().toJson(
@@ -160,8 +169,14 @@ class LayerExposureTest {
                     "serverTime" to TIME_NOW_MOCK.toString()
                 )
             ),
-            Gson().toJson(events[0].eventMetadata)
+            Gson().toJson(metadata)
         )
+
+        serverTime = events[1].eventMetadata?.get("serverTime")?.toLong()
+        assertTrue(serverTime != null && serverTime > 0)
+        metadata = events[1].eventMetadata?.toMutableMap() ?: mutableMapOf()
+        metadata["serverTime"] = TIME_NOW_MOCK.toString()
+
         assertEquals(
             Gson().toJson(
                 mapOf(
@@ -178,7 +193,7 @@ class LayerExposureTest {
 
                 )
             ),
-            Gson().toJson(events[1].eventMetadata)
+            Gson().toJson(metadata)
         )
     }
 

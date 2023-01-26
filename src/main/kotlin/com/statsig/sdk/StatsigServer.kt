@@ -179,18 +179,18 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     private val coroutineExceptionHandler =
         CoroutineExceptionHandler { _, ex ->
             // no-op - supervisor job should not throw when a child fails
-            errorBoundary.logException(ex)
+            errorBoundary.logException("coroutineExceptionHandler", ex)
         }
     private val statsigJob = SupervisorJob()
     private val statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
     private val mutex = Mutex()
     private val statsigMetadata = StatsigMetadata.asMap()
-    private val network = StatsigNetwork(serverSecret, options, statsigMetadata)
+    private val network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary)
     private var logger: StatsigLogger = StatsigLogger(statsigScope, network, statsigMetadata)
     private lateinit var configEvaluator: Evaluator
 
     override suspend fun initialize() {
-        errorBoundary.swallow {
+        errorBoundary.swallow("initialize") {
             mutex.withLock { // Prevent multiple coroutines from calling this at once.
 
                 if (this::configEvaluator.isInitialized && configEvaluator.isInitialized) {
@@ -198,14 +198,14 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                         "Cannot re-initialize server that has shutdown. Please recreate the server connection."
                     )
                 }
-                configEvaluator = Evaluator(network, options, statsigScope)
+                configEvaluator = Evaluator(network, options, statsigScope, errorBoundary)
                 configEvaluator.initialize()
             }
         }
     }
 
     override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
-        return errorBoundary.capture({
+        return errorBoundary.capture("checkGate", {
             var result = checkGateImpl(user, gateName)
             if (!result.fetchFromServer) { // If we fetched from server, we've already logged
                 logGateExposureImpl(user, gateName, result)
@@ -215,7 +215,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean {
-        return errorBoundary.capture({
+        return errorBoundary.capture("checkGateWithExposureLoggingDisabled", {
             val result = checkGateImpl(user, gateName)
             return@capture result.booleanValue
         }, { return@capture false })
@@ -236,7 +236,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun manuallyLogGateExposure(user: StatsigUser, gateName: String) {
-        errorBoundary.swallow {
+        errorBoundary.swallow("manuallyLogGateExposure") {
             val result = checkGateImpl(user, gateName)
             logGateExposureImpl(user, gateName, result, true)
         }
@@ -258,7 +258,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(dynamicConfigName)
         }
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getConfig", {
             val normalizedUser = normalizeUser(user)
             val result = getConfigImpl(user, dynamicConfigName)
             logConfigImpl(normalizedUser, dynamicConfigName, result)
@@ -272,7 +272,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(dynamicConfigName)
         }
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getConfigWithExposureLoggingDisabled", {
             val normalizedUser = normalizeUser(user)
             val result = getConfigImpl(normalizedUser, dynamicConfigName)
             return@capture getDynamicConfigFromEvalResult(result, normalizedUser, dynamicConfigName)
@@ -282,7 +282,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun manuallyLogConfigExposure(user: StatsigUser, configName: String) {
-        errorBoundary.swallow {
+        errorBoundary.swallow("manuallyLogConfigExposure") {
             val normalizedUser = normalizeUser(user)
             val result = getConfigImpl(normalizedUser, configName)
             logConfigImpl(normalizedUser, configName, result, isManualExposure = true)
@@ -293,7 +293,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(experimentName)
         }
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getExperiment", {
             return@capture getConfig(user, experimentName)
         }, {
             return@capture DynamicConfig.empty(experimentName)
@@ -307,7 +307,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(experimentName)
         }
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getExperimentWithExposureLoggingDisabled", {
             val normalizedUser = normalizeUser(user)
             val result = getConfigImpl(normalizedUser, experimentName)
             return@capture getDynamicConfigFromEvalResult(result, user, experimentName)
@@ -324,7 +324,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return DynamicConfig.empty()
         }
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getExperimentInLayerForUser", {
             val normalizedUser = normalizeUser(user)
             val experiments =
                 configEvaluator.getExperimentsInLayer(layerName)
@@ -354,7 +354,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun getLayer(user: StatsigUser, layerName: String): Layer {
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getLayer", {
             return@capture getLayerImpl(user, layerName, false)
         }, {
             return@capture Layer.empty(layerName)
@@ -362,7 +362,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getLayerWithExposureLoggingDisabled", {
             return@capture getLayerImpl(user, layerName, true)
         }, {
             return@capture Layer.empty(layerName)
@@ -370,13 +370,13 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override fun overrideLayer(layerName: String, value: Map<String, Any>) {
-        this.errorBoundary.captureSync({
+        this.errorBoundary.captureSync("overrideLayer", {
             isSDKInitialized()
             configEvaluator.overrideLayer(layerName, value)
         }, { return@captureSync })
     }
     override fun removeLayerOverride(layerName: String) {
-        this.errorBoundary.captureSync({
+        this.errorBoundary.captureSync("removeLayerOverride", {
             isSDKInitialized()
             configEvaluator.removeLayerOverride(layerName)
         }, { return@captureSync })
@@ -388,7 +388,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         value: String?,
         metadata: Map<String, String>?
     ) {
-        this.errorBoundary.captureSync({
+        this.errorBoundary.captureSync("logEvent:string", {
             this.logEventImpl(user, eventName, null, value, metadata)
         }, { return@captureSync })
     }
@@ -399,7 +399,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         value: Double,
         metadata: Map<String, String>?
     ) {
-        this.errorBoundary.captureSync({
+        this.errorBoundary.captureSync("logEvent:double", {
             this.logEventImpl(user, eventName, value, null, metadata)
         }, { return@captureSync })
     }
@@ -430,7 +430,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return
         }
-        errorBoundary.swallow {
+        errorBoundary.swallow("shutdownSuspend") {
             // CAUTION: Order matters here! Need to clean up jobs and post logs before
             // shutting down the network and supervisor scope
             logger.shutdown()
@@ -442,28 +442,28 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     override fun overrideGate(gateName: String, gateValue: Boolean) {
-        errorBoundary.captureSync({
+        errorBoundary.captureSync("overrideGate", {
             isSDKInitialized()
             configEvaluator.overrideGate(gateName, gateValue)
         }, { return@captureSync })
     }
 
     override fun removeGateOverride(gateName: String) {
-        errorBoundary.captureSync({
+        errorBoundary.captureSync("removeGateOverride", {
             isSDKInitialized()
             configEvaluator.removeGateOverride(gateName)
         }, { return@captureSync })
     }
 
     override fun overrideConfig(configName: String, configValue: Map<String, Any>) {
-        errorBoundary.captureSync({
+        errorBoundary.captureSync("overrideConfig", {
             isSDKInitialized()
             configEvaluator.overrideConfig(configName, configValue)
         }, { return@captureSync })
     }
 
     override fun removeConfigOverride(configName: String) {
-        errorBoundary.captureSync({
+        errorBoundary.captureSync("removeConfigOverride", {
             isSDKInitialized()
             configEvaluator.removeConfigOverride(configName)
         }, { return@captureSync })
@@ -615,7 +615,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         if (!isSDKInitialized()) {
             return Layer.empty(layerName)
         }
-        return this.errorBoundary.capture({
+        return this.errorBoundary.capture("getLayerImpl", {
             val normalizedUser = normalizeUser(user)
 
             var result: ConfigEvaluation = configEvaluator.getLayer(normalizedUser, layerName)
