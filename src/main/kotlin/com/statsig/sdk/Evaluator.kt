@@ -236,7 +236,7 @@ internal class Evaluator(
                             '.' +
                             (getUnitID(user, rule.idType) ?: "")
                     )
-                        .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
+                        .mod(10000UL) < (rule.passPercentage.times(100.0)).toULong()
 
                 return ConfigEvaluation(
                     false,
