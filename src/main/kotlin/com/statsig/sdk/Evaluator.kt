@@ -236,7 +236,7 @@ internal class Evaluator(
                             '.' +
                             (getUnitID(user, rule.idType) ?: "")
                     )
-                        .mod(10000UL) < rule.passPercentage.toULong().times(100UL)
+                        .mod(10000f) < rule.passPercentage.times(100f)
 
                 return ConfigEvaluation(
                     false,
@@ -378,7 +378,7 @@ internal class Evaluator(
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues["salt"])
                     val unitID = getUnitID(user, condition.idType) ?: ""
-                    value = computeUserHash("$salt.$unitID").mod(1000UL)
+                    value = computeUserHash("$salt.$unitID").mod(1000f)
                 }
                 ConfigCondition.UNIT_ID -> {
                     value = getUnitID(user, condition.idType)
@@ -867,11 +867,11 @@ internal class Evaluator(
             ?: user.statsigEnvironment?.get(field.lowercase())
     }
 
-    private fun computeUserHash(input: String): ULong {
+    private fun computeUserHash(input: String): Float {
         val md = MessageDigest.getInstance("SHA-256")
         val inputBytes = input.toByteArray()
         val bytes = md.digest(inputBytes)
-        return ByteBuffer.wrap(bytes).long.toULong()
+        return ByteBuffer.wrap(bytes).float
     }
 
     private fun getUnitID(user: StatsigUser, idType: String?): String? {
