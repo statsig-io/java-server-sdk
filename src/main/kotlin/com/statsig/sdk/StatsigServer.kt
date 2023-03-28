@@ -192,7 +192,6 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     override suspend fun initialize() {
         errorBoundary.swallow("initialize") {
             mutex.withLock { // Prevent multiple coroutines from calling this at once.
-
                 if (this::configEvaluator.isInitialized && configEvaluator.isInitialized) {
                     throw StatsigIllegalStateException(
                         "Cannot re-initialize server that has shutdown. Please recreate the server connection."

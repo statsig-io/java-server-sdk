@@ -95,8 +95,8 @@ internal data class LayerExposureMetadata(
     @SerializedName("isManualExposure") var isManualExposure: String = "false",
     @SerializedName("evaluationDetails") val evaluationDetails: EvaluationDetails?,
 ) {
-    fun toStatsigEventMetadataMap(): Map<String, String> {
-        return mapOf(
+    fun toStatsigEventMetadataMap(): MutableMap<String, String> {
+        return mutableMapOf(
             "config" to config,
             "ruleID" to ruleID,
             "allocatedExperiment" to allocatedExperiment,
