@@ -27,7 +27,7 @@ jobs:
         run: npm install
 
       - name: Setup Kotlin SDK
-        run: npm run kong -- setup kotlin --no-env -v
+        run: npm run kong -- setup kotlin -v
 
       - name: Build Bridge
         run: npm run kong -- build kotlin -v

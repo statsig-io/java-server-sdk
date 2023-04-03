@@ -10,9 +10,10 @@ import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Base64
+import java.util.Calendar
+import java.util.Date
 import kotlin.collections.set
-
 
 internal class ConfigEvaluation(
     val fetchFromServer: Boolean = false,
@@ -36,9 +37,9 @@ internal class Evaluator(
 ) {
     private var specStore: SpecStore
     private val uaParser: Parser by lazy {
-      synchronized(this) {
-          Parser()
-      }
+        synchronized(this) {
+            Parser()
+        }
     }
     private var gateOverrides: MutableMap<String, Boolean> = HashMap()
     private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
@@ -244,10 +245,10 @@ internal class Evaluator(
                 val pass =
                     computeUserHash(
                         config.salt +
-                                '.' +
-                                (rule.salt ?: rule.id) +
-                                '.' +
-                                (getUnitID(user, rule.idType) ?: "")
+                            '.' +
+                            (rule.salt ?: rule.id) +
+                            '.' +
+                            (getUnitID(user, rule.idType) ?: "")
                     )
                         .mod(10000UL) < (rule.passPercentage.times(100.0)).toULong()
 
@@ -476,8 +477,7 @@ internal class Evaluator(
                 "version_gt" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String,
-                                                                                       v2: String ->
+                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) > 0
                         }
                     )
@@ -486,8 +486,7 @@ internal class Evaluator(
                 "version_gte" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String,
-                                                                                       v2: String ->
+                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) >= 0
                         }
                     )
@@ -496,8 +495,7 @@ internal class Evaluator(
                 "version_lt" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String,
-                                                                                       v2: String ->
+                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) < 0
                         }
                     )
@@ -506,8 +504,7 @@ internal class Evaluator(
                 "version_lte" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String,
-                                                                                       v2: String ->
+                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) <= 0
                         }
                     )
@@ -516,8 +513,7 @@ internal class Evaluator(
                 "version_eq" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String,
-                                                                                       v2: String ->
+                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) == 0
                         }
                     )
@@ -526,8 +522,7 @@ internal class Evaluator(
                 "version_neq" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String,
-                                                                                       v2: String ->
+                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) != 0
                         }
                     )
@@ -631,7 +626,7 @@ internal class Evaluator(
                         { a: Date, b: Date ->
                             return@compareDates a.before(b)
                         },
-                        { a, b -> a < b},
+                        { a, b -> a < b },
                         value,
                         condition.targetValue
                     )
@@ -642,7 +637,7 @@ internal class Evaluator(
                         { a: Date, b: Date ->
                             return@compareDates a.after(b)
                         },
-                        { a, b -> a > b},
+                        { a, b -> a > b },
                         value,
                         condition.targetValue
                     )
@@ -654,9 +649,9 @@ internal class Evaluator(
                             calendarOne.time = a
                             calendarTwo.time = b
                             return@compareDates calendarOne[Calendar.YEAR] ==
-                                    calendarTwo[Calendar.YEAR] &&
-                                    calendarOne[Calendar.DAY_OF_YEAR] ==
-                                    calendarTwo[Calendar.DAY_OF_YEAR]
+                                calendarTwo[Calendar.YEAR] &&
+                                calendarOne[Calendar.DAY_OF_YEAR] ==
+                                calendarTwo[Calendar.DAY_OF_YEAR]
                         },
                         null,
                         value,

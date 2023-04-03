@@ -1,12 +1,8 @@
 package com.statsig.sdk
 
 import kotlinx.coroutines.runBlocking
-import org.junit.AfterClass
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 
 class LockableArrayTest {
@@ -14,7 +10,7 @@ class LockableArrayTest {
 
     @Before
     fun setup() {
-        arr = LockableArray<String>()
+        arr = LockableArray()
         arr.add("1")
         arr.add("2")
     }
@@ -25,7 +21,7 @@ class LockableArrayTest {
     }
 
     @Test
-    fun testGettingUnderlyingArray()  {
+    fun testGettingUnderlyingArray() {
         assertEquals(arrayListOf("1", "2"), arr.reset())
     }
 }

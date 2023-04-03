@@ -1,7 +1,6 @@
 package com.statsig.sdk
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 class LockableArray<T> {
