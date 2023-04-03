@@ -2,6 +2,7 @@ package com.statsig.sdk
 
 import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import ua_parser.Client
 import ua_parser.Parser
 import java.lang.Long.parseLong
@@ -34,7 +35,11 @@ internal class Evaluator(
     private val errorBoundary: ErrorBoundary
 ) {
     private var specStore: SpecStore
-    private var uaParser: Parser = Parser()
+    private val uaParser: Parser by lazy {
+      synchronized(this) {
+          Parser()
+      }
+    }
     private var gateOverrides: MutableMap<String, Boolean> = HashMap()
     private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
@@ -48,6 +53,9 @@ internal class Evaluator(
     init {
         CountryLookup.initialize()
         specStore = SpecStore(this.network, this.options, StatsigMetadata(), statsigScope, errorBoundary)
+        statsigScope.launch {
+            uaParser // This will cause the 'lazy' load to occur on a BG thread
+        }
     }
 
     suspend fun initialize() {
