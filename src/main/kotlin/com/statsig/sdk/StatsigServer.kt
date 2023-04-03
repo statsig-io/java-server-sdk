@@ -66,6 +66,9 @@ sealed class StatsigServer {
     @JvmSynthetic abstract fun overrideConfig(configName: String, configValue: Map<String, Any>)
 
     @JvmSynthetic abstract fun removeConfigOverride(configName: String)
+
+    @JvmSynthetic abstract fun getClientInitializeResponse(user: StatsigUser): Map<String, Any>
+
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
     }
@@ -141,6 +144,9 @@ sealed class StatsigServer {
     abstract fun manuallyLogLayerParameterExposureAsync(user: StatsigUser, layerName: String, paramName: String): CompletableFuture<Void>
     abstract fun manuallyLogGateExposureAsync(user: StatsigUser, gateName: String): CompletableFuture<Void>
     abstract fun manuallyLogConfigExposureAsync(user: StatsigUser, configName: String): CompletableFuture<Void>
+
+    abstract fun getClientInitializeResponseAsync(user: StatsigUser): CompletableFuture<Map<String, Any>>
+
     /**
      * @deprecated
      * - we make no promises of support for this API
@@ -369,6 +375,13 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         })
     }
 
+    override fun getClientInitializeResponse(user: StatsigUser): Map<String, Any> {
+        return this.errorBoundary.captureSync("getClientInitializeResponse", {
+            val normalizedUser = normalizeUser(user)
+            return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser)
+        }, { return@captureSync emptyMap() }) // what to return if failure occurs?
+    }
+
     override fun overrideLayer(layerName: String, value: Map<String, Any>) {
         this.errorBoundary.captureSync("overrideLayer", {
             isSDKInitialized()
@@ -592,7 +605,14 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }.thenApply { return@thenApply null }
     }
 
+    override fun getClientInitializeResponseAsync(user: StatsigUser): CompletableFuture<Map<String, Any>> {
+        return statsigScope.future {
+            return@future getClientInitializeResponse(user)
+        }
+    }
+
     /**
+     *
      * @deprecated
      * - we make no promises of support for this API
      */

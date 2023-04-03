@@ -51,12 +51,14 @@ class SpecStoreTests {
         return APIConfig(
             name,
             "",
+            false,
             "",
             "",
             false,
             emptyArray(),
             "",
             "",
+            null,
             null
         )
     }
