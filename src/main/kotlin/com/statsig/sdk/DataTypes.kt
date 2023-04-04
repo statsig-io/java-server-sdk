@@ -16,6 +16,7 @@ internal data class APIDownloadedConfigs(
 internal data class APIConfig(
     @SerializedName("name") val name: String,
     @SerializedName("type") val type: String,
+    @SerializedName("isActive") val isActive: Boolean,
     @SerializedName("salt") val salt: String,
     @SerializedName("defaultValue") val defaultValue: Any,
     @SerializedName("enabled") val enabled: Boolean,
@@ -23,6 +24,7 @@ internal data class APIConfig(
     @SerializedName("idType") val idType: String,
     @SerializedName("entity") val entity: String,
     @SerializedName("explicitParameters") val explicitParameters: Array<String>?,
+    @SerializedName("hasSharedParams") val hasSharedParams: Boolean?,
 )
 
 internal data class APIRule(
@@ -35,6 +37,7 @@ internal data class APIRule(
     @SerializedName("idType") val idType: String,
     @SerializedName("groupName") val groupName: String,
     @SerializedName("configDelegate") val configDelegate: String?,
+    @SerializedName("isExperimentGroup") val isExperimentGroup: Boolean?,
 )
 
 internal data class APICondition(

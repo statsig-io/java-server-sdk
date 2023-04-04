@@ -24,7 +24,8 @@ internal class ConfigEvaluation(
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val explicitParameters: Array<String> = arrayOf(),
     val configDelegate: String? = null,
-    var evaluationDetails: EvaluationDetails? = null
+    var evaluationDetails: EvaluationDetails? = null,
+    var isExperimentGroup: Boolean = false,
 ) {
     var undelegatedSecondaryExposures: ArrayList<Map<String, String>> = secondaryExposures
 }
@@ -162,9 +163,13 @@ internal class Evaluator(
         return this.evaluateConfig(user, specStore.getConfig(dynamicConfigName))
     }
 
+    fun getClientInitializeResponse(user: StatsigUser): Map<String, Any> {
+        return ClientInitializeFormatter(this.specStore, this::evaluateConfig, user).getFormattedResponse()
+    }
+
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
         if (layerOverrides.containsKey(layerName)) {
-            val value = layerOverrides[layerName] ?: mapOf<String, Any>()
+            val value = layerOverrides[layerName] ?: mapOf()
             return ConfigEvaluation(
                 jsonValue = value,
                 evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
@@ -259,7 +264,8 @@ internal class Evaluator(
                     result.ruleID,
                     result.groupName,
                     secondaryExposures,
-                    evaluationDetails = evaluationDetails
+                    evaluationDetails = evaluationDetails,
+                    isExperimentGroup = rule.isExperimentGroup ?: false
                 )
             }
         }
@@ -323,6 +329,7 @@ internal class Evaluator(
             rule.id,
             rule.groupName,
             secondaryExposures,
+            isExperimentGroup = rule.isExperimentGroup == true
         )
     }
 
