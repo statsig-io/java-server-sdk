@@ -3,7 +3,6 @@ package com.statsig.sdk
 import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import ua_parser.Client
 import ua_parser.Parser
 import java.lang.Long.parseLong
 import java.nio.ByteBuffer
@@ -909,34 +908,47 @@ internal class Evaluator(
     }
 
     private fun getFromUserAgent(user: StatsigUser, field: String): String? {
-        val ua = getFromUser(user, "userAgent") ?: return null
-        val c: Client = uaParser.parse(ua.toString())
-        when (field.lowercase()) {
-            "os_name", "osname" -> return c.os.family
-            "os_version", "osversion" ->
-                return arrayOf(
-                    if (c.os.major.isNullOrBlank()) "0" else c.os.major,
-                    if (c.os.minor.isNullOrBlank()) "0" else c.os.minor,
-                    if (c.os.patch.isNullOrBlank()) "0" else c.os.patch,
-                )
-                    .joinToString(".")
-
-            "browser_name", "browsername" -> return c.userAgent.family
-            "browser_version", "browserversion" ->
-                return arrayOf(
-                    if (c.userAgent.major.isNullOrBlank()) "0"
-                    else c.userAgent.major,
-                    if (c.userAgent.minor.isNullOrBlank()) "0"
-                    else c.userAgent.minor,
-                    if (c.userAgent.patch.isNullOrBlank()) "0"
-                    else c.userAgent.patch,
-                )
-                    .joinToString(".")
-
+        val ua = getFromUser(user, "userAgent")?.toString() ?: return null
+        return when (field.lowercase()) {
+            "os_name", "osname" -> osFamilyFromUserAgent(ua)
+            "os_version", "osversion" -> osVersionFromUserAgent(ua)
+            "browser_name", "browsername" -> userAgentFamilyFromUserAgent(ua)
+            "browser_version", "browserversion" -> browserVersionFromUserAgent(ua)
             else -> {
-                return null
+                null
             }
         }
+    }
+
+    private fun osFamilyFromUserAgent(userAgent: String): String {
+        val os = uaParser.parseOS(userAgent)
+        return os.family
+    }
+
+    private fun osVersionFromUserAgent(userAgent: String): String {
+        val os = uaParser.parseOS(userAgent)
+        return arrayOf(
+            if (os.major.isNullOrBlank()) "0" else os.major,
+            if (os.minor.isNullOrBlank()) "0" else os.minor,
+            if (os.patch.isNullOrBlank()) "0" else os.patch,
+        ).joinToString(".")
+    }
+
+    private fun userAgentFamilyFromUserAgent(userAgent: String): String {
+        val agent = uaParser.parseUserAgent(userAgent)
+        return agent.family
+    }
+
+    private fun browserVersionFromUserAgent(userAgent: String): String {
+        val agent = uaParser.parseUserAgent(userAgent)
+        return arrayOf(
+            if (agent.major.isNullOrBlank()) "0"
+            else agent.major,
+            if (agent.minor.isNullOrBlank()) "0"
+            else agent.minor,
+            if (agent.patch.isNullOrBlank()) "0"
+            else agent.patch,
+        ).joinToString(".")
     }
 
     private fun getUserValueForField(user: StatsigUser, field: String): Any? {
