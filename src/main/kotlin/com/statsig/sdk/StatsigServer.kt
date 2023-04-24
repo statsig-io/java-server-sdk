@@ -12,6 +12,7 @@ import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Collections.emptyMap
 import java.util.concurrent.CompletableFuture
 
 sealed class StatsigServer {
@@ -144,8 +145,6 @@ sealed class StatsigServer {
     abstract fun manuallyLogLayerParameterExposureAsync(user: StatsigUser, layerName: String, paramName: String): CompletableFuture<Void>
     abstract fun manuallyLogGateExposureAsync(user: StatsigUser, gateName: String): CompletableFuture<Void>
     abstract fun manuallyLogConfigExposureAsync(user: StatsigUser, configName: String): CompletableFuture<Void>
-
-    abstract fun getClientInitializeResponseAsync(user: StatsigUser): CompletableFuture<Map<String, Any>>
 
     /**
      * @deprecated
@@ -378,7 +377,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         return this.errorBoundary.captureSync("getClientInitializeResponse", {
             val normalizedUser = normalizeUser(user)
             return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser)
-        }, { return@captureSync emptyMap() }) // what to return if failure occurs?
+        }, { return@captureSync emptyMap() })
     }
 
     override fun overrideLayer(layerName: String, value: Map<String, Any>) {
@@ -602,12 +601,6 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         return statsigScope.future {
             manuallyLogConfigExposure(user, configName)
         }.thenApply { return@thenApply null }
-    }
-
-    override fun getClientInitializeResponseAsync(user: StatsigUser): CompletableFuture<Map<String, Any>> {
-        return statsigScope.future {
-            return@future getClientInitializeResponse(user)
-        }
     }
 
     /**
