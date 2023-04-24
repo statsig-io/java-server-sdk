@@ -596,22 +596,6 @@ class Statsig {
         }
 
         /**
-         * Gets all evaluated values for the given user.
-         * These values can then be given to a Statsig Client SDK via bootstrapping.
-         * Note: See Java SDK documentation https://docs.statsig.com/server/javaSDK
-         *
-         * @param user The StatsigUser object used for evaluation
-         * @return An initialize response containing evaluated gates/configs/layers
-         */
-        @JvmStatic
-        fun getClientInitializeResponseAsync(user: StatsigUser): CompletableFuture<Map<String, Any>> {
-            if (!checkInitialized()) {
-                return CompletableFuture.completedFuture(emptyMap())
-            }
-            return statsigServer.getClientInitializeResponseAsync(user)
-        }
-
-        /**
          * Get experiment groups for the selected Experiment.
          *
          * @param experimentName The name of the experiment
