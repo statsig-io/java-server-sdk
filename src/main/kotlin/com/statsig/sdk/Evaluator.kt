@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import ua_parser.Parser
 import java.lang.Long.parseLong
+import java.lang.NumberFormatException
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.Instant
@@ -849,6 +850,8 @@ internal class Evaluator(
 
         return try {
             compare(version1Str, version2Str)
+        } catch (e: NumberFormatException) {
+            false
         } catch (e: Exception) {
             errorBoundary.logException("versionCompareHelper", e)
             println("[Statsig]: An exception was caught:  $e")
