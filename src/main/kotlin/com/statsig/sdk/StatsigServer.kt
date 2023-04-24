@@ -12,7 +12,6 @@ import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import sun.awt.Mutex
 import java.util.Collections.emptyMap
 import java.util.concurrent.CompletableFuture
 
