@@ -1,6 +1,7 @@
 package com.statsig.sdk
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -15,14 +16,15 @@ const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
 const val LAYER_EXPOSURE_EVENT = "statsig::layer_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
 
-internal fun safeAddEvaluationToEvent(evaluationDetails: EvaluationDetails?, event: StatsigEvent) {
+internal fun safeAddEvaluationToEvent(evaluationDetails: EvaluationDetails?, metadata: MutableMap<String, String>) {
     if (evaluationDetails == null) {
         return
     }
 
-    event.eventMetadata = event.eventMetadata?.plus(
-        evaluationDetails.toMap()
-    )
+    metadata["reason"] = evaluationDetails.reason.toString()
+    metadata["configSyncTime"] = evaluationDetails.configSyncTime.toString()
+    metadata["initTime"] = evaluationDetails.initTime.toString()
+    metadata["serverTime"] = evaluationDetails.serverTime.toString()
 }
 
 internal class StatsigLogger(
@@ -33,7 +35,7 @@ internal class StatsigLogger(
 
     private val executor = Executors.newSingleThreadExecutor()
     private val singleThreadDispatcher = executor.asCoroutineDispatcher()
-    private var events = arrayListOf<StatsigEvent>()
+    private var events = LockableArray<StatsigEvent>()
     private val timer = coroutineScope.launch {
         while (coroutineScope.isActive) {
             delay(FLUSH_TIMER_MS)
@@ -42,12 +44,10 @@ internal class StatsigLogger(
     }
 
     fun log(event: StatsigEvent) {
-        coroutineScope.launch(singleThreadDispatcher) {
-            events.add(event)
+        events.add(event)
 
-            if (events.size >= MAX_EVENTS) {
-                flush()
-            }
+        if (events.size() >= MAX_EVENTS) {
+            coroutineScope.launch { flush() }
         }
     }
 
@@ -60,15 +60,23 @@ internal class StatsigLogger(
         isManualExposure: Boolean = false,
         evaluationDetails: EvaluationDetails?
     ) {
+        val metadata = mutableMapOf(
+            "gate" to gateName,
+            "gateValue" to value.toString(),
+            "ruleID" to ruleID,
+            "isManualExposure" to isManualExposure.toString()
+        )
+
+        safeAddEvaluationToEvent(evaluationDetails, metadata)
+
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
             eventValue = null,
-            mapOf("gate" to gateName, "gateValue" to value.toString(), "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString()),
+            metadata,
             user,
             statsigMetadata,
             secondaryExposures
         )
-        safeAddEvaluationToEvent(evaluationDetails, event)
         log(event)
     }
 
@@ -80,7 +88,9 @@ internal class StatsigLogger(
         isManualExposure: Boolean,
         evaluationDetails: EvaluationDetails?
     ) {
-        val metadata = mutableMapOf("config" to configName, "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString())
+        val metadata =
+            mutableMapOf("config" to configName, "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString())
+        safeAddEvaluationToEvent(evaluationDetails, metadata)
 
         val event = StatsigEvent(
             CONFIG_EXPOSURE_EVENT,
@@ -90,37 +100,39 @@ internal class StatsigLogger(
             statsigMetadata,
             secondaryExposures
         )
-        safeAddEvaluationToEvent(evaluationDetails, event)
         log(event)
     }
 
-    fun logLayerExposure(user: StatsigUser?, layerExposureMetadata: LayerExposureMetadata, isManualExposure: Boolean = false) {
+    fun logLayerExposure(
+        user: StatsigUser?,
+        layerExposureMetadata: LayerExposureMetadata,
+        isManualExposure: Boolean = false
+    ) {
 
         if (isManualExposure) {
             layerExposureMetadata.isManualExposure = "true"
         }
+        val metadata = layerExposureMetadata.toStatsigEventMetadataMap()
+        safeAddEvaluationToEvent(layerExposureMetadata.evaluationDetails, metadata)
 
         val event = StatsigEvent(
             LAYER_EXPOSURE_EVENT,
             eventValue = null,
-            layerExposureMetadata.toStatsigEventMetadataMap(),
+            metadata,
             user,
             statsigMetadata,
             layerExposureMetadata.secondaryExposures
         )
-        safeAddEvaluationToEvent(layerExposureMetadata.evaluationDetails, event)
         log(event)
     }
 
     suspend fun flush() {
-        withContext(singleThreadDispatcher) {
-            if (events.size == 0) {
+        withContext(Dispatchers.IO) {
+            if (events.size() == 0) {
                 return@withContext
             }
 
-            val flushEvents = events
-            events = arrayListOf()
-
+            val flushEvents = events.reset()
             network.postLogs(flushEvents, statsigMetadata)
         }
     }

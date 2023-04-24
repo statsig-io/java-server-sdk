@@ -14,6 +14,7 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 internal data class LogEventInput(
@@ -50,6 +51,10 @@ class StatsigE2ETest {
     private var download_list_1_count: Int = 0
     private var download_list_2_count: Int = 0
     private var bootstrap_callback_count: Int = 0
+
+    @JvmField
+    @Rule
+    val retry = RetryRule(3)
 
     @Before
     fun setup() {

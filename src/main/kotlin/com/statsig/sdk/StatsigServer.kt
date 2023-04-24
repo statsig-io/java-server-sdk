@@ -12,6 +12,7 @@ import kotlinx.coroutines.future.future
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Collections.emptyMap
 import java.util.concurrent.CompletableFuture
 
 sealed class StatsigServer {
@@ -66,6 +67,9 @@ sealed class StatsigServer {
     @JvmSynthetic abstract fun overrideConfig(configName: String, configValue: Map<String, Any>)
 
     @JvmSynthetic abstract fun removeConfigOverride(configName: String)
+
+    @JvmSynthetic abstract fun getClientInitializeResponse(user: StatsigUser): Map<String, Any>
+
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
     }
@@ -141,6 +145,7 @@ sealed class StatsigServer {
     abstract fun manuallyLogLayerParameterExposureAsync(user: StatsigUser, layerName: String, paramName: String): CompletableFuture<Void>
     abstract fun manuallyLogGateExposureAsync(user: StatsigUser, gateName: String): CompletableFuture<Void>
     abstract fun manuallyLogConfigExposureAsync(user: StatsigUser, configName: String): CompletableFuture<Void>
+
     /**
      * @deprecated
      * - we make no promises of support for this API
@@ -192,7 +197,6 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     override suspend fun initialize() {
         errorBoundary.swallow("initialize") {
             mutex.withLock { // Prevent multiple coroutines from calling this at once.
-
                 if (this::configEvaluator.isInitialized && configEvaluator.isInitialized) {
                     throw StatsigIllegalStateException(
                         "Cannot re-initialize server that has shutdown. Please recreate the server connection."
@@ -367,6 +371,13 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }, {
             return@capture Layer.empty(layerName)
         })
+    }
+
+    override fun getClientInitializeResponse(user: StatsigUser): Map<String, Any> {
+        return this.errorBoundary.captureSync("getClientInitializeResponse", {
+            val normalizedUser = normalizeUser(user)
+            return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser)
+        }, { return@captureSync emptyMap() })
     }
 
     override fun overrideLayer(layerName: String, value: Map<String, Any>) {
@@ -593,6 +604,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     }
 
     /**
+     *
      * @deprecated
      * - we make no promises of support for this API
      */
