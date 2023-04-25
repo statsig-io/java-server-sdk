@@ -68,7 +68,7 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract fun removeConfigOverride(configName: String)
 
-    @JvmSynthetic abstract fun getClientInitializeResponse(user: StatsigUser): Map<String, Any>
+    abstract fun getClientInitializeResponse(user: StatsigUser): Map<String, Any>
 
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
