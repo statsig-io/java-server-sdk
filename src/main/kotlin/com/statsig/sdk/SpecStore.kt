@@ -128,7 +128,10 @@ internal class SpecStore constructor(
 
     private suspend fun syncIdListsFromNetwork() {
         val response = network.post(
-            options.api + "/get_id_lists", mapOf("statsigMetadata" to statsigMetadata), emptyMap()
+            options.api + "/get_id_lists",
+            mapOf("statsigMetadata" to statsigMetadata),
+            emptyMap(),
+            this.options.initTimeoutMs,
         ) ?: return
         if (!response.isSuccessful) {
             return
