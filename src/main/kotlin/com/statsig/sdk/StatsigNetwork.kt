@@ -141,7 +141,7 @@ internal class StatsigNetwork(
         url: String,
         body: Map<String, Any>?,
         headers: Map<String, String> = emptyMap(),
-        timeoutMs: Long = 0,
+        timeoutMs: Long = 3000L,
     ): Response? {
         return postImpl(
             statsigHttpClient.newBuilder().callTimeout(
