@@ -389,7 +389,8 @@ internal class SpecStore constructor(
             val specs = this.network.post(
                 options.api + "/download_config_specs",
                 mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastUpdateTime),
-                emptyMap()
+                emptyMap(),
+                this.options.initTimeoutMs ?: 0,
             ) ?: return null
             val configs = gson.fromJson(specs.body?.charStream(), APIDownloadedConfigs::class.java)
             if (configs.hasUpdates) {
