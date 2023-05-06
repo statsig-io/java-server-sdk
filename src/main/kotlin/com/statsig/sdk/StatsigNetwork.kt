@@ -19,6 +19,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
@@ -140,8 +141,17 @@ internal class StatsigNetwork(
         url: String,
         body: Map<String, Any>?,
         headers: Map<String, String> = emptyMap(),
+        timeoutMs: Long = 3000L,
     ): Response? {
-        return postImpl(statsigHttpClient, url, body, headers)
+        return postImpl(
+            statsigHttpClient.newBuilder().callTimeout(
+                timeoutMs,
+                TimeUnit.MILLISECONDS
+            ).build(),
+            url,
+            body,
+            headers,
+        )
     }
 
     suspend fun postExternal(

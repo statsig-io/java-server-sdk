@@ -29,7 +29,7 @@ fun interface RulesUpdatedCallback {
  */
 class StatsigOptions(
     var api: String = DEFAULT_API_URL_BASE,
-    var initTimeoutMs: Long? = DEFAULT_INIT_TIME_OUT_MS,
+    var initTimeoutMs: Long = DEFAULT_INIT_TIME_OUT_MS,
     var bootstrapValues: String? = null,
     var rulesUpdatedCallback: RulesUpdatedCallback? = null,
     var localMode: Boolean = false,
