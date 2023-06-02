@@ -68,7 +68,10 @@ sealed class StatsigServer {
 
     @JvmSynthetic abstract fun removeConfigOverride(configName: String)
 
-    abstract fun getClientInitializeResponse(user: StatsigUser): Map<String, Any>
+    abstract fun getClientInitializeResponse(
+        user: StatsigUser,
+        hash: HashAlgo = HashAlgo.SHA256,
+    ): Map<String, Any>
 
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
@@ -373,10 +376,13 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         })
     }
 
-    override fun getClientInitializeResponse(user: StatsigUser): Map<String, Any> {
+    override fun getClientInitializeResponse(
+        user: StatsigUser,
+        hash: HashAlgo,
+    ): Map<String, Any> {
         return this.errorBoundary.captureSync("getClientInitializeResponse", {
             val normalizedUser = normalizeUser(user)
-            return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser)
+            return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser, hash)
         }, { return@captureSync emptyMap() })
     }
 

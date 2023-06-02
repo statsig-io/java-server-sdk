@@ -3,8 +3,6 @@ package com.statsig.sdk
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
-import java.security.MessageDigest
-import java.util.Base64
 
 internal data class ClientInitializeResponse(
     @SerializedName("feature_gates") var feature_gates: Map<String, ClientConfig>,
@@ -15,6 +13,7 @@ internal data class ClientInitializeResponse(
     @SerializedName("time") var time: Long,
     @SerializedName("generator") var generator: String,
     @SerializedName("evaluated_keys") var evaluated_keys: Map<String, Any>,
+    @SerializedName("hash_used") var hash_used: String,
 ) {
     fun toMap(): Map<String, Any> {
         val gson = Gson()
@@ -46,7 +45,8 @@ internal data class ClientConfig(
 internal class ClientInitializeFormatter(
     private val specStore: SpecStore,
     private val evalFun: (user: StatsigUser, config: APIConfig?) -> ConfigEvaluation,
-    private val user: StatsigUser
+    private val user: StatsigUser,
+    private val hash: HashAlgo = HashAlgo.SHA256
 ) {
 
     fun getFormattedResponse(): Map<String, Any> {
@@ -83,6 +83,7 @@ internal class ClientInitializeFormatter(
             0, // set the time to 0 so this doesn't interfere with polling,
             "statsig-java-sdk",
             evaluatedKeys,
+            this.hash.toString().lowercase()
         ).toMap()
     }
 
@@ -166,10 +167,11 @@ internal class ClientInitializeFormatter(
     }
 
     private fun hashName(name: String): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        val input = name.toByteArray(Charsets.UTF_8)
-        val bytes = md.digest(input)
-        return Base64.getEncoder().encodeToString(bytes)
+        return when (this.hash) {
+            HashAlgo.NONE -> name
+            HashAlgo.DJB2 -> Hashing.djb2(name)
+            else -> Hashing.sha256(name)
+        }
     }
 
     private fun cleanExposures(exposures: ArrayList<Map<String, String>>): ArrayList<Map<String, String>> {

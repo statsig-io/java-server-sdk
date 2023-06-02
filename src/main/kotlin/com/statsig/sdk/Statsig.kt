@@ -267,14 +267,19 @@ class Statsig {
          * Note: See Java SDK documentation https://docs.statsig.com/server/javaSDK
          *
          * @param user The StatsigUser object used for evaluation
+         * @param hash The hashing algorithm to use when obfuscating names
+         *
          * @return An initialize response containing evaluated gates/configs/layers
          */
         @JvmStatic
-        fun getClientInitializeResponse(user: StatsigUser): Map<String, Any> {
+        fun getClientInitializeResponse(
+            user: StatsigUser,
+            hash: HashAlgo = HashAlgo.SHA256,
+        ): Map<String, Any> {
             if (!checkInitialized()) {
                 return emptyMap()
             }
-            return statsigServer.getClientInitializeResponse(user)
+            return statsigServer.getClientInitializeResponse(user, hash)
         }
 
         /**
