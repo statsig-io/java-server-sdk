@@ -1,0 +1,65 @@
+{
+  "dynamic_configs": [],
+  "feature_gates": [
+    {
+      "defaultValue": false,
+      "enabled": true,
+      "entity": "feature_gate",
+      "idType": "userID",
+      "isDeviceBased": false,
+      "name": "test_iso_timestamp",
+      "rules": [
+        {
+          "conditions": [
+            {
+              "additionalValues": null,
+              "field": null,
+              "idType": "userID",
+              "isDeviceBased": false,
+              "operator": "any",
+              "targetValue": "global_holdout",
+              "type": "pass_gate"
+            }
+          ],
+          "groupName": "global_holdout",
+          "id": "3Qfj3hxoLuSh1ORaVBVonj",
+          "idType": "userID",
+          "isDeviceBased": false,
+          "name": "3Qfj3hxoLuSh1ORaVBVonj",
+          "passPercentage": 0,
+          "returnValue": true,
+          "salt": ""
+        },
+        {
+          "conditions": [
+            {
+              "additionalValues": {
+                "custom_field": "iso"
+              },
+              "field": "iso",
+              "idType": "userID",
+              "isDeviceBased": false,
+              "operator": "after",
+              "targetValue": 1685676930000,
+              "type": "user_field"
+            }
+          ],
+          "groupName": "iso",
+          "id": "AC4w2sFDULiT4Yt93u1ZQ",
+          "idType": "userID",
+          "isDeviceBased": false,
+          "name": "AC4w2sFDULiT4Yt93u1ZQ",
+          "passPercentage": 100,
+          "returnValue": true,
+          "salt": "e0d26d8a-9b12-45ea-b9dc-4aaf1df07dc5"
+        }
+      ],
+      "salt": "19936848-bba0-4801-85e6-481157a97e2a",
+      "type": "feature_gate"
+    }
+  ],
+  "layer_configs": [],
+  "has_updates": true,
+  "time": 1631638014811,
+  "id_lists": { "list_1": true, "list_2": true }
+}
