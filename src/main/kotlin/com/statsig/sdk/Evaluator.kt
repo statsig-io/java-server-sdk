@@ -633,7 +633,6 @@ internal class Evaluator(
                         { a: Date, b: Date ->
                             return@compareDates a.before(b)
                         },
-                        { a, b -> a < b },
                         value,
                         condition.targetValue
                     )
@@ -644,7 +643,6 @@ internal class Evaluator(
                         { a: Date, b: Date ->
                             return@compareDates a.after(b)
                         },
-                        { a, b -> a > b },
                         value,
                         condition.targetValue
                     )
@@ -660,7 +658,6 @@ internal class Evaluator(
                                 calendarOne[Calendar.DAY_OF_YEAR] ==
                                 calendarTwo[Calendar.DAY_OF_YEAR]
                         },
-                        null,
                         value,
                         condition.targetValue
                     )
@@ -690,7 +687,6 @@ internal class Evaluator(
             }
         } catch (e: IllegalArgumentException) {
             errorBoundary.logException("evaluateCondition:all", e)
-            println("[Statsig]: An exception was caught:  $e")
             return ConfigEvaluation(true)
         }
     }
@@ -720,8 +716,7 @@ internal class Evaluator(
     }
 
     private fun compareDates(
-        compare: (a: Date, b: Date) -> Boolean,
-        compareEpoch: ((a: Long, b: Long) -> Boolean)?,
+        compare: ((a: Date, b: Date) -> Boolean),
         a: Any?,
         b: Any?
     ): ConfigEvaluation {
@@ -729,27 +724,19 @@ internal class Evaluator(
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
         }
 
-        if (compareEpoch != null) {
-            val firstEpoch = getEpoch(a)
-            val secondEpoch = getEpoch(b)
+        val firstEpoch = getDate(a)
+        val secondEpoch = getDate(b)
 
-            if (firstEpoch != null && secondEpoch != null) {
-                return ConfigEvaluation(
-                    fetchFromServer = false,
-                    booleanValue = compareEpoch(firstEpoch, secondEpoch)
-                )
-            }
+        if (firstEpoch == null || secondEpoch == null) {
+
+            return ConfigEvaluation(
+                fetchFromServer = false,
+                booleanValue = false
+            )
         }
-
-        val firstDate = getDate(a)
-        val secondDate = getDate(b)
-        if (firstDate == null || secondDate == null) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
-        }
-
         return ConfigEvaluation(
             fetchFromServer = false,
-            booleanValue = compare(firstDate, secondDate)
+            booleanValue = compare(firstEpoch, secondEpoch)
         )
     }
 
@@ -758,7 +745,6 @@ internal class Evaluator(
             when (input) {
                 is String -> parseLong(input)
                 is Number -> input.toLong()
-
                 else -> return null
             }
 
@@ -770,35 +756,30 @@ internal class Evaluator(
         return epoch
     }
 
-    private fun getDate(input: Any?): Date? {
-        if (input == null) {
-            return null
-        }
-
-        return try {
-            var epoch =
-                if (input is String) {
-                    parseLong(input)
-                } else if (input is Number) {
-                    input.toLong()
-                } else {
-                    return null
-                }
-            if (epoch.toString().length < 11) {
-                // epoch in seconds (milliseconds would be before 1970)
-                epoch *= 1000
-            }
-            Date(epoch)
-        } catch (e: Exception) {
-            try {
-                val ta = DateTimeFormatter.ISO_INSTANT.parse(input as String)
+    private fun parseISOTimestamp(input: Any?): Date? {
+        if (input is String) {
+            return try {
+                val ta = DateTimeFormatter.ISO_INSTANT.parse(input)
                 val i = Instant.from(ta)
                 Date.from(i)
             } catch (e: Exception) {
                 errorBoundary.logException("getDate", e)
-                println("[Statsig]: An exception was caught:  $e")
                 null
             }
+        }
+        return null
+    }
+
+    private fun getDate(input: Any?): Date? {
+        if (input == null) {
+            return null
+        }
+        return try {
+            var epoch: Long = getEpoch(input) ?: return parseISOTimestamp(input)
+            val instant = Instant.ofEpochMilli(epoch)
+            Date.from(instant)
+        } catch (e: Exception) {
+            parseISOTimestamp(input)
         }
     }
 
