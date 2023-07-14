@@ -687,6 +687,7 @@ internal class Evaluator(
             }
         } catch (e: IllegalArgumentException) {
             errorBoundary.logException("evaluateCondition:all", e)
+            return ConfigEvaluation(true)
         }
     }
 
@@ -754,7 +755,6 @@ internal class Evaluator(
 
         return epoch
     }
-
 
     private fun parseISOTimestamp(input: Any?): Date? {
         if (input is String) {

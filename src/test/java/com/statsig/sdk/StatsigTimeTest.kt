@@ -11,7 +11,6 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 
 class StatsigTimeTest {
@@ -23,10 +22,6 @@ class StatsigTimeTest {
 
     private lateinit var driver: StatsigServer
     private lateinit var downloadConfigSpecsResponse: String
-
-    @JvmField
-    @Rule
-    val retry = RetryRule(3)
 
     @Before
     fun setup() {
@@ -118,13 +113,13 @@ class StatsigTimeTest {
             )
         }
 
-        val secondsUser = StatsigUser("random").apply { custom = mapOf(
-            "iso" to "1685776846"
-        )}
+        val secondsUser = StatsigUser("random").apply {
+            custom = mapOf("iso" to "1685776846")
+        }
 
-        val msUser = StatsigUser("random").apply { custom = mapOf(
-            "iso" to "1685776846109"
-        )}
+        val msUser = StatsigUser("random").apply {
+            custom = mapOf("iso" to "1685776846109")
+        }
         assert(driver.checkGate(isoUser, "test_iso_timestamp"))
         assert(driver.checkGate(secondsUser, "test_iso_timestamp"))
         assert(driver.checkGate(msUser, "test_iso_timestamp"))
@@ -140,13 +135,13 @@ class StatsigTimeTest {
             )
         }
 
-        val secondsUser = StatsigUser("random").apply { custom = mapOf(
-            "iso" to "1675776846"
-        )}
+        val secondsUser = StatsigUser("random").apply {
+            custom = mapOf("iso" to "1675776846")
+        }
 
-        val msUser = StatsigUser("random").apply { custom = mapOf(
-            "iso" to "1675776846109"
-        )}
+        val msUser = StatsigUser("random").apply {
+            custom = mapOf("iso" to "1675776846109")
+        }
         assert(!driver.checkGate(isoUser, "test_iso_timestamp"))
         assert(!driver.checkGate(secondsUser, "test_iso_timestamp"))
         assert(!driver.checkGate(msUser, "test_iso_timestamp"))
