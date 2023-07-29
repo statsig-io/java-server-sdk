@@ -3,6 +3,7 @@ package com.statsig.sdk
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
+import sun.security.util.AlgorithmDecomposer.hashName
 
 internal data class ClientInitializeResponse(
     @SerializedName("feature_gates") var feature_gates: Map<String, ClientConfig>,
@@ -46,7 +47,8 @@ internal class ClientInitializeFormatter(
     private val specStore: SpecStore,
     private val evalFun: (user: StatsigUser, config: APIConfig?) -> ConfigEvaluation,
     private val user: StatsigUser,
-    private val hash: HashAlgo = HashAlgo.SHA256
+    private val hash: HashAlgo = HashAlgo.SHA256,
+    private val clientSDKKey: String? = null,
 ) {
 
     fun getFormattedResponse(): Map<String, Any> {
@@ -136,6 +138,14 @@ internal class ClientInitializeFormatter(
         if (configSpec.entity == "segment" || configSpec.entity == "holdout") {
             return null
         }
+        var targetAppID: String? = null
+        if (clientSDKKey != null) {
+            targetAppID = specStore.getAppIDFromKey(clientSDKKey)
+        }
+        if (targetAppID != null && configSpec.targetAppIDs != null && !configSpec.targetAppIDs.contains(targetAppID)) {
+            return null
+        }
+
         val evalResult = evalFun(user, configSpec)
         val hashedName = hashName(configName)
         val result = ClientConfig(

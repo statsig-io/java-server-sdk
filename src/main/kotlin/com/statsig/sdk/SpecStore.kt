@@ -33,6 +33,7 @@ internal class SpecStore constructor(
     private var gates: Map<String, APIConfig> = emptyMap()
     private var layers: Map<String, Array<String>> = HashMap()
     private var idLists: MutableMap<String, IDList> = HashMap()
+    private var sdkKeysToAppIDs: Map<String, String> = HashMap()
 
     private var layerConfigs: Map<String, APIConfig> = emptyMap()
     private var experimentToLayer: Map<String, String> = emptyMap()
@@ -244,11 +245,15 @@ internal class SpecStore constructor(
                 }
             }
         }
+
         this.gates = newGates
         this.dynamicConfigs = newDynamicConfigs
         this.layerConfigs = newLayerConfigs
         this.experimentToLayer = newExperimentToLayer
         this.lastUpdateTime = downloadedConfig.time
+        if (downloadedConfig.sdkKeysToAppIDs != null) {
+            this.sdkKeysToAppIDs = downloadedConfig.sdkKeysToAppIDs
+        }
     }
 
     fun getGate(name: String): APIConfig? {
@@ -303,6 +308,10 @@ internal class SpecStore constructor(
     }
     fun getLastUpdateTime(): Long {
         return this.lastUpdateTime
+    }
+
+    fun getAppIDFromKey(clientSDKKey: String): String? {
+        return this.sdkKeysToAppIDs.get(clientSDKKey)
     }
 
     private suspend fun initializeSpecs() {

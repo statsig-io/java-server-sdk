@@ -71,6 +71,7 @@ sealed class StatsigServer {
     abstract fun getClientInitializeResponse(
         user: StatsigUser,
         hash: HashAlgo = HashAlgo.SHA256,
+        clientSDKKey: String? = null,
     ): Map<String, Any>
 
     fun logEvent(user: StatsigUser?, eventName: String) {
@@ -379,10 +380,11 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     override fun getClientInitializeResponse(
         user: StatsigUser,
         hash: HashAlgo,
+        clientSDKKey: String?,
     ): Map<String, Any> {
         return this.errorBoundary.captureSync("getClientInitializeResponse", {
             val normalizedUser = normalizeUser(user)
-            return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser, hash)
+            return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser, hash, clientSDKKey)
         }, { return@captureSync emptyMap() })
     }
 
