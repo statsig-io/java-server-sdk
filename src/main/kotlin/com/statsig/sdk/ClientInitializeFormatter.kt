@@ -3,7 +3,6 @@ package com.statsig.sdk
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
-import sun.security.util.AlgorithmDecomposer.hashName
 
 internal data class ClientInitializeResponse(
     @SerializedName("feature_gates") var feature_gates: Map<String, ClientConfig>,
