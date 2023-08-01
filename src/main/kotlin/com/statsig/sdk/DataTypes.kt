@@ -11,7 +11,7 @@ internal data class APIDownloadedConfigs(
     @SerializedName("layers") val layers: Map<String, Array<String>>?,
     @SerializedName("time") val time: Long = 0,
     @SerializedName("has_updates") val hasUpdates: Boolean,
-    @SerializedName("sdk_keys_to_app_ids") val sdkKeysToAppIDs: Map<String, String>?,
+    @SerializedName("sdk_keys_to_app_ids") val sdkKeysToAppIDs: Map<String, String>? = null,
 )
 
 internal data class APIConfig(
@@ -26,7 +26,7 @@ internal data class APIConfig(
     @SerializedName("entity") val entity: String,
     @SerializedName("explicitParameters") val explicitParameters: Array<String>?,
     @SerializedName("hasSharedParams") val hasSharedParams: Boolean?,
-    @SerializedName("targetAppIDs") val targetAppIDs: Array<String>?,
+    @SerializedName("targetAppIDs") val targetAppIDs: Array<String>? = null,
 )
 
 internal data class APIRule(
