@@ -90,9 +90,9 @@ class EvaluationDetailsTest {
             events[0],
             mapOf(
                 "eventName" to "statsig::gate_exposure",
-                "reason" to EvaluationReason.UNINITIALIZED.toString()
+                "reason" to EvaluationReason.UNINITIALIZED.toString(),
             ),
-            true
+            true,
         )
         assertEventEqual(
             events[1],
@@ -100,15 +100,15 @@ class EvaluationDetailsTest {
                 "eventName" to "statsig::config_exposure",
                 "reason" to EvaluationReason.UNINITIALIZED.toString(),
             ),
-            true
+            true,
         )
         assertEventEqual(
             events[2],
             mapOf(
                 "eventName" to "statsig::config_exposure",
-                "reason" to EvaluationReason.UNINITIALIZED.toString()
+                "reason" to EvaluationReason.UNINITIALIZED.toString(),
             ),
-            true
+            true,
         )
     }
 
@@ -129,29 +129,29 @@ class EvaluationDetailsTest {
             events[0],
             mapOf(
                 "eventName" to "statsig::gate_exposure",
-                "reason" to EvaluationReason.NETWORK.toString()
-            )
+                "reason" to EvaluationReason.NETWORK.toString(),
+            ),
         )
         assertEventEqual(
             events[1],
             mapOf(
                 "eventName" to "statsig::config_exposure",
                 "reason" to EvaluationReason.NETWORK.toString(),
-            )
+            ),
         )
         assertEventEqual(
             events[2],
             mapOf(
                 "eventName" to "statsig::config_exposure",
-                "reason" to EvaluationReason.NETWORK.toString()
-            )
+                "reason" to EvaluationReason.NETWORK.toString(),
+            ),
         )
         assertEventEqual(
             events[3],
             mapOf(
                 "eventName" to "statsig::layer_exposure",
-                "reason" to EvaluationReason.NETWORK.toString()
-            )
+                "reason" to EvaluationReason.NETWORK.toString(),
+            ),
         )
     }
 
@@ -179,29 +179,29 @@ class EvaluationDetailsTest {
             events[0],
             mapOf(
                 "eventName" to "statsig::gate_exposure",
-                "reason" to EvaluationReason.BOOTSTRAP.toString()
-            )
+                "reason" to EvaluationReason.BOOTSTRAP.toString(),
+            ),
         )
         assertEventEqual(
             events[1],
             mapOf(
                 "eventName" to "statsig::config_exposure",
                 "reason" to EvaluationReason.BOOTSTRAP.toString(),
-            )
+            ),
         )
         assertEventEqual(
             events[2],
             mapOf(
                 "eventName" to "statsig::config_exposure",
-                "reason" to EvaluationReason.BOOTSTRAP.toString()
-            )
+                "reason" to EvaluationReason.BOOTSTRAP.toString(),
+            ),
         )
         assertEventEqual(
             events[3],
             mapOf(
                 "eventName" to "statsig::layer_exposure",
-                "reason" to EvaluationReason.BOOTSTRAP.toString()
-            )
+                "reason" to EvaluationReason.BOOTSTRAP.toString(),
+            ),
         )
     }
 
@@ -225,14 +225,14 @@ class EvaluationDetailsTest {
             mapOf(
                 "eventName" to "statsig::gate_exposure",
                 "reason" to EvaluationReason.LOCAL_OVERRIDE.toString(),
-            )
+            ),
         )
         assertEventEqual(
             events[1],
             mapOf(
                 "eventName" to "statsig::config_exposure",
                 "reason" to EvaluationReason.LOCAL_OVERRIDE.toString(),
-            )
+            ),
         )
     }
 
@@ -252,22 +252,22 @@ class EvaluationDetailsTest {
             events[0],
             mapOf(
                 "eventName" to "statsig::gate_exposure",
-                "reason" to EvaluationReason.UNRECOGNIZED.toString()
-            )
+                "reason" to EvaluationReason.UNRECOGNIZED.toString(),
+            ),
         )
         assertEventEqual(
             events[1],
             mapOf(
                 "eventName" to "statsig::config_exposure",
                 "reason" to EvaluationReason.UNRECOGNIZED.toString(),
-            )
+            ),
         )
         assertEventEqual(
             events[2],
             mapOf(
                 "eventName" to "statsig::config_exposure",
-                "reason" to EvaluationReason.UNRECOGNIZED.toString()
-            )
+                "reason" to EvaluationReason.UNRECOGNIZED.toString(),
+            ),
         )
     }
 

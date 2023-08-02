@@ -6,7 +6,7 @@ import java.util.Base64
 enum class HashAlgo {
     SHA256,
     DJB2,
-    NONE
+    NONE,
 }
 
 class Hashing {

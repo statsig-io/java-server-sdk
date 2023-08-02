@@ -58,13 +58,13 @@ internal class StatsigLogger(
         ruleID: String,
         secondaryExposures: ArrayList<Map<String, String>>,
         isManualExposure: Boolean = false,
-        evaluationDetails: EvaluationDetails?
+        evaluationDetails: EvaluationDetails?,
     ) {
         val metadata = mutableMapOf(
             "gate" to gateName,
             "gateValue" to value.toString(),
             "ruleID" to ruleID,
-            "isManualExposure" to isManualExposure.toString()
+            "isManualExposure" to isManualExposure.toString(),
         )
 
         safeAddEvaluationToEvent(evaluationDetails, metadata)
@@ -75,7 +75,7 @@ internal class StatsigLogger(
             metadata,
             user,
             statsigMetadata,
-            secondaryExposures
+            secondaryExposures,
         )
         log(event)
     }
@@ -86,7 +86,7 @@ internal class StatsigLogger(
         ruleID: String,
         secondaryExposures: ArrayList<Map<String, String>>,
         isManualExposure: Boolean,
-        evaluationDetails: EvaluationDetails?
+        evaluationDetails: EvaluationDetails?,
     ) {
         val metadata =
             mutableMapOf("config" to configName, "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString())
@@ -98,7 +98,7 @@ internal class StatsigLogger(
             metadata,
             user,
             statsigMetadata,
-            secondaryExposures
+            secondaryExposures,
         )
         log(event)
     }
@@ -106,9 +106,8 @@ internal class StatsigLogger(
     fun logLayerExposure(
         user: StatsigUser?,
         layerExposureMetadata: LayerExposureMetadata,
-        isManualExposure: Boolean = false
+        isManualExposure: Boolean = false,
     ) {
-
         if (isManualExposure) {
             layerExposureMetadata.isManualExposure = "true"
         }
@@ -121,7 +120,7 @@ internal class StatsigLogger(
             metadata,
             user,
             statsigMetadata,
-            layerExposureMetadata.secondaryExposures
+            layerExposureMetadata.secondaryExposures,
         )
         log(event)
     }

@@ -3,7 +3,7 @@ package com.statsig.sdk
 import com.google.gson.annotations.SerializedName
 
 internal data class APIEvaluationConsistencyTestData(
-    @SerializedName("data") val data: Array<APITestDataSet>
+    @SerializedName("data") val data: Array<APITestDataSet>,
 )
 
 internal data class APITestDataSet(

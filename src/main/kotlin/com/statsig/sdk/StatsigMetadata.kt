@@ -10,7 +10,7 @@ internal class StatsigMetadata {
             try {
                 val properties = Properties()
                 properties.load(
-                    StatsigMetadata::class.java.getResourceAsStream("/statsigsdk.properties")
+                    StatsigMetadata::class.java.getResourceAsStream("/statsigsdk.properties"),
                 )
                 properties.getProperty("version")
             } catch (e: Exception) {

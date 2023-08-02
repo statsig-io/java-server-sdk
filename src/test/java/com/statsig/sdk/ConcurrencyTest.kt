@@ -69,10 +69,10 @@ class ConcurrencyTest {
                                                 "size" to 3 * getIDListCount,
                                                 "url" to server.url("/list_1").toString(),
                                                 "creationTime" to 1,
-                                                "fileID" to "file_id_1"
-                                            )
-                                    )
-                                )
+                                                "fileID" to "file_id_1",
+                                            ),
+                                    ),
+                                ),
                             )
                         }
                         "/list_1" -> {

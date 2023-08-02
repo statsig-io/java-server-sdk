@@ -84,9 +84,9 @@ class LayerTest {
                 "nestedString" to "nested",
                 "nestedBoolean" to true,
                 "nestedDouble" to 13.74,
-                "nestedLong" to 13L
+                "nestedLong" to 13L,
             ),
-            layer.getDictionary("testNested", mapOf())
+            layer.getDictionary("testNested", mapOf()),
         )
     }
 }

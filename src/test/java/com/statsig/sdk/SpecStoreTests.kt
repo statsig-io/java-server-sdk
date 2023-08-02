@@ -10,6 +10,7 @@ import org.junit.Test
 class SpecStoreTests {
 
     lateinit var driver: StatsigServer
+
     @Before
     fun setup() {
         driver = create("secret-local", StatsigOptions())
@@ -59,7 +60,7 @@ class SpecStoreTests {
             "",
             "",
             null,
-            null
+            null,
         )
     }
 }

@@ -143,6 +143,7 @@ class ExposureLoggingTest {
 
         assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
     }
+
     @Test
     fun testGetExperimentWithExposureLoggingEnabled() = runBlocking {
         driver.initialize()
@@ -162,6 +163,7 @@ class ExposureLoggingTest {
 
         assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
     }
+
     @Test
     fun testGetLayerWithExposureLoggingEnabled() = runBlocking {
         driver.initialize()

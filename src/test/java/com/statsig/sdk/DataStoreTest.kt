@@ -16,7 +16,7 @@ private class TestDataAdapter : IDataStore() {
     var data =
         DataStoreTest::class.java.getResource("/data_adapter.json")?.readText() ?: ""
     var dataStore = mutableMapOf(
-        STORAGE_ADAPTER_KEY to data
+        STORAGE_ADAPTER_KEY to data,
     )
     override fun get(key: String): String? {
         return dataStore[key]
@@ -41,6 +41,7 @@ class DataStoreTest {
     var didCallDownloadConfig = false
 
     val user = StatsigUser("a_user")
+
     @Before
     fun setup() {
         downloadConfigSpecsResponse =
@@ -77,7 +78,7 @@ class DataStoreTest {
 
         networkOptions = StatsigOptions(
             dataStore = TestDataAdapter(),
-            api = server.url("/v1").toString()
+            api = server.url("/v1").toString(),
         )
     }
 
@@ -100,7 +101,7 @@ class DataStoreTest {
         networkOptions = StatsigOptions(
             dataStore = TestDataAdapter(),
             api = server.url("/v1").toString(),
-            bootstrapValues = downloadConfigSpecsResponse
+            bootstrapValues = downloadConfigSpecsResponse,
         )
         driver = StatsigServer.create("secret-local", networkOptions)
         driver.initializeAsync().get()
@@ -121,7 +122,7 @@ class DataStoreTest {
     @Test
     fun testCallsNetworkWhenAdapterIsEmpty() {
         val networkOptions = StatsigOptions(
-            api = server.url("/v1").toString()
+            api = server.url("/v1").toString(),
         )
         driver = StatsigServer.create("secret-local", networkOptions)
         driver.initializeAsync().get()
