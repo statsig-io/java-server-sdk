@@ -133,15 +133,13 @@ internal class ClientInitializeFormatter(
         result.undelegatedSecondaryExposures = cleanExposures(evalResult.undelegatedSecondaryExposures)
     }
 
+
     private fun configToResponse(configName: String, configSpec: APIConfig): ClientConfig? {
         if (configSpec.entity == "segment" || configSpec.entity == "holdout") {
             return null
         }
-        var targetAppID: String? = null
-        if (clientSDKKey != null) {
-            targetAppID = specStore.getAppIDFromKey(clientSDKKey)
-        }
-        if (targetAppID != null && configSpec.targetAppIDs != null && !configSpec.targetAppIDs.contains(targetAppID)) {
+
+        if (!configSpecIsForThisTargetApp(configSpec)) {
             return null
         }
 
@@ -193,5 +191,22 @@ internal class ClientInitializeFormatter(
             res.add(it)
         }
         return res
+    }
+
+    private fun configSpecIsForThisTargetApp(configSpec: APIConfig): Boolean {
+        if (clientSDKKey == null) {
+            // no client key provided, send me everything
+            return true
+        }
+        var targetAppID = specStore.getAppIDFromKey(clientSDKKey)
+        if (targetAppID == null) {
+            // no target app id for the given SDK key
+            return false
+        }
+        if (configSpec.targetAppIDs == null) {
+            // no target app id associated with this config
+            return false
+        }
+        return configSpec.targetAppIDs.contains(targetAppID)
     }
 }
