@@ -85,9 +85,9 @@ class DynamicConfigTest {
                 "nestedString" to "nested",
                 "nestedBoolean" to true,
                 "nestedDouble" to 13.74,
-                "nestedLong" to 13L
+                "nestedLong" to 13L,
             ),
-            config.getDictionary("testNested", mapOf())
+            config.getDictionary("testNested", mapOf()),
         )
     }
 }

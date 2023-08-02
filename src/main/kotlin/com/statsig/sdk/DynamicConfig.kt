@@ -10,7 +10,7 @@ class DynamicConfig(
     val value: Map<String, Any>,
     val ruleID: String? = null,
     val groupName: String? = null,
-    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
 ) {
     companion object {
         fun empty(name: String = ""): DynamicConfig {
@@ -135,8 +135,8 @@ class DynamicConfig(
             mapOf(
                 "config" to this.name,
                 "ruleID" to this.ruleID,
-                "secondaryExposures" to this.secondaryExposures
-            )
+                "secondaryExposures" to this.secondaryExposures,
+            ),
         )
     }
 }

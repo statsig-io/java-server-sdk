@@ -54,7 +54,7 @@ internal data class APIFeatureGate(
     @SerializedName("value") val value: Boolean,
     @SerializedName("rule_id") val ruleID: String?,
     @SerializedName("secondary_exposures")
-    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf()
+    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
 )
 
 internal data class APIDynamicConfig(

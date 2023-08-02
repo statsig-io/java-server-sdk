@@ -26,7 +26,7 @@ data class StatsigUser private constructor(
     var userID: String?,
 
     @SerializedName("customIDs")
-    var customIDs: Map<String, String>?
+    var customIDs: Map<String, String>?,
 ) {
     constructor(userID: String) : this(userID, null)
     constructor(customIDs: Map<String, String>) : this(null, customIDs)

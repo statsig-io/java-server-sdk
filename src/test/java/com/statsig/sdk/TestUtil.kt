@@ -46,12 +46,17 @@ class TestUtil {
 
             return obj.returnValue as Map<String, Any>
         }
-        internal fun captureEvents(eventLogInputCompletable: CompletableDeferred<LogEventInput>): Array<StatsigEvent> = runBlocking {
+        internal fun captureEvents(eventLogInputCompletable: CompletableDeferred<LogEventInput>, shouldFilterDiagnostics: Boolean = true): Array<StatsigEvent> = runBlocking {
             val logs = withTimeout(TEST_TIMEOUT) {
                 eventLogInputCompletable.await()
             }
 
             logs.events.sortBy { it.time }
+            if (shouldFilterDiagnostics) {
+                val events = logs.events.filter { it.eventName != "statsig::diagnostics" }.toTypedArray()
+                return@runBlocking events
+            }
+
             return@runBlocking logs.events
         }
 

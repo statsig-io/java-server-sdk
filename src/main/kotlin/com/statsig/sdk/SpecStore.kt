@@ -20,7 +20,8 @@ internal class SpecStore constructor(
     private var options: StatsigOptions,
     private var statsigMetadata: StatsigMetadata,
     private var statsigScope: CoroutineScope,
-    private val errorBoundary: ErrorBoundary
+    private val errorBoundary: ErrorBoundary,
+    private val diagnostics: Diagnostics,
 ) {
     private var initTime: Long = 0
     private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
@@ -138,6 +139,7 @@ internal class SpecStore constructor(
         }
         val body = response.body ?: return
         val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
+        diagnostics.markStart(KeyType.GET_ID_LIST_SOURCES, StepType.PROCESS, Marker(idListCount = jsonResponse.size))
         val tasks = mutableListOf<Job>()
 
         for ((name, serverList) in jsonResponse) {
@@ -157,7 +159,7 @@ internal class SpecStore constructor(
                     url = serverList.url,
                     fileID = serverList.fileID,
                     size = 0,
-                    creationTime = serverList.creationTime
+                    creationTime = serverList.creationTime,
                 )
                 idLists[name] = localList
             }
@@ -168,11 +170,12 @@ internal class SpecStore constructor(
             tasks.add(
                 statsigScope.launch {
                     downloadIDList(localList)
-                }
+                },
             )
         }
 
         tasks.joinAll()
+        diagnostics.markEnd(KeyType.GET_ID_LIST_SOURCES, true, StepType.PROCESS)
 
         // remove deleted id lists
         val deletedLists = mutableListOf<String>()
@@ -192,10 +195,14 @@ internal class SpecStore constructor(
         }
 
         try {
+            diagnostics.markStart(KeyType.GET_ID_LIST, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
             val response = network.postExternal(list.url!!, null, mapOf("Range" to "bytes=${list.size}-"))
+            diagnostics.markEnd(KeyType.GET_ID_LIST, response?.isSuccessful === true, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url, statusCode = response?.code, sdkRegion = response?.headers?.get("x-statsig-region")))
+
             if (response?.isSuccessful !== true) {
                 return
             }
+            diagnostics.markStart(KeyType.GET_ID_LIST, StepType.PROCESS, additionalMarker = Marker(url = list.url))
             val contentLength = response.headers["content-length"]?.toIntOrNull()
             var content = response.body?.string()
             if (content == null || content.length <= 1) {
@@ -220,9 +227,11 @@ internal class SpecStore constructor(
                 }
             }
             list.size = list.size + contentLength
+            diagnostics.markEnd(KeyType.GET_ID_LIST, true, StepType.PROCESS, additionalMarker = Marker(url = list.url))
         } catch (e: Exception) {
             errorBoundary.logException("downloadIDList", e)
             println("[Statsig]: An exception was caught:  $e")
+            diagnostics.markEnd(KeyType.GET_ID_LIST, false, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
         }
     }
 
@@ -230,6 +239,8 @@ internal class SpecStore constructor(
         if (!downloadedConfig.hasUpdates) {
             return
         }
+        val diagnosticKey = if (options.bootstrapValues == null) KeyType.DOWNLOAD_CONFIG_SPECS else KeyType.BOOTSTRAP
+        diagnostics.markStart(diagnosticKey, step = StepType.PROCESS)
         val newGates = getParsedSpecs(downloadedConfig.featureGates)
         val newDynamicConfigs = getParsedSpecs(downloadedConfig.dynamicConfigs)
         val newLayerConfigs = getParsedSpecs(downloadedConfig.layerConfigs)
@@ -249,6 +260,7 @@ internal class SpecStore constructor(
         this.layerConfigs = newLayerConfigs
         this.experimentToLayer = newExperimentToLayer
         this.lastUpdateTime = downloadedConfig.time
+        diagnostics.markEnd(diagnosticKey, true, step = StepType.PROCESS)
     }
 
     fun getGate(name: String): APIConfig? {
@@ -321,7 +333,6 @@ internal class SpecStore constructor(
         } else {
             downloadedConfigs = this.downloadConfigSpecsFromNetwork()
         }
-
         if (downloadedConfigs != null) {
             if (options.bootstrapValues == null) {
                 // only fire the callback if this was not the result of a bootstrap

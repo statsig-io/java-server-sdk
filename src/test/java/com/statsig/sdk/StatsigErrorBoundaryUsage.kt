@@ -29,7 +29,6 @@ class StatsigErrorBoundaryUsage {
         @BeforeClass
         @JvmStatic
         internal fun beforeAll() {
-
             mockkConstructor(StatsigNetwork::class)
             every { anyConstructed<StatsigNetwork>().shutdown() } throws Exception("Test Network Shutdown")
 
@@ -37,11 +36,11 @@ class StatsigErrorBoundaryUsage {
             every { anyConstructed<ConfigEvaluation>().fetchFromServer } throws Exception("Test Config Eval")
 
             mockkConstructor(StatsigLogger::class)
-            every { anyConstructed<StatsigLogger>().log(any()) } throws Exception("Test Logger Log")
 
             mockkConstructor(SpecStore::class)
             every { anyConstructed<SpecStore>().getLayerConfig(any()) } throws Exception("Test Evaluator LayerConfig")
             every { anyConstructed<SpecStore>().getLayer(any()) } throws Exception("Test Evaluator Layers")
+//            every { anyConstructed<StatsigLogger>().log(match {it.eventName != "statsig::diagnostics"}) } throws Exception("Test Logger Log")
             coEvery { anyConstructed<SpecStore>().downloadConfigSpecs() } coAnswers {
                 if (throwOnDownloadConfigSpecs) {
                     throw Exception("Bad Config Specs")

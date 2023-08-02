@@ -130,10 +130,10 @@ class LayerExposureTest {
                     "reason" to "NETWORK",
                     "configSyncTime" to "0",
                     "initTime" to "-1",
-                    "serverTime" to TIME_NOW_MOCK.toString()
-                )
+                    "serverTime" to TIME_NOW_MOCK.toString(),
+                ),
             ),
-            Gson().toJson(metadata)
+            Gson().toJson(metadata),
         )
     }
 
@@ -166,10 +166,10 @@ class LayerExposureTest {
                     "reason" to "NETWORK",
                     "configSyncTime" to "0",
                     "initTime" to "-1",
-                    "serverTime" to TIME_NOW_MOCK.toString()
-                )
+                    "serverTime" to TIME_NOW_MOCK.toString(),
+                ),
             ),
-            Gson().toJson(metadata)
+            Gson().toJson(metadata),
         )
 
         serverTime = events[1].eventMetadata?.get("serverTime")?.toLong()
@@ -189,11 +189,11 @@ class LayerExposureTest {
                     "reason" to "NETWORK",
                     "configSyncTime" to "0",
                     "initTime" to "-1",
-                    "serverTime" to TIME_NOW_MOCK.toString()
+                    "serverTime" to TIME_NOW_MOCK.toString(),
 
-                )
+                ),
             ),
-            Gson().toJson(metadata)
+            Gson().toJson(metadata),
         )
     }
 
@@ -239,7 +239,7 @@ class LayerExposureTest {
 
         assertEquals(
             Gson().toJson(mapOf("userID" to "dloomb", "email" to "dan@statsigly.com")),
-            Gson().toJson(events[0].user)
+            Gson().toJson(events[0].user),
         )
         assertEquals("statsig::layer_exposure", events[0].eventName)
     }

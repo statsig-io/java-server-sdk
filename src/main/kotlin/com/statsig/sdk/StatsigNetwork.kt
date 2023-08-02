@@ -29,7 +29,7 @@ internal class StatsigNetwork(
     private val options: StatsigOptions,
     private val statsigMetadata: Map<String, String>,
     private val errorBoundary: ErrorBoundary,
-    private val backoffMultiplier: Int = BACKOFF_MULTIPLIER
+    private val backoffMultiplier: Int = BACKOFF_MULTIPLIER,
 ) {
     private val retryCodes: Set<Int> = setOf(
         408,
@@ -39,13 +39,14 @@ internal class StatsigNetwork(
         504,
         522,
         524,
-        599
+        599,
     )
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val statsigHttpClient: OkHttpClient
     private val externalHttpClient: OkHttpClient
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     private val serverSessionID = UUID.randomUUID().toString()
+    private var diagnostics: Diagnostics? = null
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
@@ -64,7 +65,7 @@ internal class StatsigNetwork(
                     .method(original.method, original.body)
                     .build()
                 it.proceed(request)
-            }
+            },
         )
 
         clientBuilder.addInterceptor(
@@ -78,11 +79,15 @@ internal class StatsigNetwork(
                         .build()
                 }
                 it.proceed(it.request())
-            }
+            },
         )
 
         statsigHttpClient = clientBuilder.build()
         externalHttpClient = OkHttpClient.Builder().build()
+    }
+
+    fun setDiagnostics(diagnostics: Diagnostics) {
+        this.diagnostics = diagnostics
     }
 
     suspend fun checkGate(user: StatsigUser?, gateName: String, disableExposureLogging: Boolean): ConfigEvaluation {
@@ -92,7 +97,7 @@ internal class StatsigNetwork(
                 "gateName" to gateName,
                 "user" to user,
                 "statsigMetadata" to statsigMetadata + exposureLoggingMap,
-            )
+            ),
         )
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
@@ -106,7 +111,7 @@ internal class StatsigNetwork(
                 fetchFromServer = false,
                 booleanValue = apiGate.value,
                 apiGate.value.toString(),
-                apiGate.ruleID ?: ""
+                apiGate.ruleID ?: "",
             )
         }
     }
@@ -118,7 +123,7 @@ internal class StatsigNetwork(
                 "configName" to configName,
                 "user" to user,
                 "statsigMetadata" to statsigMetadata + exposureLoggingMap,
-            )
+            ),
         )
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
@@ -132,7 +137,7 @@ internal class StatsigNetwork(
                 fetchFromServer = false,
                 booleanValue = false,
                 apiConfig.value,
-                apiConfig.ruleID ?: ""
+                apiConfig.ruleID ?: "",
             )
         }
     }
@@ -146,7 +151,7 @@ internal class StatsigNetwork(
         return postImpl(
             statsigHttpClient.newBuilder().callTimeout(
                 timeoutMs,
-                TimeUnit.MILLISECONDS
+                TimeUnit.MILLISECONDS,
             ).build(),
             url,
             body,
@@ -168,6 +173,7 @@ internal class StatsigNetwork(
         body: Map<String, Any>?,
         headers: Map<String, String> = emptyMap(),
     ): Response? {
+        val diagnosticsKey = getDiagnosticKeyFromURL(url)
         try {
             val request = Request.Builder()
                 .url(url)
@@ -176,12 +182,16 @@ internal class StatsigNetwork(
                 request.post(bodyJson.toRequestBody(json))
             }
             headers.forEach { (key, value) -> request.addHeader(key, value) }
-            return client.newCall(request.build()).await()
+            startDiagnostics(diagnosticsKey)
+            val response = client.newCall(request.build()).await()
+            endDiagnostics(diagnosticsKey, response.isSuccessful, response)
+            return response
         } catch (e: Exception) {
             println("[Statsig]: An exception was caught: $e")
             if (e is JsonParseException) {
                 errorBoundary.logException("postImpl", e)
             }
+            endDiagnostics(diagnosticsKey, false, null)
             return null
         }
     }
@@ -194,7 +204,7 @@ internal class StatsigNetwork(
         events: List<StatsigEvent>,
         statsigMetadata: Map<String, String>,
         retries: Int,
-        backoff: Int
+        backoff: Int,
     ) {
         if (events.isEmpty()) {
             return
@@ -233,5 +243,30 @@ internal class StatsigNetwork(
 
     fun shutdown() {
         statsigHttpClient.dispatcher.executorService.shutdown()
+    }
+
+    private fun startDiagnostics(key: KeyType?) {
+        if (key == null) {
+            return
+        }
+        diagnostics?.markStart(key, step = StepType.NETWORK_REQUEST)
+    }
+
+    private fun endDiagnostics(key: KeyType?, success: Boolean, response: Response?) {
+        if (key == null) {
+            return
+        }
+        val marker = if (response != null) Marker(sdkRegion = response.headers["x-statsig-region"], statusCode = response.code) else null
+        diagnostics?.markEnd(key, success, StepType.NETWORK_REQUEST, additionalMarker = marker)
+    }
+
+    private fun getDiagnosticKeyFromURL(url: String): KeyType? {
+        if (url.endsWith("/download_config_specs")) {
+            return KeyType.DOWNLOAD_CONFIG_SPECS
+        }
+        if (url.endsWith("/get_id_lists")) {
+            return KeyType.GET_ID_LIST_SOURCES
+        }
+        return null
     }
 }
