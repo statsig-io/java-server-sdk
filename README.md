@@ -1,12 +1,12 @@
 # Statsig Java/Kotlin Server SDK
 
-[![Test](https://github.com/statsig-io/private-java-server-sdk/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/statsig-io/private-java-server-sdk/actions/workflows/build-and-test.yml)
+[![Test](https://github.com/statsig-io/java-server-sdk/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/statsig-io/java-server-sdk/actions/workflows/build-and-test.yml)
 
 The Statsig Java/Kotlin SDK for multi-user, server side environments. If you need a SDK for another language or single user client environment, check out our [other SDKs](https://docs.statsig.com/#sdks).
 
 ## Installation
 
-SDK versions below 1.0.0 are available via jitpack.  Starting with v1.0.0, we started publishing the SDK only to MavenCentral.
+SDK versions below 1.0.0 are available via jitpack. Starting with v1.0.0, we started publishing the SDK only to MavenCentral.
 
 ## What is Statsig
 
