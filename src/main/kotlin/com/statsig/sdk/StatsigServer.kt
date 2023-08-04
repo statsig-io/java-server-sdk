@@ -21,12 +21,15 @@ sealed class StatsigServer {
     @JvmSynthetic abstract suspend fun initialize()
 
     @JvmSynthetic abstract suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
+
     @JvmSynthetic abstract suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean
 
     @JvmSynthetic
     abstract suspend fun getConfig(user: StatsigUser, dynamicConfigName: String): DynamicConfig
+
     @JvmSynthetic
     abstract suspend fun getConfigWithExposureLoggingDisabled(user: StatsigUser, dynamicConfigName: String): DynamicConfig
+
     @JvmSynthetic
     abstract suspend fun manuallyLogConfigExposure(user: StatsigUser, configName: String)
 
@@ -42,15 +45,16 @@ sealed class StatsigServer {
     @JvmSynthetic
     abstract suspend fun getExperimentWithExposureLoggingDisabled(
         user: StatsigUser,
-        experimentName: String
+        experimentName: String,
     ): DynamicConfig
 
     @JvmSynthetic
     abstract suspend fun getExperimentInLayerForUser(
         user: StatsigUser,
         layerName: String,
-        disableExposure: Boolean = false
+        disableExposure: Boolean = false,
     ): DynamicConfig
+
     @JvmSynthetic abstract suspend fun getLayer(user: StatsigUser, layerName: String): Layer
 
     @JvmSynthetic abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
@@ -64,6 +68,7 @@ sealed class StatsigServer {
     @JvmSynthetic abstract fun overrideGate(gateName: String, gateValue: Boolean)
 
     @JvmSynthetic abstract fun removeGateOverride(gateName: String)
+
     @JvmSynthetic abstract fun overrideConfig(configName: String, configValue: Map<String, Any>)
 
     @JvmSynthetic abstract fun removeConfigOverride(configName: String)
@@ -86,7 +91,7 @@ sealed class StatsigServer {
         user: StatsigUser?,
         eventName: String,
         value: String? = null,
-        metadata: Map<String, String>? = null
+        metadata: Map<String, String>? = null,
     )
 
     fun logEvent(user: StatsigUser?, eventName: String, value: Double) {
@@ -97,7 +102,7 @@ sealed class StatsigServer {
         user: StatsigUser?,
         eventName: String,
         value: Double,
-        metadata: Map<String, String>? = null
+        metadata: Map<String, String>? = null,
     )
 
     abstract fun initializeAsync(): CompletableFuture<Void?>
@@ -107,33 +112,33 @@ sealed class StatsigServer {
 
     abstract fun getConfigAsync(
         user: StatsigUser,
-        dynamicConfigName: String
+        dynamicConfigName: String,
     ): CompletableFuture<DynamicConfig>
 
     abstract fun getConfigWithExposureLoggingDisabledAsync(
         user: StatsigUser,
-        dynamicConfigName: String
+        dynamicConfigName: String,
     ): CompletableFuture<DynamicConfig>
 
     abstract fun getExperimentAsync(
         user: StatsigUser,
-        experimentName: String
+        experimentName: String,
     ): CompletableFuture<DynamicConfig>
 
     abstract fun getExperimentWithExposureLoggingDisabledAsync(
         user: StatsigUser,
-        experimentName: String
+        experimentName: String,
     ): CompletableFuture<DynamicConfig>
 
     abstract fun getExperimentInLayerForUserAsync(
         user: StatsigUser,
         layerName: String,
-        disableExposure: Boolean = false
+        disableExposure: Boolean = false,
     ): CompletableFuture<DynamicConfig>
 
     abstract fun getLayerAsync(
         user: StatsigUser,
-        layerName: String
+        layerName: String,
     ): CompletableFuture<Layer>
 
     abstract fun getLayerWithExposureLoggingDisabledAsync(
@@ -166,7 +171,7 @@ sealed class StatsigServer {
         @JvmOverloads
         fun create(
             serverSecret: String,
-            options: StatsigOptions = StatsigOptions()
+            options: StatsigOptions = StatsigOptions(),
         ): StatsigServer = StatsigServerImpl(serverSecret, options)
     }
 }
@@ -177,7 +182,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     init {
         if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
             throw StatsigUninitializedException(
-                "Statsig Server SDKs must be initialized with a secret key"
+                "Statsig Server SDKs must be initialized with a secret key",
             )
         }
     }
@@ -203,7 +208,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             mutex.withLock { // Prevent multiple coroutines from calling this at once.
                 if (this::configEvaluator.isInitialized && configEvaluator.isInitialized) {
                     throw StatsigIllegalStateException(
-                        "Cannot re-initialize server that has shutdown. Please recreate the server connection."
+                        "Cannot re-initialize server that has shutdown. Please recreate the server connection.",
                     )
                 }
                 configEvaluator = Evaluator(network, options, statsigScope, errorBoundary)
@@ -258,7 +263,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             evaluation.ruleID,
             evaluation.secondaryExposures,
             isManualExposure,
-            evaluation.evaluationDetails
+            evaluation.evaluationDetails,
         )
     }
 
@@ -310,7 +315,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     override suspend fun getExperimentWithExposureLoggingDisabled(
         user: StatsigUser,
-        experimentName: String
+        experimentName: String,
     ): DynamicConfig {
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(experimentName)
@@ -327,7 +332,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     override suspend fun getExperimentInLayerForUser(
         user: StatsigUser,
         layerName: String,
-        disableExposure: Boolean
+        disableExposure: Boolean,
     ): DynamicConfig {
         if (!isSDKInitialized()) {
             return DynamicConfig.empty()
@@ -405,7 +410,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         user: StatsigUser?,
         eventName: String,
         value: String?,
-        metadata: Map<String, String>?
+        metadata: Map<String, String>?,
     ) {
         this.errorBoundary.captureSync("logEvent:string", {
             this.logEventImpl(user, eventName, null, value, metadata)
@@ -416,7 +421,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         user: StatsigUser?,
         eventName: String,
         value: Double,
-        metadata: Map<String, String>?
+        metadata: Map<String, String>?,
     ) {
         this.errorBoundary.captureSync("logEvent:double", {
             this.logEventImpl(user, eventName, value, null, metadata)
@@ -428,7 +433,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         eventName: String,
         doubleValue: Double?,
         stringValue: String?,
-        metadata: Map<String, String>?
+        metadata: Map<String, String>?,
     ) {
         if (!isSDKInitialized()) {
             return
@@ -509,7 +514,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     override fun getConfigAsync(
         user: StatsigUser,
-        dynamicConfigName: String
+        dynamicConfigName: String,
     ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getConfig(user, dynamicConfigName)
@@ -518,7 +523,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     override fun getConfigWithExposureLoggingDisabledAsync(
         user: StatsigUser,
-        dynamicConfigName: String
+        dynamicConfigName: String,
     ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getConfigWithExposureLoggingDisabled(user, dynamicConfigName)
@@ -527,7 +532,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     override fun getExperimentAsync(
         user: StatsigUser,
-        experimentName: String
+        experimentName: String,
     ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperiment(user, experimentName)
@@ -536,7 +541,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     override fun getExperimentWithExposureLoggingDisabledAsync(
         user: StatsigUser,
-        experimentName: String
+        experimentName: String,
     ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperimentWithExposureLoggingDisabled(user, experimentName)
@@ -546,7 +551,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     override fun getExperimentInLayerForUserAsync(
         user: StatsigUser,
         layerName: String,
-        disableExposure: Boolean
+        disableExposure: Boolean,
     ): CompletableFuture<DynamicConfig> {
         return statsigScope.future {
             return@future getExperimentInLayerForUser(user, layerName, disableExposure)
@@ -555,7 +560,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
 
     override fun getLayerAsync(
         user: StatsigUser,
-        layerName: String
+        layerName: String,
     ): CompletableFuture<Layer> {
         return statsigScope.future {
             return@future getLayer(user, layerName)
@@ -663,8 +668,8 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                             normalizedUser,
                             layer,
                             paramName,
-                            Gson().toJson(metadata)
-                        )
+                            Gson().toJson(metadata),
+                        ),
                     )
                 } else {
                     logLayerExposureImpl(user, metadata)
@@ -704,7 +709,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     private fun logLayerExposureImpl(user: StatsigUser, metadata: LayerExposureMetadata) {
         logger.logLayerExposure(
             user,
-            metadata
+            metadata,
         )
     }
 

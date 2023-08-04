@@ -67,7 +67,7 @@ class StatsigTimeTest {
                                     "creationTime" to 2,
                                     "url" to server.url("/v1/list_2").toString(),
                                     "fileID" to "file_id_2_a",
-                                )
+                                ),
                             )
                             return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
                         }
@@ -109,7 +109,7 @@ class StatsigTimeTest {
         val isoUser = StatsigUser("123").apply {
             email = "testuser@statsig.com"
             custom = mapOf(
-                "iso" to "2023-06-03T07:20:46.109Z"
+                "iso" to "2023-06-03T07:20:46.109Z",
             )
         }
 
@@ -131,7 +131,7 @@ class StatsigTimeTest {
         val isoUser = StatsigUser("123").apply {
             email = "testuser@statsig.com"
             custom = mapOf(
-                "iso" to "2023-05-03T07:20:46.109Z"
+                "iso" to "2023-05-03T07:20:46.109Z",
             )
         }
 

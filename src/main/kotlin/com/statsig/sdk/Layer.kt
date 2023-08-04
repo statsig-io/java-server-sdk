@@ -23,6 +23,7 @@ class Layer internal constructor(
             return Layer(name, null, null, mapOf())
         }
     }
+
     /**
      * Gets a value from the config, falling back to the provided default value
      * @param key the index within the Layer to fetch a value from
@@ -128,8 +129,8 @@ class Layer internal constructor(
                 "config" to this.name,
                 "ruleID" to this.ruleID,
                 "secondaryExposures" to this.secondaryExposures,
-                "allocatedExperiment" to this.allocatedExperiment
-            )
+                "allocatedExperiment" to this.allocatedExperiment,
+            ),
         )
     }
 
@@ -154,7 +155,7 @@ class Layer internal constructor(
 internal fun createLayerExposureMetadata(
     layer: Layer,
     parameterName: String,
-    configEvaluation: ConfigEvaluation
+    configEvaluation: ConfigEvaluation,
 ): LayerExposureMetadata {
     var allocatedExperiment = ""
     var exposures = configEvaluation.undelegatedSecondaryExposures

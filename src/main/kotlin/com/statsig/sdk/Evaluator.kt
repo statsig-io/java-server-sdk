@@ -34,7 +34,7 @@ internal class Evaluator(
     private var network: StatsigNetwork,
     private var options: StatsigOptions,
     private val statsigScope: CoroutineScope,
-    private val errorBoundary: ErrorBoundary
+    private val errorBoundary: ErrorBoundary,
 ) {
     private var specStore: SpecStore
     private val uaParser: Parser by lazy {
@@ -150,13 +150,13 @@ internal class Evaluator(
         if (configOverrides.containsKey(dynamicConfigName)) {
             return ConfigEvaluation(
                 jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>(),
-                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE),
             )
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
             return ConfigEvaluation(
-                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED),
             )
         }
 
@@ -172,13 +172,13 @@ internal class Evaluator(
             val value = layerOverrides[layerName] ?: mapOf()
             return ConfigEvaluation(
                 jsonValue = value,
-                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE),
             )
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
             return ConfigEvaluation(
-                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED),
             )
         }
 
@@ -195,13 +195,13 @@ internal class Evaluator(
             return ConfigEvaluation(
                 booleanValue = value,
                 jsonValue = value,
-                evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+                evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE),
             )
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
             return ConfigEvaluation(
-                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED),
             )
         }
 
@@ -216,7 +216,7 @@ internal class Evaluator(
                     fetchFromServer = false,
                     booleanValue = false,
                     mapOf<String, Any>(),
-                    evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED)
+                    evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED),
                 )
         return this.evaluate(user, unwrappedConfig)
     }
@@ -229,7 +229,7 @@ internal class Evaluator(
                 booleanValue = false,
                 config.defaultValue,
                 "disabled",
-                evaluationDetails = evaluationDetails
+                evaluationDetails = evaluationDetails,
             )
         }
         val secondaryExposures = arrayListOf<Map<String, String>>()
@@ -253,7 +253,7 @@ internal class Evaluator(
                             '.' +
                             (rule.salt ?: rule.id) +
                             '.' +
-                            (getUnitID(user, rule.idType) ?: "")
+                            (getUnitID(user, rule.idType) ?: ""),
                     )
                         .mod(10000UL) < (rule.passPercentage.times(100.0)).toULong()
 
@@ -265,7 +265,7 @@ internal class Evaluator(
                     result.groupName,
                     secondaryExposures,
                     evaluationDetails = evaluationDetails,
-                    isExperimentGroup = rule.isExperimentGroup ?: false
+                    isExperimentGroup = rule.isExperimentGroup ?: false,
                 )
             }
         }
@@ -276,14 +276,14 @@ internal class Evaluator(
             "default",
             "",
             secondaryExposures,
-            evaluationDetails = evaluationDetails
+            evaluationDetails = evaluationDetails,
         )
     }
 
     private fun evaluateDelegate(
         user: StatsigUser,
         rule: APIRule,
-        secondaryExposures: ArrayList<Map<String, String>>
+        secondaryExposures: ArrayList<Map<String, String>>,
     ): ConfigEvaluation? {
         val configDelegate = rule.configDelegate ?: return null
         val config = specStore.getConfig(configDelegate) ?: return null
@@ -302,7 +302,7 @@ internal class Evaluator(
             secondaryExposures = secondaryExposures,
             configDelegate = rule.configDelegate,
             explicitParameters = config.explicitParameters ?: arrayOf(),
-            evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason())
+            evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason()),
         )
         evaluation.undelegatedSecondaryExposures = undelegatedSecondaryExposures
         return evaluation
@@ -329,7 +329,7 @@ internal class Evaluator(
             rule.id,
             rule.groupName,
             secondaryExposures,
-            isExperimentGroup = rule.isExperimentGroup == true
+            isExperimentGroup = rule.isExperimentGroup == true,
         )
     }
 
@@ -377,12 +377,15 @@ internal class Evaluator(
                     secondaryExposures.add(newExposure)
                     return ConfigEvaluation(
                         result.fetchFromServer,
-                        if (conditionEnum == ConfigCondition.PASS_GATE) result.booleanValue
-                        else !result.booleanValue,
+                        if (conditionEnum == ConfigCondition.PASS_GATE) {
+                            result.booleanValue
+                        } else {
+                            !result.booleanValue
+                        },
                         result.jsonValue,
                         "",
                         "",
-                        secondaryExposures
+                        secondaryExposures,
                     )
                 }
 
@@ -441,7 +444,7 @@ internal class Evaluator(
                     }
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        doubleValue > doubleTargetValue
+                        doubleValue > doubleTargetValue,
                     )
                 }
 
@@ -453,7 +456,7 @@ internal class Evaluator(
                     }
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        doubleValue >= doubleTargetValue
+                        doubleValue >= doubleTargetValue,
                     )
                 }
 
@@ -465,7 +468,7 @@ internal class Evaluator(
                     }
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        doubleValue < doubleTargetValue
+                        doubleValue < doubleTargetValue,
                     )
                 }
 
@@ -477,7 +480,7 @@ internal class Evaluator(
                     }
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        doubleValue <= doubleTargetValue
+                        doubleValue <= doubleTargetValue,
                     )
                 }
 
@@ -486,7 +489,7 @@ internal class Evaluator(
                         false,
                         versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) > 0
-                        }
+                        },
                     )
                 }
 
@@ -495,7 +498,7 @@ internal class Evaluator(
                         false,
                         versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) >= 0
-                        }
+                        },
                     )
                 }
 
@@ -504,7 +507,7 @@ internal class Evaluator(
                         false,
                         versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) < 0
-                        }
+                        },
                     )
                 }
 
@@ -513,7 +516,7 @@ internal class Evaluator(
                         false,
                         versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) <= 0
-                        }
+                        },
                     )
                 }
 
@@ -522,7 +525,7 @@ internal class Evaluator(
                         false,
                         versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) == 0
-                        }
+                        },
                     )
                 }
 
@@ -531,7 +534,7 @@ internal class Evaluator(
                         false,
                         versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
                             versionCompare(v1, v2) != 0
-                        }
+                        },
                     )
                 }
 
@@ -612,11 +615,11 @@ internal class Evaluator(
                         getValueAsString(value)
                             ?: return ConfigEvaluation(
                                 fetchFromServer = false,
-                                booleanValue = false
+                                booleanValue = false,
                             )
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        booleanValue = Regex(condition.targetValue as String).containsMatchIn(strValue)
+                        booleanValue = Regex(condition.targetValue as String).containsMatchIn(strValue),
                     )
                 }
 
@@ -634,7 +637,7 @@ internal class Evaluator(
                             return@compareDates a.before(b)
                         },
                         value,
-                        condition.targetValue
+                        condition.targetValue,
                     )
                 }
 
@@ -644,7 +647,7 @@ internal class Evaluator(
                             return@compareDates a.after(b)
                         },
                         value,
-                        condition.targetValue
+                        condition.targetValue,
                     )
                 }
 
@@ -659,7 +662,7 @@ internal class Evaluator(
                                 calendarTwo[Calendar.DAY_OF_YEAR]
                         },
                         value,
-                        condition.targetValue
+                        condition.targetValue,
                     )
                 }
 
@@ -674,8 +677,11 @@ internal class Evaluator(
                         val containsID = idList.contains(base64.substring(0, 8))
                         return ConfigEvaluation(
                             fetchFromServer = false,
-                            if (condition.operator == "in_segment_list") containsID
-                            else !containsID,
+                            if (condition.operator == "in_segment_list") {
+                                containsID
+                            } else {
+                                !containsID
+                            },
                         )
                     }
                     return ConfigEvaluation(fetchFromServer = false, false)
@@ -694,7 +700,7 @@ internal class Evaluator(
     private fun matchStringInArray(
         value: Any?,
         target: Any?,
-        compare: (value: String, target: String) -> Boolean
+        compare: (value: String, target: String) -> Boolean,
     ): Boolean {
         var strValue = getValueAsString(value) ?: return false
         var iterable =
@@ -718,7 +724,7 @@ internal class Evaluator(
     private fun compareDates(
         compare: ((a: Date, b: Date) -> Boolean),
         a: Any?,
-        b: Any?
+        b: Any?,
     ): ConfigEvaluation {
         if (a == null || b == null) {
             return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
@@ -728,15 +734,14 @@ internal class Evaluator(
         val secondEpoch = getDate(b)
 
         if (firstEpoch == null || secondEpoch == null) {
-
             return ConfigEvaluation(
                 fetchFromServer = false,
-                booleanValue = false
+                booleanValue = false,
             )
         }
         return ConfigEvaluation(
             fetchFromServer = false,
-            booleanValue = compare(firstEpoch, secondEpoch)
+            booleanValue = compare(firstEpoch, secondEpoch),
         )
     }
 
@@ -810,7 +815,7 @@ internal class Evaluator(
     private fun versionCompareHelper(
         version1: Any?,
         version2: Any?,
-        compare: (v1: String, v2: String) -> Boolean
+        compare: (v1: String, v2: String) -> Boolean,
     ): Boolean {
         var version1Str = getValueAsString(version1)
         var version2Str = getValueAsString(version2)
@@ -926,12 +931,21 @@ internal class Evaluator(
     private fun browserVersionFromUserAgent(userAgent: String): String {
         val agent = uaParser.parseUserAgent(userAgent)
         return arrayOf(
-            if (agent.major.isNullOrBlank()) "0"
-            else agent.major,
-            if (agent.minor.isNullOrBlank()) "0"
-            else agent.minor,
-            if (agent.patch.isNullOrBlank()) "0"
-            else agent.patch,
+            if (agent.major.isNullOrBlank()) {
+                "0"
+            } else {
+                agent.major
+            },
+            if (agent.minor.isNullOrBlank()) {
+                "0"
+            } else {
+                agent.minor
+            },
+            if (agent.patch.isNullOrBlank()) {
+                "0"
+            } else {
+                agent.patch
+            },
         ).joinToString(".")
     }
 
@@ -1005,5 +1019,5 @@ internal enum class ConfigCondition {
     CURRENT_TIME,
     ENVIRONMENT_FIELD,
     USER_BUCKET,
-    UNIT_ID
+    UNIT_ID,
 }

@@ -42,6 +42,7 @@ class LocalOverridesTest {
         Statsig.removeGateOverride("override_me")
         assertFalse(Statsig.checkGate(user, "override_me"))
     }
+
     @Test
     fun testConfigOverrides() = runBlocking {
         users.forEach { user -> testConfigOverridesHelper(user) }

@@ -125,7 +125,7 @@ class Statsig {
          */
         suspend fun getExperimentWithExposureLoggingDisabled(
             user: StatsigUser,
-            experimentName: String
+            experimentName: String,
         ): DynamicConfig {
             if (!checkInitialized()) {
                 return DynamicConfig.empty(experimentName)
@@ -176,6 +176,7 @@ class Statsig {
             }
             statsigServer.manuallyLogLayerParameterExposure(user, layerName, paramName)
         }
+
         /**
          * Stores a local layer override
          *
@@ -224,6 +225,7 @@ class Statsig {
             }
             statsigServer.overrideGate(gateName, gateValue)
         }
+
         /**
          * Removes the given gate override
          *
@@ -249,6 +251,7 @@ class Statsig {
             }
             statsigServer.overrideConfig(configName, configValue)
         }
+
         /**
          * Removes the given config override
          *
@@ -297,7 +300,7 @@ class Statsig {
             user: StatsigUser?,
             eventName: String,
             value: String? = null,
-            metadata: Map<String, String>? = null
+            metadata: Map<String, String>? = null,
         ) {
             if (!checkInitialized()) {
                 return
@@ -319,7 +322,7 @@ class Statsig {
             user: StatsigUser?,
             eventName: String,
             value: Double,
-            metadata: Map<String, String>? = null
+            metadata: Map<String, String>? = null,
         ) {
             if (!checkInitialized()) {
                 return
@@ -417,6 +420,7 @@ class Statsig {
             }
             return statsigServer.manuallyLogGateExposureAsync(user, gateName)
         }
+
         /**
          * Asynchronously get the values of a dynamic config, evaluated against the given user.
          * An exposure event will automatically be logged for the DynamicConfig.
@@ -428,7 +432,7 @@ class Statsig {
         @JvmStatic
         fun getConfigAsync(
             user: StatsigUser,
-            dynamicConfigName: String
+            dynamicConfigName: String,
         ): CompletableFuture<DynamicConfig> {
             if (!checkInitialized()) {
                 return CompletableFuture.completedFuture(DynamicConfig.empty(dynamicConfigName))
@@ -447,7 +451,7 @@ class Statsig {
         @JvmStatic
         fun getConfigWithExposureLoggingDisabledAsync(
             user: StatsigUser,
-            dynamicConfigName: String
+            dynamicConfigName: String,
         ): CompletableFuture<DynamicConfig> {
             if (!checkInitialized()) {
                 return CompletableFuture.completedFuture(DynamicConfig.empty(dynamicConfigName))
@@ -482,7 +486,7 @@ class Statsig {
         @JvmStatic
         fun getExperimentAsync(
             user: StatsigUser,
-            experimentName: String
+            experimentName: String,
         ): CompletableFuture<DynamicConfig> {
             if (!checkInitialized()) {
                 return CompletableFuture.completedFuture(DynamicConfig.empty(experimentName))
@@ -502,7 +506,7 @@ class Statsig {
         @JvmStatic
         fun getExperimentWithExposureLoggingDisabledAsync(
             user: StatsigUser,
-            experimentName: String
+            experimentName: String,
         ): CompletableFuture<DynamicConfig> {
             if (!checkInitialized()) {
                 return CompletableFuture.completedFuture(DynamicConfig.empty(experimentName))
@@ -537,7 +541,7 @@ class Statsig {
         @JvmStatic
         fun getLayerAsync(
             user: StatsigUser,
-            layerName: String
+            layerName: String,
         ): CompletableFuture<Layer> {
             if (!checkInitialized()) {
                 return CompletableFuture.completedFuture(Layer.empty(layerName))
@@ -564,6 +568,7 @@ class Statsig {
             }
             return statsigServer.getLayerWithExposureLoggingDisabledAsync(user, layerName)
         }
+
         /**
          * Manually log a layer exposure event to Statsig.
          * (Java Compatible)
@@ -593,7 +598,7 @@ class Statsig {
         fun getExperimentInLayerForUserAsync(
             user: StatsigUser,
             layerName: String,
-            disableExposure: Boolean
+            disableExposure: Boolean,
         ): CompletableFuture<DynamicConfig> {
             if (!checkInitialized()) {
                 return CompletableFuture.completedFuture(DynamicConfig.empty())

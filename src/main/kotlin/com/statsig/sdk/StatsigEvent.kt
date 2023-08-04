@@ -10,7 +10,7 @@ internal data class StatsigEvent(
     @SerializedName("user") var user: StatsigUser? = null,
     @SerializedName("statsigMetadata") val statsigMetadata: Map<String, String>? = null,
     @SerializedName("secondaryExposures") val secondaryExposures: ArrayList<Map<String, String>>? = arrayListOf(),
-    @SerializedName("time") val time: Long? = Utils().getTimeInMillis()
+    @SerializedName("time") val time: Long? = Utils().getTimeInMillis(),
 ) {
     init {
         // We need to use a special copy of the user object that strips out private attributes for logging purposes

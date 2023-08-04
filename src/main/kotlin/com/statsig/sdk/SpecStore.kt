@@ -20,7 +20,7 @@ internal class SpecStore constructor(
     private var options: StatsigOptions,
     private var statsigMetadata: StatsigMetadata,
     private var statsigScope: CoroutineScope,
-    private val errorBoundary: ErrorBoundary
+    private val errorBoundary: ErrorBoundary,
 ) {
     private var initTime: Long = 0
     private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
@@ -158,7 +158,7 @@ internal class SpecStore constructor(
                     url = serverList.url,
                     fileID = serverList.fileID,
                     size = 0,
-                    creationTime = serverList.creationTime
+                    creationTime = serverList.creationTime,
                 )
                 idLists[name] = localList
             }
@@ -169,7 +169,7 @@ internal class SpecStore constructor(
             tasks.add(
                 statsigScope.launch {
                     downloadIDList(localList)
-                }
+                },
             )
         }
 

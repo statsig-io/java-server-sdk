@@ -107,7 +107,7 @@ class StatsigE2ETest {
                                         "creationTime" to 1,
                                         "url" to server.url("/v1/list_2").toString(),
                                         "fileID" to "file_id_2",
-                                    )
+                                    ),
                                 )
                             } else if (download_id_list_count == 2) {
                                 list = mapOf(
@@ -124,7 +124,7 @@ class StatsigE2ETest {
                                         "creationTime" to 1,
                                         "url" to server.url("/v1/list_2").toString(),
                                         "fileID" to "file_id_2",
-                                    )
+                                    ),
                                 )
                             } else if (download_id_list_count == 3) {
                                 list = mapOf(
@@ -141,7 +141,7 @@ class StatsigE2ETest {
                                         "creationTime" to 2,
                                         "url" to server.url("/v1/list_2").toString(),
                                         "fileID" to "file_id_2_a",
-                                    )
+                                    ),
                                 )
                             } else {
                                 list = mapOf(
@@ -158,7 +158,7 @@ class StatsigE2ETest {
                                         "creationTime" to 2,
                                         "url" to server.url("/v1/list_2").toString(),
                                         "fileID" to "file_id_2_a",
-                                    )
+                                    ),
                                 )
                             }
                             return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
@@ -362,6 +362,7 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventMetadata!!["item_name"].equals("remove_ads"))
         assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
     }
+
     @Test
     fun testBackgroundSync() = runBlocking {
         download_config_count = 0
@@ -384,7 +385,7 @@ class StatsigE2ETest {
                     bootstrap_callback_count++
                     val specs = gson.fromJson(it, APIDownloadedConfigs::class.java)
                     assert(gson.toJson(specs) == gson.toJson(gson.fromJson(downloadConfigSpecsResponse, APIDownloadedConfigs::class.java)))
-                }
+                },
             ).apply {
                 api = server.url("/v1").toString()
                 rulesetsSyncIntervalMs = SYNC_INTERVAL
@@ -397,7 +398,7 @@ class StatsigE2ETest {
                     bootstrap_callback_count++
                     val specs = gson.fromJson(it, APIDownloadedConfigs::class.java)
                     assert(gson.toJson(specs) == gson.toJson(gson.fromJson(downloadConfigSpecsResponse, APIDownloadedConfigs::class.java)))
-                }
+                },
             ).apply {
                 api = server.url("/v1").toString()
             }

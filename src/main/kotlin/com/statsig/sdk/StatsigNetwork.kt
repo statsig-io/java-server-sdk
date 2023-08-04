@@ -29,7 +29,7 @@ internal class StatsigNetwork(
     private val options: StatsigOptions,
     private val statsigMetadata: Map<String, String>,
     private val errorBoundary: ErrorBoundary,
-    private val backoffMultiplier: Int = BACKOFF_MULTIPLIER
+    private val backoffMultiplier: Int = BACKOFF_MULTIPLIER,
 ) {
     private val retryCodes: Set<Int> = setOf(
         408,
@@ -39,7 +39,7 @@ internal class StatsigNetwork(
         504,
         522,
         524,
-        599
+        599,
     )
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val statsigHttpClient: OkHttpClient
@@ -64,7 +64,7 @@ internal class StatsigNetwork(
                     .method(original.method, original.body)
                     .build()
                 it.proceed(request)
-            }
+            },
         )
 
         clientBuilder.addInterceptor(
@@ -78,7 +78,7 @@ internal class StatsigNetwork(
                         .build()
                 }
                 it.proceed(it.request())
-            }
+            },
         )
 
         statsigHttpClient = clientBuilder.build()
@@ -92,7 +92,7 @@ internal class StatsigNetwork(
                 "gateName" to gateName,
                 "user" to user,
                 "statsigMetadata" to statsigMetadata + exposureLoggingMap,
-            )
+            ),
         )
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
@@ -106,7 +106,7 @@ internal class StatsigNetwork(
                 fetchFromServer = false,
                 booleanValue = apiGate.value,
                 apiGate.value.toString(),
-                apiGate.ruleID ?: ""
+                apiGate.ruleID ?: "",
             )
         }
     }
@@ -118,7 +118,7 @@ internal class StatsigNetwork(
                 "configName" to configName,
                 "user" to user,
                 "statsigMetadata" to statsigMetadata + exposureLoggingMap,
-            )
+            ),
         )
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
@@ -132,7 +132,7 @@ internal class StatsigNetwork(
                 fetchFromServer = false,
                 booleanValue = false,
                 apiConfig.value,
-                apiConfig.ruleID ?: ""
+                apiConfig.ruleID ?: "",
             )
         }
     }
@@ -146,7 +146,7 @@ internal class StatsigNetwork(
         return postImpl(
             statsigHttpClient.newBuilder().callTimeout(
                 timeoutMs,
-                TimeUnit.MILLISECONDS
+                TimeUnit.MILLISECONDS,
             ).build(),
             url,
             body,
@@ -194,7 +194,7 @@ internal class StatsigNetwork(
         events: List<StatsigEvent>,
         statsigMetadata: Map<String, String>,
         retries: Int,
-        backoff: Int
+        backoff: Int,
     ) {
         if (events.isEmpty()) {
             return

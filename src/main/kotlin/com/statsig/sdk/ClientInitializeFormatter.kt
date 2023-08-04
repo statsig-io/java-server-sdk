@@ -84,7 +84,7 @@ internal class ClientInitializeFormatter(
             0, // set the time to 0 so this doesn't interfere with polling,
             "statsig-java-sdk",
             evaluatedKeys,
-            this.hash.toString().lowercase()
+            this.hash.toString().lowercase(),
         ).toMap()
     }
 
@@ -92,7 +92,7 @@ internal class ClientInitializeFormatter(
         configName: String,
         configSpec: APIConfig,
         evalResult: ConfigEvaluation,
-        result: ClientConfig
+        result: ClientConfig,
     ) {
         result.isUserInExperiment = evalResult.isExperimentGroup
         result.isExperimentActive = configSpec.isActive
@@ -162,7 +162,10 @@ internal class ClientInitializeFormatter(
 
             if (entityType == "experiment") {
                 populateExperimentFields(
-                    configName, configSpec, evalResult, result
+                    configName,
+                    configSpec,
+                    evalResult,
+                    result,
                 )
             } else if (entityType == "layer") {
                 populateLayerFields(configSpec, evalResult, result)

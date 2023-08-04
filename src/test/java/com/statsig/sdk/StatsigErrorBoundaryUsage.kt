@@ -29,7 +29,6 @@ class StatsigErrorBoundaryUsage {
         @BeforeClass
         @JvmStatic
         internal fun beforeAll() {
-
             mockkConstructor(StatsigNetwork::class)
             every { anyConstructed<StatsigNetwork>().shutdown() } throws Exception("Test Network Shutdown")
 
