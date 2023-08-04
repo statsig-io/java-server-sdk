@@ -278,11 +278,12 @@ class Statsig {
         fun getClientInitializeResponse(
             user: StatsigUser,
             hash: HashAlgo = HashAlgo.SHA256,
+            clientSDKKey: String? = null,
         ): Map<String, Any> {
             if (!checkInitialized()) {
                 return emptyMap()
             }
-            return statsigServer.getClientInitializeResponse(user, hash)
+            return statsigServer.getClientInitializeResponse(user, hash, clientSDKKey)
         }
 
         /**

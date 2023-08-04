@@ -163,8 +163,8 @@ internal class Evaluator(
         return this.evaluateConfig(user, specStore.getConfig(dynamicConfigName))
     }
 
-    fun getClientInitializeResponse(user: StatsigUser, hash: HashAlgo = HashAlgo.SHA256): Map<String, Any> {
-        return ClientInitializeFormatter(this.specStore, this::evaluateConfig, user, hash).getFormattedResponse()
+    fun getClientInitializeResponse(user: StatsigUser, hash: HashAlgo = HashAlgo.SHA256, clientSDKKey: String? = null): Map<String, Any> {
+        return ClientInitializeFormatter(this.specStore, this::evaluateConfig, user, hash, clientSDKKey).getFormattedResponse()
     }
 
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {

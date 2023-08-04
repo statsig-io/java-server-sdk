@@ -33,6 +33,7 @@ class StatsigOptions(
     var bootstrapValues: String? = null,
     var rulesUpdatedCallback: RulesUpdatedCallback? = null,
     var localMode: Boolean = false,
+    var disableDiagnostics: Boolean = false,
     var rulesetsSyncIntervalMs: Long = CONFIG_SYNC_INTERVAL_MS,
     var idListsSyncIntervalMs: Long = ID_LISTS_SYNC_INTERVAL_MS,
     var dataStore: IDataStore? = null,

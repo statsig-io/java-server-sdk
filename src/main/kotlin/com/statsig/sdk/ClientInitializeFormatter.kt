@@ -47,6 +47,7 @@ internal class ClientInitializeFormatter(
     private val evalFun: (user: StatsigUser, config: APIConfig?) -> ConfigEvaluation,
     private val user: StatsigUser,
     private val hash: HashAlgo = HashAlgo.SHA256,
+    private val clientSDKKey: String? = null,
 ) {
 
     fun getFormattedResponse(): Map<String, Any> {
@@ -136,6 +137,11 @@ internal class ClientInitializeFormatter(
         if (configSpec.entity == "segment" || configSpec.entity == "holdout") {
             return null
         }
+
+        if (!configSpecIsForThisTargetApp(configSpec)) {
+            return null
+        }
+
         val evalResult = evalFun(user, configSpec)
         val hashedName = hashName(configName)
         val result = ClientConfig(
@@ -187,5 +193,24 @@ internal class ClientInitializeFormatter(
             res.add(it)
         }
         return res
+    }
+
+    private fun configSpecIsForThisTargetApp(configSpec: APIConfig): Boolean {
+        if (clientSDKKey == null) {
+            // no client key provided, send me everything
+            return true
+        }
+        var targetAppID = specStore.getAppIDFromKey(clientSDKKey)
+        if (targetAppID == null) {
+            // no target app id for the given SDK key, send me everything
+            return true
+        }
+        if (configSpec.targetAppIDs == null) {
+            // no target app id associated with this config
+            // if the key does have a target app id its not for this app
+            return false
+        }
+
+        return configSpec.targetAppIDs.contains(targetAppID)
     }
 }
