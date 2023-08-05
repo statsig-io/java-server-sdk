@@ -4,7 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import io.mockk.every
-import io.mockk.mockkConstructor
+import io.mockk.mockkObject
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
@@ -32,8 +32,9 @@ class EvaluationDetailsTest {
 
     @Before
     fun setup() = runBlocking {
-        mockkConstructor(Utils::class)
-        every { anyConstructed<Utils>().getTimeInMillis() } returns TIME_NOW_MOCK
+        mockkObject(Utils.Companion)
+
+        every { Utils.getTimeInMillis() } returns TIME_NOW_MOCK
 
         eventLogInputCompletable = CompletableDeferred()
         val downloadConfigSpecsResponse =

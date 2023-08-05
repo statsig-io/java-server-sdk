@@ -44,10 +44,10 @@ internal data class APIRule(
 
 internal data class APICondition(
     @SerializedName("type") val type: String,
-    @SerializedName("targetValue") val targetValue: Any,
-    @SerializedName("operator") val operator: String,
-    @SerializedName("field") val field: String,
-    @SerializedName("additionalValues") val additionalValues: Map<String, Any>,
+    @SerializedName("targetValue") val targetValue: Any?,
+    @SerializedName("operator") val operator: String?,
+    @SerializedName("field") val field: String?,
+    @SerializedName("additionalValues") val additionalValues: Map<String, Any>?,
     @SerializedName("idType") val idType: String,
 )
 

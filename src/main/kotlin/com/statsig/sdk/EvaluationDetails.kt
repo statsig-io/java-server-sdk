@@ -5,7 +5,7 @@ internal class EvaluationDetails(
     var initTime: Long,
     var reason: EvaluationReason,
 ) {
-    var serverTime: Long = Utils().getTimeInMillis()
+    var serverTime: Long = Utils.getTimeInMillis()
 
     fun toMap(): Map<String, String> {
         return mapOf(

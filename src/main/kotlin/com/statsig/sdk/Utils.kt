@@ -1,7 +1,13 @@
 package com.statsig.sdk
 
 internal class Utils {
-    fun getTimeInMillis(): Long {
-        return System.currentTimeMillis()
+    companion object {
+        fun getTimeInMillis(): Long {
+            return System.currentTimeMillis()
+        }
+
+        fun toStringOrEmpty(value: Any?): String {
+            return value?.toString() ?: ""
+        }
     }
 }

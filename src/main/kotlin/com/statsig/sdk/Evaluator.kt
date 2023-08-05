@@ -77,11 +77,11 @@ internal class Evaluator(
     }
 
     fun getVariants(configName: String): Map<String, Map<String, Any>> {
-        var variants: MutableMap<String, Map<String, Any>> = HashMap()
+        val variants: MutableMap<String, Map<String, Any>> = HashMap()
         val config = specStore.getConfig(configName) ?: return variants
 
         var previousAllocation = 0.0
-        for (r: APIRule in config!!.rules) {
+        for (r: APIRule in config.rules) {
             val value = r.returnValue.toString()
             val cond = r.conditions[0]
             var percent = 0.0
@@ -163,8 +163,18 @@ internal class Evaluator(
         return this.evaluateConfig(user, specStore.getConfig(dynamicConfigName))
     }
 
-    fun getClientInitializeResponse(user: StatsigUser, hash: HashAlgo = HashAlgo.SHA256, clientSDKKey: String? = null): Map<String, Any> {
-        return ClientInitializeFormatter(this.specStore, this::evaluateConfig, user, hash, clientSDKKey).getFormattedResponse()
+    fun getClientInitializeResponse(
+        user: StatsigUser,
+        hash: HashAlgo = HashAlgo.SHA256,
+        clientSDKKey: String? = null
+    ): Map<String, Any> {
+        return ClientInitializeFormatter(
+            this.specStore,
+            this::evaluateConfig,
+            user,
+            hash,
+            clientSDKKey
+        ).getFormattedResponse()
     }
 
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
@@ -293,7 +303,7 @@ internal class Evaluator(
         undelegatedSecondaryExposures.addAll(secondaryExposures)
         secondaryExposures.addAll(delegatedResult.secondaryExposures)
 
-        var evaluation = ConfigEvaluation(
+        val evaluation = ConfigEvaluation(
             fetchFromServer = delegatedResult.fetchFromServer,
             booleanValue = delegatedResult.booleanValue,
             jsonValue = delegatedResult.jsonValue,
@@ -333,7 +343,7 @@ internal class Evaluator(
         )
     }
 
-    private fun conditionFromString(input: String?): ConfigCondition? {
+    private fun conditionFromString(input: String?): ConfigCondition {
         return when (input) {
             "PUBLIC", "public" -> ConfigCondition.PUBLIC
             "FAIL_GATE", "fail_gate" -> ConfigCondition.FAIL_GATE
@@ -352,23 +362,25 @@ internal class Evaluator(
     private fun evaluateCondition(user: StatsigUser, condition: APICondition): ConfigEvaluation {
         try {
             var value: Any?
-            val conditionEnum: ConfigCondition?
-            conditionEnum = try {
+            val field: String = Utils.toStringOrEmpty(condition.field)
+            val conditionEnum: ConfigCondition? = try {
                 conditionFromString(condition.type)
             } catch (e: java.lang.IllegalArgumentException) {
                 errorBoundary.logException("evaluateCondition:condition", e)
                 println("[Statsig]: An exception was caught:  $e")
                 null
             }
+
             when (conditionEnum) {
                 ConfigCondition.PUBLIC ->
                     return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
 
                 ConfigCondition.FAIL_GATE, ConfigCondition.PASS_GATE -> {
-                    val result = this.checkGate(user, condition.targetValue as String)
+                    val name = Utils.toStringOrEmpty(condition.targetValue)
+                    val result = this.checkGate(user, name)
                     val newExposure =
                         mapOf(
-                            "gate" to condition.targetValue,
+                            "gate" to name,
                             "gateValue" to result.booleanValue.toString(),
                             "ruleID" to result.ruleID,
                         )
@@ -390,26 +402,26 @@ internal class Evaluator(
                 }
 
                 ConfigCondition.IP_BASED -> {
-                    value = getFromUser(user, condition.field)
+                    value = getFromUser(user, field)
                     if (value == null) {
                         val ipString = getFromUser(user, "ip")?.toString()
-                        if (ipString == null) {
-                            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                        value = if (ipString == null) {
+                            null
                         } else {
-                            value = CountryLookup.lookupIPString(ipString)
+                            CountryLookup.lookupIPString(ipString)
                         }
                     }
                 }
 
                 ConfigCondition.UA_BASED -> {
-                    value = getFromUser(user, condition.field)
+                    value = getFromUser(user, field)
                     if (value == null && !condition.field.equals("browser_version")) {
-                        value = getFromUserAgent(user, condition.field)
+                        value = getFromUserAgent(user, field)
                     }
                 }
 
                 ConfigCondition.USER_FIELD -> {
-                    value = getFromUser(user, condition.field)
+                    value = getFromUser(user, field)
                 }
 
                 ConfigCondition.CURRENT_TIME -> {
@@ -417,11 +429,11 @@ internal class Evaluator(
                 }
 
                 ConfigCondition.ENVIRONMENT_FIELD -> {
-                    value = getFromEnvironment(user, condition.field)
+                    value = getFromEnvironment(user, field)
                 }
 
                 ConfigCondition.USER_BUCKET -> {
-                    val salt = getValueAsString(condition.additionalValues["salt"])
+                    val salt = getValueAsString(condition.additionalValues?.let { it["salt"] })
                     val unitID = getUnitID(user, condition.idType) ?: ""
                     value = computeUserHash("$salt.$unitID").mod(1000UL)
                 }
@@ -487,7 +499,7 @@ internal class Evaluator(
                 "version_gt" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
+                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
                             versionCompare(v1, v2) > 0
                         },
                     )
@@ -496,7 +508,7 @@ internal class Evaluator(
                 "version_gte" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
+                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
                             versionCompare(v1, v2) >= 0
                         },
                     )
@@ -505,7 +517,7 @@ internal class Evaluator(
                 "version_lt" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
+                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
                             versionCompare(v1, v2) < 0
                         },
                     )
@@ -514,7 +526,7 @@ internal class Evaluator(
                 "version_lte" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
+                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
                             versionCompare(v1, v2) <= 0
                         },
                     )
@@ -523,7 +535,7 @@ internal class Evaluator(
                 "version_eq" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
+                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
                             versionCompare(v1, v2) == 0
                         },
                     )
@@ -532,7 +544,7 @@ internal class Evaluator(
                 "version_neq" -> {
                     return ConfigEvaluation(
                         false,
-                        versionCompareHelper(value, condition.targetValue as String) { v1: String, v2: String ->
+                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
                             versionCompare(v1, v2) != 0
                         },
                     )
@@ -611,15 +623,22 @@ internal class Evaluator(
                 }
 
                 "str_matches" -> {
+                    val targetValue = getValueAsString(condition.targetValue)
+                        ?: return ConfigEvaluation(
+                            fetchFromServer = false,
+                            booleanValue = false,
+                        )
+
                     val strValue =
                         getValueAsString(value)
                             ?: return ConfigEvaluation(
                                 fetchFromServer = false,
                                 booleanValue = false,
                             )
+
                     return ConfigEvaluation(
                         fetchFromServer = false,
-                        booleanValue = Regex(condition.targetValue as String).containsMatchIn(strValue),
+                        booleanValue = Regex(targetValue).containsMatchIn(strValue),
                     )
                 }
 
@@ -667,7 +686,7 @@ internal class Evaluator(
                 }
 
                 "in_segment_list", "not_in_segment_list" -> {
-                    val idList = specStore.getIDList(condition.targetValue as String)
+                    val idList = specStore.getIDList(Utils.toStringOrEmpty(condition.targetValue))
                     val stringValue = getValueAsString(value)
                     if (idList != null && stringValue != null) {
                         val bytes =
@@ -702,14 +721,20 @@ internal class Evaluator(
         target: Any?,
         compare: (value: String, target: String) -> Boolean,
     ): Boolean {
-        var strValue = getValueAsString(value) ?: return false
-        var iterable =
-            if (target is Iterable<*>) {
-                target
-            } else if (target is Array<*>) {
-                target.asIterable()
-            } else {
-                return false
+        val strValue = getValueAsString(value) ?: return false
+        val iterable =
+            when (target) {
+                is Iterable<*> -> {
+                    target
+                }
+
+                is Array<*> -> {
+                    target.asIterable()
+                }
+
+                else -> {
+                    return false
+                }
             }
 
         for (match in iterable) {
@@ -780,7 +805,7 @@ internal class Evaluator(
             return null
         }
         return try {
-            var epoch: Long = getEpoch(input) ?: return parseISOTimestamp(input)
+            val epoch: Long = getEpoch(input) ?: return parseISOTimestamp(input)
             val instant = Instant.ofEpochMilli(epoch)
             Date.from(instant)
         } catch (e: Exception) {
@@ -789,8 +814,8 @@ internal class Evaluator(
     }
 
     private fun versionCompare(v1: String, v2: String): Int {
-        var parts1 = v1.split(".")
-        var parts2 = v2.split(".")
+        val parts1 = v1.split(".")
+        val parts2 = v2.split(".")
 
         var i = 0
         while (i < parts1.size.coerceAtLeast(parts2.size)) {
@@ -859,31 +884,43 @@ internal class Evaluator(
         if (input == null) {
             return null
         }
+
         if (input is String) {
             return input.toDoubleOrNull()
         }
-        if (input is Number) {
-            return input.toDouble()
-        }
+
         if (input is ULong) {
             return input.toDouble()
         }
-        return input as? Double
+
+        if (input is Double) {
+            return input
+        }
+
+        if (input is Number) {
+            return input.toDouble()
+        }
+
+        return null
     }
 
     private fun contains(targets: Any?, value: Any?, ignoreCase: Boolean): Boolean {
         if (targets == null || value == null) {
             return false
         }
-        var iterable: Iterable<*>
-        if (targets is Iterable<*>) {
-            iterable = targets
-        } else if (targets is Array<*>) {
-            iterable = targets.asIterable()
-        } else {
-            return false
-        }
+        val iterable: Iterable<*> = when (targets) {
+            is Iterable<*> -> {
+                targets
+            }
 
+            is Array<*> -> {
+                targets.asIterable()
+            }
+
+            else -> {
+                return false
+            }
+        }
         for (option in iterable) {
             if ((option is String) && (value is String) && option.equals(value, ignoreCase)) {
                 return true
@@ -892,7 +929,6 @@ internal class Evaluator(
                 return true
             }
         }
-
         return false
     }
 
@@ -931,21 +967,9 @@ internal class Evaluator(
     private fun browserVersionFromUserAgent(userAgent: String): String {
         val agent = uaParser.parseUserAgent(userAgent)
         return arrayOf(
-            if (agent.major.isNullOrBlank()) {
-                "0"
-            } else {
-                agent.major
-            },
-            if (agent.minor.isNullOrBlank()) {
-                "0"
-            } else {
-                agent.minor
-            },
-            if (agent.patch.isNullOrBlank()) {
-                "0"
-            } else {
-                agent.patch
-            },
+            if (agent.major.isNullOrBlank()) "0" else agent.major,
+            if (agent.minor.isNullOrBlank()) "0" else agent.minor,
+            if (agent.patch.isNullOrBlank()) "0" else agent.patch,
         ).joinToString(".")
     }
 
