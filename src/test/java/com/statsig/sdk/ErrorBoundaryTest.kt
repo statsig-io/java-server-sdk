@@ -14,6 +14,8 @@ import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 class ErrorBoundaryTest {
     private lateinit var boundary: ErrorBoundary
@@ -64,7 +66,8 @@ class ErrorBoundaryTest {
 
         val body = Gson().fromJson(server.takeRequest().body.readUtf8(), Map::class.java)
         assertEquals(body["exception"], "java.io.IOException")
-        assertEquals(body["info"], err.stackTraceToString())
+        val trace = URLEncoder.encode(err.stackTraceToString(), StandardCharsets.UTF_8.toString())
+        assertEquals(body["info"], trace.substring(0, 3000))
     }
 
     @Test

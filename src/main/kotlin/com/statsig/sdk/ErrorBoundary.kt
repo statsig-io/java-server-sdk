@@ -5,10 +5,13 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 internal class ErrorBoundary(private val apiKey: String, private val options: StatsigOptions) {
     internal var uri = URI("https://statsigapi.net/v1/sdk_exception")
     private val seen = HashSet<String>()
+    private val maxInfoLength = 3000
 
     private val client = OkHttpClient()
     private companion object {
@@ -55,10 +58,16 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
 
             seen.add(ex.javaClass.name)
 
+            val info = ex.stackTraceToString()
+            var safeInfo = URLEncoder.encode(info, StandardCharsets.UTF_8.toString())
+            if (safeInfo.length > maxInfoLength) {
+                safeInfo = safeInfo.substring(0, maxInfoLength)
+            }
+
             val body = """{
                 "tag": "$tag",
                 "exception": "${ex.javaClass.name}",
-                "info": "${ex.stackTraceToString()}",
+                "info": "$safeInfo",
                 "statsigMetadata": ${StatsigMetadata.asJson()}
             }
             """.trimIndent()
