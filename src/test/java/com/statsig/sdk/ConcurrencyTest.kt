@@ -92,6 +92,7 @@ class ConcurrencyTest {
 
         val options = StatsigOptions().apply {
             api = server.url("/v1").toString()
+            disableDiagnostics = true
 
             // set sync interval to be short, so we are modifying and checking values at the same time
             rulesetsSyncIntervalMs = 10

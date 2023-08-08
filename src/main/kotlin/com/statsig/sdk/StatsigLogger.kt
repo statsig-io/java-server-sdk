@@ -1,5 +1,7 @@
 package com.statsig.sdk
 
+import com.google.gson.GsonBuilder
+import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -15,6 +17,7 @@ const val FLUSH_TIMER_MS: Long = 60000
 const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
 const val LAYER_EXPOSURE_EVENT = "statsig::layer_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
+const val DIAGNOSTICS_EVENT = "statsig::diagnostics"
 
 internal fun safeAddEvaluationToEvent(evaluationDetails: EvaluationDetails?, metadata: MutableMap<String, String>) {
     if (evaluationDetails == null) {
@@ -42,6 +45,7 @@ internal class StatsigLogger(
             flush()
         }
     }
+    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
     fun log(event: StatsigEvent) {
         events.add(event)
@@ -122,6 +126,12 @@ internal class StatsigLogger(
             statsigMetadata,
             layerExposureMetadata.secondaryExposures,
         )
+        log(event)
+    }
+
+    fun logDiagnostics(context: ContextType, markers: Collection<Marker>) {
+        val event = StatsigEvent(DIAGNOSTICS_EVENT)
+        event.eventMetadata = mapOf("context" to context.toString().lowercase(), "markers" to gson.toJson(markers))
         log(event)
     }
 

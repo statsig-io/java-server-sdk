@@ -79,6 +79,7 @@ class DataStoreTest {
         networkOptions = StatsigOptions(
             dataStore = TestDataAdapter(),
             api = server.url("/v1").toString(),
+            disableDiagnostics = true,
         )
     }
 
@@ -102,6 +103,7 @@ class DataStoreTest {
             dataStore = TestDataAdapter(),
             api = server.url("/v1").toString(),
             bootstrapValues = downloadConfigSpecsResponse,
+            disableDiagnostics = true,
         )
         driver = StatsigServer.create("secret-local", networkOptions)
         driver.initializeAsync().get()

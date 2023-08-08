@@ -197,6 +197,7 @@ class StatsigE2ETest {
 
         options = StatsigOptions().apply {
             api = server.url("/v1").toString()
+            disableDiagnostics = true
         }
 
         statsigUser = StatsigUser("123").apply {
@@ -371,6 +372,7 @@ class StatsigE2ETest {
             api = server.url("/v1").toString()
             rulesetsSyncIntervalMs = SYNC_INTERVAL
             idListsSyncIntervalMs = SYNC_INTERVAL
+            disableDiagnostics = true
         }
 
         driver = StatsigServer.create("secret-testcase", options)
@@ -387,6 +389,7 @@ class StatsigE2ETest {
                     assert(gson.toJson(specs) == gson.toJson(gson.fromJson(downloadConfigSpecsResponse, APIDownloadedConfigs::class.java)))
                 },
             ).apply {
+                disableDiagnostics = true
                 api = server.url("/v1").toString()
                 rulesetsSyncIntervalMs = SYNC_INTERVAL
                 idListsSyncIntervalMs = SYNC_INTERVAL
@@ -400,6 +403,7 @@ class StatsigE2ETest {
                     assert(gson.toJson(specs) == gson.toJson(gson.fromJson(downloadConfigSpecsResponse, APIDownloadedConfigs::class.java)))
                 },
             ).apply {
+                disableDiagnostics = true
                 api = server.url("/v1").toString()
             }
         }

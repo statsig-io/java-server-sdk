@@ -46,6 +46,7 @@ internal class StatsigNetwork(
     private val externalHttpClient: OkHttpClient
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     private val serverSessionID = UUID.randomUUID().toString()
+    private var diagnostics: Diagnostics? = null
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
@@ -83,6 +84,10 @@ internal class StatsigNetwork(
 
         statsigHttpClient = clientBuilder.build()
         externalHttpClient = OkHttpClient.Builder().build()
+    }
+
+    fun setDiagnostics(diagnostics: Diagnostics) {
+        this.diagnostics = diagnostics
     }
 
     suspend fun checkGate(user: StatsigUser?, gateName: String, disableExposureLogging: Boolean): ConfigEvaluation {
@@ -168,6 +173,7 @@ internal class StatsigNetwork(
         body: Map<String, Any>?,
         headers: Map<String, String> = emptyMap(),
     ): Response? {
+        val diagnosticsKey = diagnostics?.getDiagnosticKeyFromURL(url)
         try {
             val request = Request.Builder()
                 .url(url)
@@ -176,12 +182,16 @@ internal class StatsigNetwork(
                 request.post(bodyJson.toRequestBody(json))
             }
             headers.forEach { (key, value) -> request.addHeader(key, value) }
-            return client.newCall(request.build()).await()
+            diagnostics?.startNetworkRequestDiagnostics(diagnosticsKey)
+            val response = client.newCall(request.build()).await()
+            diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, response.isSuccessful, response)
+            return response
         } catch (e: Exception) {
             println("[Statsig]: An exception was caught: $e")
             if (e is JsonParseException) {
                 errorBoundary.logException("postImpl", e)
             }
+            diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, false, null)
             return null
         }
     }

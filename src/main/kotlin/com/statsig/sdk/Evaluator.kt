@@ -35,6 +35,7 @@ internal class Evaluator(
     private var options: StatsigOptions,
     private val statsigScope: CoroutineScope,
     private val errorBoundary: ErrorBoundary,
+    private val diagnostics: Diagnostics,
 ) {
     private var specStore: SpecStore
     private val uaParser: Parser by lazy {
@@ -54,7 +55,9 @@ internal class Evaluator(
 
     init {
         CountryLookup.initialize()
-        specStore = SpecStore(this.network, this.options, StatsigMetadata(), statsigScope, errorBoundary)
+        specStore = SpecStore(this.network, this.options, StatsigMetadata(), statsigScope, errorBoundary, diagnostics)
+        network.setDiagnostics(diagnostics)
+
         statsigScope.launch {
             uaParser // This will cause the 'lazy' load to occur on a BG thread
         }

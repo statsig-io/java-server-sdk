@@ -202,19 +202,29 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
     private val network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary)
     private var logger: StatsigLogger = StatsigLogger(statsigScope, network, statsigMetadata)
     private lateinit var configEvaluator: Evaluator
+    private lateinit var diagnostics: Diagnostics
 
     override suspend fun initialize() {
-        errorBoundary.swallow("initialize") {
-            mutex.withLock { // Prevent multiple coroutines from calling this at once.
-                if (this::configEvaluator.isInitialized && configEvaluator.isInitialized) {
-                    throw StatsigIllegalStateException(
-                        "Cannot re-initialize server that has shutdown. Please recreate the server connection.",
-                    )
+        errorBoundary.capture(
+            "initialize",
+            {
+                mutex.withLock { // Prevent multiple coroutines from calling this at once.
+                    if (this::configEvaluator.isInitialized && configEvaluator.isInitialized) {
+                        throw StatsigIllegalStateException(
+                            "Cannot re-initialize server that has shutdown. Please recreate the server connection.",
+                        )
+                    }
+                    setupAndStartDiagnostics()
+                    configEvaluator =
+                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics)
+                    configEvaluator.initialize()
+                    endInitDiagnostics(isSDKInitialized())
                 }
-                configEvaluator = Evaluator(network, options, statsigScope, errorBoundary)
-                configEvaluator.initialize()
-            }
-        }
+            },
+            {
+                endInitDiagnostics(false)
+            },
+        )
     }
 
     override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
@@ -758,5 +768,16 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             finalResult.groupName,
             finalResult.secondaryExposures,
         )
+    }
+
+    private fun setupAndStartDiagnostics() {
+        diagnostics = Diagnostics(options.disableDiagnostics, logger)
+        diagnostics.markStart(KeyType.OVERALL)
+    }
+
+    private fun endInitDiagnostics(success: Boolean) {
+        diagnostics?.markEnd(KeyType.OVERALL, success)
+        diagnostics?.logDiagnostics(ContextType.INITIALIZE)
+        diagnostics.diagnosticsContext = ContextType.CONFIG_SYNC
     }
 }
