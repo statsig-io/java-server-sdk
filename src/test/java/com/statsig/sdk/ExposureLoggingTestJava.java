@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -61,6 +62,7 @@ public class ExposureLoggingTestJava {
         server.setDispatcher(dispatcher);
 
         StatsigOptions options = new StatsigOptions();
+        options.setDisableDiagnostics(true);
         options.setApi(server.url("/v1").toString());
 
         driver = StatsigServer.create("secret-local", options);
@@ -114,8 +116,8 @@ public class ExposureLoggingTestJava {
 
     private StatsigEvent[] captureEvents(CompletableFuture<LogEventInput> eventLogInputCompletable) {
         try {
-            return eventLogInputCompletable.get(100, TimeUnit.MILLISECONDS).getEvents();
-
+            StatsigEvent[] res = eventLogInputCompletable.get(100, TimeUnit.MILLISECONDS).getEvents();
+            return Arrays.stream(res).filter(event -> !event.getEventName().equals("statsig::diagnostics")).toArray(StatsigEvent[] ::new);
         } catch (Exception e){}
 
         return new StatsigEvent[0];

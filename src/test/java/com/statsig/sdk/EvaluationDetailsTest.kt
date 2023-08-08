@@ -66,6 +66,7 @@ class EvaluationDetailsTest {
 
         val options = StatsigOptions().apply {
             api = server.url("/v1").toString()
+            disableDiagnostics = true
         }
 
         driver = StatsigServer.create("secret-local", options)
@@ -158,7 +159,7 @@ class EvaluationDetailsTest {
 
     @Test
     fun bootstrapTest() = runBlocking {
-        val options = StatsigOptions(bootstrapValues = configSpecsResponse, api = server.url("/v1").toString())
+        val options = StatsigOptions(bootstrapValues = configSpecsResponse, api = server.url("/v1").toString(), disableDiagnostics = true)
         val bootstrapServer = StatsigServer.create("secret-key", options)
         bootstrapServer.initialize()
 

@@ -70,6 +70,7 @@ class LayerExposureTest {
 
         val options = StatsigOptions().apply {
             api = server.url("/v1").toString()
+            disableDiagnostics = true
         }
         driver = StatsigServer.create("secret-testcase", options)
     }
