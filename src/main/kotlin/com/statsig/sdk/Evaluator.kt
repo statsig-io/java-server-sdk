@@ -418,7 +418,7 @@ internal class Evaluator(
 
                 ConfigCondition.UA_BASED -> {
                     value = getFromUser(user, field)
-                    if (value == null && !condition.field.equals("browser_version")) {
+                    if (value == null) {
                         value = getFromUserAgent(user, field)
                     }
                 }

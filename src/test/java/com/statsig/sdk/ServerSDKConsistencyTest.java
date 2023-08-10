@@ -7,7 +7,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -71,12 +70,13 @@ public class ServerSDKConsistencyTest {
             for (Map.Entry<String, APIFeatureGate> entry : d.getGates().entrySet()) {
                 ConfigEvaluation sdkResult = evaluator.checkGate(user, entry.getKey());
                 APIFeatureGate serverResult = entry.getValue();
-                assertEquals("Value mismatch for gate " + entry.getKey() + " for user" + user.toString(), serverResult.getValue(),
-                        sdkResult.getBooleanValue());
+
                 assertEquals("Rule ID mismatch for gate " + entry.getKey(), serverResult.getRuleID(),
                         sdkResult.getRuleID());
                 assertEquals("Secondary exposure mismatch for gate " + entry.getKey(),
                         gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
+                assertEquals("Value mismatch for gate " + entry.getKey() + " for user" + user.toString(), serverResult.getValue(),
+                    sdkResult.getBooleanValue());
 
                 Future<Boolean> sdkValue = driver.checkGateAsync(user, entry.getKey());
                 assertEquals("Server driver value mismatch for gate " + entry.getKey(), serverResult.getValue(), sdkValue.get());
