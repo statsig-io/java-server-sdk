@@ -169,14 +169,14 @@ internal class Evaluator(
     fun getClientInitializeResponse(
         user: StatsigUser,
         hash: HashAlgo = HashAlgo.SHA256,
-        clientSDKKey: String? = null
+        clientSDKKey: String? = null,
     ): Map<String, Any> {
         return ClientInitializeFormatter(
             this.specStore,
             this::evaluateConfig,
             user,
             hash,
-            clientSDKKey
+            clientSDKKey,
         ).getFormattedResponse()
     }
 

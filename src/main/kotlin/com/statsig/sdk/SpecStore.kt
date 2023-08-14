@@ -265,6 +265,9 @@ internal class SpecStore constructor(
         if (downloadedConfig.sdkKeysToAppIDs != null) {
             this.sdkKeysToAppIDs = downloadedConfig.sdkKeysToAppIDs
         }
+        if (downloadedConfig.diagnostics != null) {
+            diagnostics.setSamplingRate(downloadedConfig.diagnostics)
+        }
         diagnostics.markEnd(diagnosticKey, true, step = StepType.PROCESS)
     }
 
