@@ -9,16 +9,22 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
     private val samplingRates: MutableMap<String, Int> = mutableMapOf("dcs" to 0, "log" to 0, "initialize" to MAX_SAMPLING_RATE, "idlist" to 0)
     private var markers: DiagnosticsMarkers = mutableMapOf()
 
-    fun setSamplingRate(key: String, rate: Int) {
-        if (!samplingRates.containsKey(key)) {
-            return
+    fun setSamplingRate(rates: Map<String, Int>) {
+        rates.forEach { entry ->
+            if (samplingRates.containsKey(entry.key)) {
+                val rate = entry.value
+                val samplingRate = if (rate in 0..MAX_SAMPLING_RATE) {
+                    rate
+                } else {
+                    if (rate < 0) 0 else MAX_SAMPLING_RATE
+                }
+                samplingRates[entry.key] = samplingRate
+            }
         }
-        val samplingRate = if (rate in 0..MAX_SAMPLING_RATE) rate else { if (rate < 0) 0 else MAX_SAMPLING_RATE }
-        samplingRates[key] = samplingRate
     }
 
     fun markStart(key: KeyType, step: StepType? = null, additionalMarker: Marker? = null) {
-        if (!shouldAddMarker(this.diagnosticsContext, key)) {
+        if (isDisabled) {
             return
         }
         val marker = Marker(key = key, action = ActionType.START, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
@@ -36,7 +42,7 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
     }
 
     fun markEnd(key: KeyType, success: Boolean, step: StepType? = null, additionalMarker: Marker? = null) {
-        if (!shouldAddMarker(this.diagnosticsContext, key)) {
+        if (isDisabled) {
             return
         }
         val marker = Marker(key = key, action = ActionType.END, success = success, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
@@ -69,19 +75,12 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         this.addMarker(marker)
     }
 
-    private fun shouldAddMarker(context: ContextType, key: KeyType): Boolean {
-        if (this.isDisabled) {
-            return false
-        }
+    private fun shouldLogDiagnostics(context: ContextType): Boolean {
         val samplingKey: String =
-            if (context == ContextType.INITIALIZE) {
-                "initialize"
-            } else if (key == KeyType.GET_ID_LIST || key == KeyType.GET_ID_LIST_SOURCES) {
-                "id_list"
-            } else {
-                "dcs"
+            when (context) {
+                ContextType.CONFIG_SYNC -> "dcs"
+                ContextType.INITIALIZE -> "initialize"
             }
-
         val rand = Math.random() * MAX_SAMPLING_RATE
         return samplingRates[samplingKey] ?: 0 > rand
     }
@@ -95,7 +94,7 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
     }
 
     fun logDiagnostics(context: ContextType) {
-        if ((markers[context]?.size ?: 0) <= 0) {
+        if ((markers[context]?.size ?: 0) <= 0 || !shouldLogDiagnostics(context)) {
             return
         }
         logger.logDiagnostics(context, markers[context]!!)

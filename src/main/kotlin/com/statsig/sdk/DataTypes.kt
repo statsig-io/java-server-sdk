@@ -12,6 +12,7 @@ internal data class APIDownloadedConfigs(
     @SerializedName("time") val time: Long = 0,
     @SerializedName("has_updates") val hasUpdates: Boolean,
     @SerializedName("sdk_keys_to_app_ids") val sdkKeysToAppIDs: Map<String, String>? = null,
+    @SerializedName("diagnostics") val diagnostics: Map<String, Int>? = null,
 )
 
 internal data class APIConfig(
