@@ -28,7 +28,7 @@ public class EvaluatorTest {
         Evaluator eval = TestUtilJava.getEvaluatorFromStatsigServer(driver);
 
         APIDownloadedConfigs configs = gson.fromJson(CONFIG_SPEC, APIDownloadedConfigs.class);
-        specStore.setDownloadedConfigs(configs);
+        specStore.setDownloadedConfigs(configs,false);
 
         // IP Passes, but ID doesnt pass rollout percentage
         StatsigUser user = new StatsigUser("123");
