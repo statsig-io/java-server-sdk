@@ -236,12 +236,13 @@ internal class SpecStore constructor(
         }
     }
 
-    fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs) {
+    fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false) {
         if (!downloadedConfig.hasUpdates) {
             return
         }
-        val diagnosticKey = if (options.bootstrapValues == null) KeyType.DOWNLOAD_CONFIG_SPECS else KeyType.BOOTSTRAP
-        diagnostics.markStart(diagnosticKey, step = StepType.PROCESS)
+        if (options.dataStore == null && !isFromBootstrap) {
+            diagnostics.markStart(KeyType.DOWNLOAD_CONFIG_SPECS, step = StepType.PROCESS)
+        }
         val newGates = getParsedSpecs(downloadedConfig.featureGates)
         val newDynamicConfigs = getParsedSpecs(downloadedConfig.dynamicConfigs)
         val newLayerConfigs = getParsedSpecs(downloadedConfig.layerConfigs)
@@ -268,7 +269,9 @@ internal class SpecStore constructor(
         if (downloadedConfig.diagnostics != null) {
             diagnostics.setSamplingRate(downloadedConfig.diagnostics)
         }
-        diagnostics.markEnd(diagnosticKey, true, step = StepType.PROCESS)
+        if (options.dataStore == null && !isFromBootstrap) {
+            diagnostics.markEnd(KeyType.DOWNLOAD_CONFIG_SPECS, true, StepType.PROCESS)
+        }
     }
 
     fun getGate(name: String): APIConfig? {
@@ -330,19 +333,25 @@ internal class SpecStore constructor(
     }
 
     private suspend fun initializeSpecs() {
-        var downloadedConfigs: APIDownloadedConfigs?
+        var downloadedConfigs: APIDownloadedConfigs? = null
 
         if (options.dataStore != null) {
             downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
-            initReason = EvaluationReason.DATA_ADAPTER
-
-            if (this.lastUpdateTime == 0L) {
-                downloadedConfigs = this.downloadConfigSpecsFromNetwork()
-            }
+            initReason =
+                if (downloadedConfigs == null) EvaluationReason.UNINITIALIZED else EvaluationReason.DATA_ADAPTER
         } else if (options.bootstrapValues != null) {
+            diagnostics.markStart(KeyType.BOOTSTRAP, step = StepType.PROCESS)
             downloadedConfigs = this.bootstrapConfigSpecs()
-            initReason = EvaluationReason.BOOTSTRAP
-        } else {
+            initReason = if (downloadedConfigs == null) EvaluationReason.UNINITIALIZED else EvaluationReason.BOOTSTRAP
+            if (downloadedConfigs != null) {
+                setDownloadedConfigs(downloadedConfigs, true)
+                diagnostics.markEnd(KeyType.BOOTSTRAP, true, step = StepType.PROCESS)
+                return
+            }
+            diagnostics.markEnd(KeyType.BOOTSTRAP, false, step = StepType.PROCESS)
+        }
+        // If Bootstrap and DataAdapter failed to load, defaulting to download config spec from network
+        if (initReason == EvaluationReason.UNINITIALIZED) {
             downloadedConfigs = this.downloadConfigSpecsFromNetwork()
         }
         if (downloadedConfigs != null) {

@@ -122,6 +122,27 @@ class DataStoreTest {
     }
 
     @Test
+    fun testBootstrapIsIgnoredWhenBadDataStoreIsSet() {
+        val invalidDataStore = TestDataAdapter()
+        invalidDataStore.set(STORAGE_ADAPTER_KEY, "invalid_config_spec")
+        networkOptions = StatsigOptions(
+            dataStore = invalidDataStore,
+            api = server.url("/v1").toString(),
+            bootstrapValues = downloadConfigSpecsResponse,
+            disableDiagnostics = true,
+        )
+        driver = StatsigServer.create("secret-local", networkOptions)
+        driver.initializeAsync().get()
+        val bootstrapGateRes = driver.checkGateAsync(user, "always_on").get()
+        driver.shutdown()
+
+        val events = TestUtil.captureEvents(eventLogInputCompletable)
+        Assert.assertEquals("UNRECOGNIZED", events[0].eventMetadata?.get("reason") ?: "")
+        Assert.assertFalse(bootstrapGateRes)
+        Assert.assertTrue(didCallDownloadConfig)
+    }
+
+    @Test
     fun testCallsNetworkWhenAdapterIsEmpty() {
         val networkOptions = StatsigOptions(
             api = server.url("/v1").toString(),
@@ -138,5 +159,29 @@ class DataStoreTest {
         driver.initializeAsync().get()
 
         Assert.assertFalse(didCallDownloadConfig)
+    }
+
+    @Test
+    fun testNetworkNotCallWhenBootstrapIsPresent() {
+        networkOptions = StatsigOptions(
+            api = server.url("/v1").toString(),
+            bootstrapValues = downloadConfigSpecsResponse,
+        )
+        driver = StatsigServer.create("secret-local", networkOptions)
+        driver.initializeAsync().get()
+
+        Assert.assertFalse(didCallDownloadConfig)
+    }
+
+    @Test
+    fun testNetworkCallWhenBootstrapIsInvalid() {
+        networkOptions = StatsigOptions(
+            api = server.url("/v1").toString(),
+            bootstrapValues = "invalid bootstrap values",
+        )
+        driver = StatsigServer.create("secret-local", networkOptions)
+        driver.initializeAsync().get()
+
+        Assert.assertTrue(didCallDownloadConfig)
     }
 }
