@@ -263,9 +263,8 @@ internal class SpecStore constructor(
         this.layerConfigs = newLayerConfigs
         this.experimentToLayer = newExperimentToLayer
         this.lastUpdateTime = downloadedConfig.time
-        if (downloadedConfig.sdkKeysToAppIDs != null) {
-            this.sdkKeysToAppIDs = downloadedConfig.sdkKeysToAppIDs
-        }
+        this.sdkKeysToAppIDs = downloadedConfig.sdkKeysToAppIDs ?: mapOf()
+
         if (downloadedConfig.diagnostics != null) {
             diagnostics.setSamplingRate(downloadedConfig.diagnostics)
         }
@@ -329,7 +328,7 @@ internal class SpecStore constructor(
     }
 
     fun getAppIDFromKey(clientSDKKey: String): String? {
-        return this.sdkKeysToAppIDs.get(clientSDKKey)
+        return this.sdkKeysToAppIDs[clientSDKKey]
     }
 
     private suspend fun initializeSpecs() {
