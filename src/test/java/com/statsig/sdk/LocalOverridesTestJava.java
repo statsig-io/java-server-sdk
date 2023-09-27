@@ -24,8 +24,8 @@ public class LocalOverridesTestJava {
        StatsigOptions options = new StatsigOptions();
        options.setLocalMode(true);
 
-       driver = StatsigServer.create("secret-local", options);
-       Future initFuture = driver.initializeAsync();
+       driver = StatsigServer.create();
+       Future initFuture = driver.initializeAsync("secret-local", options);
        initFuture.get();
 
        evaluator = TestUtilJava.getEvaluatorFromStatsigServer(driver);

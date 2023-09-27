@@ -13,8 +13,8 @@ class SpecStoreTests {
 
     @Before
     fun setup() {
-        driver = create("secret-local", StatsigOptions())
-        driver.initializeAsync().get()
+        driver = create()
+        driver.initializeAsync("secret-local", StatsigOptions()).get()
     }
 
     @Test

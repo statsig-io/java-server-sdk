@@ -69,8 +69,8 @@ class EvaluationDetailsTest {
             disableDiagnostics = true
         }
 
-        driver = StatsigServer.create("secret-local", options)
-        driver.initialize()
+        driver = StatsigServer.create()
+        driver.initialize("secret-local", options)
     }
 
     @Test
@@ -160,8 +160,8 @@ class EvaluationDetailsTest {
     @Test
     fun bootstrapTest() = runBlocking {
         val options = StatsigOptions(bootstrapValues = configSpecsResponse, api = server.url("/v1").toString(), disableDiagnostics = true)
-        val bootstrapServer = StatsigServer.create("secret-key", options)
-        bootstrapServer.initialize()
+        val bootstrapServer = StatsigServer.create()
+        bootstrapServer.initialize("secret-key", options)
 
         bootstrapServer.checkGate(user, "always_on_gate")
         bootstrapServer.getConfig(user, "test_config")

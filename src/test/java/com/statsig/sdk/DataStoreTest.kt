@@ -90,8 +90,8 @@ class DataStoreTest {
 
     @Test
     fun dataStoreIsLoaded() {
-        driver = StatsigServer.create("secret-local", networkOptions)
-        driver.initializeAsync().get()
+        driver = StatsigServer.create()
+        driver.initializeAsync("secret-local", networkOptions).get()
 
         val res = driver.checkGateAsync(user, "gate_from_adapter_always_on").get()
         Assert.assertTrue(res)
@@ -105,8 +105,8 @@ class DataStoreTest {
             bootstrapValues = downloadConfigSpecsResponse,
             disableDiagnostics = true,
         )
-        driver = StatsigServer.create("secret-local", networkOptions)
-        driver.initializeAsync().get()
+        driver = StatsigServer.create()
+        driver.initializeAsync("secret-local", networkOptions).get()
         val dataStoreGateRes = driver.checkGateAsync(user, "gate_from_adapter_always_on").get()
         val bootstrapGateRes = driver.checkGateAsync(user, "always_on").get()
         driver.shutdown()
@@ -131,8 +131,8 @@ class DataStoreTest {
             bootstrapValues = downloadConfigSpecsResponse,
             disableDiagnostics = true,
         )
-        driver = StatsigServer.create("secret-local", networkOptions)
-        driver.initializeAsync().get()
+        driver = StatsigServer.create()
+        driver.initializeAsync("secret-local", networkOptions).get()
         val bootstrapGateRes = driver.checkGateAsync(user, "always_on").get()
         driver.shutdown()
 
@@ -147,16 +147,16 @@ class DataStoreTest {
         val networkOptions = StatsigOptions(
             api = server.url("/v1").toString(),
         )
-        driver = StatsigServer.create("secret-local", networkOptions)
-        driver.initializeAsync().get()
+        driver = StatsigServer.create()
+        driver.initializeAsync("secret-local", networkOptions).get()
 
         Assert.assertTrue(didCallDownloadConfig)
     }
 
     @Test
     fun testNetworkNotCalledWhenAdapterIsPresent() {
-        driver = StatsigServer.create("secret-local", networkOptions)
-        driver.initializeAsync().get()
+        driver = StatsigServer.create()
+        driver.initializeAsync("secret-local", networkOptions).get()
 
         Assert.assertFalse(didCallDownloadConfig)
     }
@@ -167,8 +167,8 @@ class DataStoreTest {
             api = server.url("/v1").toString(),
             bootstrapValues = downloadConfigSpecsResponse,
         )
-        driver = StatsigServer.create("secret-local", networkOptions)
-        driver.initializeAsync().get()
+        driver = StatsigServer.create()
+        driver.initializeAsync("secret-local", networkOptions).get()
 
         Assert.assertFalse(didCallDownloadConfig)
     }
@@ -179,8 +179,8 @@ class DataStoreTest {
             api = server.url("/v1").toString(),
             bootstrapValues = "invalid bootstrap values",
         )
-        driver = StatsigServer.create("secret-local", networkOptions)
-        driver.initializeAsync().get()
+        driver = StatsigServer.create()
+        driver.initializeAsync("secret-local", networkOptions).get()
 
         Assert.assertTrue(didCallDownloadConfig)
     }

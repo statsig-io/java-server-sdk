@@ -21,6 +21,7 @@ class ExposureLoggingTest {
     private lateinit var evaluator: Evaluator
     private lateinit var driver: StatsigServer
     private lateinit var user: StatsigUser
+    private lateinit var options: StatsigOptions
 
     @Before
     fun setUp() {
@@ -57,17 +58,17 @@ class ExposureLoggingTest {
             }
         }
 
-        val options = StatsigOptions().apply {
+        options = StatsigOptions().apply {
             api = server.url("/v1").toString()
             disableDiagnostics = true
         }
 
-        driver = StatsigServer.create("secret-local", options)
+        driver = StatsigServer.create()
     }
 
     @Test
     fun testManualLogLayerParameterExposure() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.manuallyLogLayerParameterExposure(user, "a_layer", "a_param")
         driver.shutdown()
 
@@ -78,7 +79,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testCheckGateWithExposureLoggingDisabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.checkGateWithExposureLoggingDisabled(user, "a_gate")
         driver.shutdown()
 
@@ -87,7 +88,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testManuallyLogGateExposure() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.manuallyLogGateExposure(user, "a_gate")
         driver.shutdown()
 
@@ -98,7 +99,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testCheckGateWithExposureLoggingEnabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.checkGate(user, "always_on_gate")
         driver.shutdown()
 
@@ -108,7 +109,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testGetConfigWithExposureLoggingDisabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.getConfigWithExposureLoggingDisabled(user, "a_config")
         driver.shutdown()
 
@@ -117,7 +118,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testGetConfigWithExposureLoggingEnabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.getConfig(user, "a_config")
         driver.shutdown()
 
@@ -127,7 +128,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testManualLogConfigExposure() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.manuallyLogConfigExposure(user, "a_config")
         driver.shutdown()
 
@@ -138,7 +139,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testGetExperimentWithExposureLoggingDisabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.getExperimentWithExposureLoggingDisabled(user, "a_config")
         driver.shutdown()
 
@@ -147,7 +148,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testGetExperimentWithExposureLoggingEnabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         driver.getExperiment(user, "a_config")
         driver.shutdown()
 
@@ -157,7 +158,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testGetLayerWithExposureLoggingDisabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         val layer = driver.getLayerWithExposureLoggingDisabled(user, "explicit_vs_implicit_parameter_layer")
         layer.getInt("an_int", 0)
         driver.shutdown()
@@ -167,7 +168,7 @@ class ExposureLoggingTest {
 
     @Test
     fun testGetLayerWithExposureLoggingEnabled() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-local", options)
         val layer = driver.getLayer(user, "explicit_vs_implicit_parameter_layer")
         layer.getInt("an_int", 0)
         driver.shutdown()
