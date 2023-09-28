@@ -2,6 +2,11 @@ name: KONG
 
 on:
   workflow_dispatch:
+    inputs:
+      kong-branch:
+        description: "Kong branch name"
+        type: string
+        required: false
   pull_request:
     branches: [main]
   push:
@@ -19,7 +24,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get KONG
-        run: git clone https://oauth2:$repo_pat@github.com/statsig-io/kong.git .
+        run: |
+          if [[ ${{ github.event_name }} == "workflow_dispatch" ]]; then
+            git clone -b ${{ inputs.kong-branch }} https://oauth2:$repo_pat@github.com/statsig-io/kong.git .
+          else
+            git clone https://oauth2:$repo_pat@github.com/statsig-io/kong.git .
+          fi
 
       - name: Install Deps
         run: npm install
