@@ -18,14 +18,14 @@ class Statsig {
             serverSecret: String,
             options: StatsigOptions,
         ) {
-            if (!::statsigServer.isInitialized) { // Quick check without synchronization
+            if (!isInitialized()) { // Quick check without synchronization
                 synchronized(this) {
-                    if (!::statsigServer.isInitialized
+                    if (!isInitialized()
                     ) { // Secondary check in case another thread already created the default server
-                        statsigServer = StatsigServer.create(serverSecret, options)
+                        statsigServer = StatsigServer.create()
                     }
                 }
-                statsigServer.initialize()
+                statsigServer.initialize(serverSecret, options)
             }
         }
 
@@ -241,7 +241,7 @@ class Statsig {
         /**
          * Sets a value to be returned for the given dynamic config/experiment instead of the actual evaluated value.
          *
-         * @param configName The name of the dynamic config or experiment to be overriden
+         * @param configName The name of the dynamic config or experiment to be overridden
          * @param configValue The value that will be returned
          */
         @JvmStatic
@@ -359,14 +359,14 @@ class Statsig {
             serverSecret: String,
             options: StatsigOptions = StatsigOptions(),
         ): CompletableFuture<Void?> {
-            if (!::statsigServer.isInitialized) { // Quick check without synchronization
+            if (!isInitialized()) { // Quick check without synchronization
                 synchronized(this) {
-                    if (!::statsigServer.isInitialized
+                    if (!isInitialized()
                     ) { // Secondary check in case another thread already created the default server
-                        statsigServer = StatsigServer.create(serverSecret, options)
+                        statsigServer = StatsigServer.create()
                     }
                 }
-                return statsigServer.initializeAsync()
+                return statsigServer.initializeAsync(serverSecret, options)
             }
             return CompletableFuture.completedFuture(null)
         }
@@ -631,12 +631,17 @@ class Statsig {
             runBlocking { statsigServer.shutdown() }
         }
 
+        @JvmStatic
+        fun isInitialized(): Boolean {
+            return ::statsigServer.isInitialized && statsigServer.initialized
+        }
+
         private fun checkInitialized(): Boolean {
-            if (!::statsigServer.isInitialized) {
+            val initialized = isInitialized()
+            if (!initialized) {
                 println("Call and wait for initialize to complete before calling SDK methods.")
-                return false
             }
-            return true
+            return initialized
         }
     }
 }

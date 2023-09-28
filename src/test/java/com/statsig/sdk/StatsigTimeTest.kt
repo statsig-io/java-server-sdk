@@ -95,7 +95,7 @@ class StatsigTimeTest {
             api = server.url("/v1").toString()
         }
 
-        driver = StatsigServer.create("secret-testcase", options)
+        driver = StatsigServer.create()
     }
 
     @After
@@ -105,7 +105,7 @@ class StatsigTimeTest {
 
     @Test
     fun testAfter() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val isoUser = StatsigUser("123").apply {
             email = "testuser@statsig.com"
             custom = mapOf(
@@ -127,7 +127,7 @@ class StatsigTimeTest {
 
     @Test
     fun testBefore() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val isoUser = StatsigUser("123").apply {
             email = "testuser@statsig.com"
             custom = mapOf(

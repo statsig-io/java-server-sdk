@@ -23,6 +23,7 @@ public class ExposureLoggingTestJava {
     private CompletableFuture<LogEventInput> eventLogInputCompletable;
     private StatsigServer driver;
     private StatsigUser user;
+    private StatsigOptions options;
 
     @Before
     public void setUp() {
@@ -61,16 +62,16 @@ public class ExposureLoggingTestJava {
         MockWebServer server = new MockWebServer();
         server.setDispatcher(dispatcher);
 
-        StatsigOptions options = new StatsigOptions();
+        options = new StatsigOptions();
         options.setDisableDiagnostics(true);
         options.setApi(server.url("/v1").toString());
 
-        driver = StatsigServer.create("secret-local", options);
+        driver = StatsigServer.create();
     }
 
     @Test
     public void testManualLogLayerParameterExposureAsync() throws ExecutionException, InterruptedException {
-        driver.initializeAsync().get();
+        driver.initializeAsync("secret-local", options).get();
         driver.manuallyLogLayerParameterExposureAsync(user, "a_layer", "a_param").get();
         driver.shutdown();
 
@@ -81,7 +82,7 @@ public class ExposureLoggingTestJava {
 
     @Test
     public void testManuallyLogGateExposureAsync() throws ExecutionException, InterruptedException {
-        driver.initializeAsync().get();
+        driver.initializeAsync("secret-local", options).get();
         driver.manuallyLogGateExposureAsync(user, "a_gate").get();
         driver.shutdown();
 
@@ -92,7 +93,7 @@ public class ExposureLoggingTestJava {
 
     @Test
     public void testManuallyLogConfigExposureAsync() throws ExecutionException, InterruptedException {
-        driver.initializeAsync().get();
+        driver.initializeAsync("secret-local", options).get();
         driver.manuallyLogConfigExposureAsync(user, "a_config").get();
         driver.shutdown();
 
@@ -104,7 +105,7 @@ public class ExposureLoggingTestJava {
     // TODO: call manuallyExperimentExposureAsync from top level.
     @Test
     public void testManuallyLogExperimentExposureAsync() throws ExecutionException, InterruptedException {
-        driver.initializeAsync().get();
+        driver.initializeAsync("secret-local", options).get();
         driver.manuallyLogConfigExposureAsync(user, "an_experiment").get();
         driver.shutdown();
 

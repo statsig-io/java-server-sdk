@@ -21,8 +21,8 @@ public class EvaluatorTest {
 
     @Test
     public void testIP3Country() throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException {
-        StatsigServer driver = StatsigServer.create("secret-local", new StatsigOptions());
-        driver.initializeAsync().get();
+        StatsigServer driver = StatsigServer.create();
+        driver.initializeAsync("secret-local", new StatsigOptions()).get();
 
         SpecStore specStore = TestUtilJava.getSpecStoreFromStatsigServer(driver);
         Evaluator eval = TestUtilJava.getEvaluatorFromStatsigServer(driver);
@@ -75,8 +75,8 @@ public class EvaluatorTest {
 
     @Test
     public void testCaseSensitivity() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException, ExecutionException, InterruptedException {
-        StatsigServer driver = StatsigServer.create("secret-local", new StatsigOptions());
-        driver.initializeAsync().get();
+        StatsigServer driver = StatsigServer.create();
+        driver.initializeAsync("secret-local", new StatsigOptions()).get();
 
         Evaluator eval = TestUtilJava.getEvaluatorFromStatsigServer(driver);
 

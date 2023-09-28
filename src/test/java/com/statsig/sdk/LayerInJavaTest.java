@@ -28,8 +28,8 @@ public class LayerInJavaTest {
             assertEquals(configs.getDynamicConfigs().length, 0);
             assertEquals(configs.getLayerConfigs().length, 0);
         });
-        driver = StatsigServer.create("secret-test", options);
-        Future initFuture = driver.initializeAsync();
+        driver = StatsigServer.create();
+        Future initFuture = driver.initializeAsync("secret-test", options);
         initFuture.get();
     }
 

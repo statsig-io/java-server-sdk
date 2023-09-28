@@ -3,22 +3,26 @@ package com.statsig.sdk
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.*
 import kotlinx.coroutines.future.future
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.Collections.emptyMap
 import java.util.concurrent.CompletableFuture
 
 sealed class StatsigServer {
-    internal abstract val errorBoundary: ErrorBoundary
+    internal abstract var errorBoundary: ErrorBoundary
+    abstract var initialized: Boolean
 
-    @JvmSynthetic abstract suspend fun initialize()
+    @JvmSynthetic abstract fun setup(
+        serverSecret: String,
+        options: StatsigOptions,
+    )
+
+    @JvmSynthetic abstract suspend fun initialize(
+        serverSecret: String,
+        options: StatsigOptions,
+    )
 
     @JvmSynthetic abstract suspend fun checkGate(user: StatsigUser, gateName: String): Boolean
 
@@ -105,7 +109,7 @@ sealed class StatsigServer {
         metadata: Map<String, String>? = null,
     )
 
-    abstract fun initializeAsync(): CompletableFuture<Void?>
+    abstract fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<Void?>
 
     abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
     abstract fun checkGateWithExposureLoggingDisabledAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
@@ -169,42 +173,43 @@ sealed class StatsigServer {
 
         @JvmStatic
         @JvmOverloads
-        fun create(
-            serverSecret: String,
-            options: StatsigOptions = StatsigOptions(),
-        ): StatsigServer = StatsigServerImpl(serverSecret, options)
+        fun create(): StatsigServer = StatsigServerImpl()
     }
 }
 
-private class StatsigServerImpl(serverSecret: String, private val options: StatsigOptions) :
+private class StatsigServerImpl() :
     StatsigServer() {
-
-    init {
-        if (serverSecret.isEmpty() || !serverSecret.startsWith("secret-")) {
-            throw StatsigUninitializedException(
-                "Statsig Server SDKs must be initialized with a secret key",
-            )
-        }
-    }
 
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
-    override val errorBoundary = ErrorBoundary(serverSecret, options)
-    private val coroutineExceptionHandler =
-        CoroutineExceptionHandler { _, ex ->
+    override lateinit var errorBoundary: ErrorBoundary
+    private lateinit var coroutineExceptionHandler: CoroutineExceptionHandler
+    private lateinit var statsigJob: CompletableJob
+    private lateinit var statsigScope: CoroutineScope
+    private lateinit var network: StatsigNetwork
+    private lateinit var logger: StatsigLogger
+    private lateinit var configEvaluator: Evaluator
+    private lateinit var diagnostics: Diagnostics
+    private var options: StatsigOptions = StatsigOptions()
+    private val mutex = Mutex()
+    private val statsigMetadata = StatsigMetadata.asMap()
+    override var initialized = false
+
+    override fun setup(serverSecret: String, options: StatsigOptions) {
+        errorBoundary = ErrorBoundary(serverSecret, options)
+        coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
             // no-op - supervisor job should not throw when a child fails
             errorBoundary.logException("coroutineExceptionHandler", ex)
         }
-    private val statsigJob = SupervisorJob()
-    private val statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
-    private val mutex = Mutex()
-    private val statsigMetadata = StatsigMetadata.asMap()
-    private val network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary)
-    private var logger: StatsigLogger = StatsigLogger(statsigScope, network, statsigMetadata)
-    private lateinit var configEvaluator: Evaluator
-    private lateinit var diagnostics: Diagnostics
+        statsigJob = SupervisorJob()
+        statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
+        network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary)
+        logger = StatsigLogger(statsigScope, network, statsigMetadata)
+        this.options = options
+    }
 
-    override suspend fun initialize() {
+    override suspend fun initialize(serverSecret: String, options: StatsigOptions) {
+        setup(serverSecret, options)
         errorBoundary.capture(
             "initialize",
             {
@@ -218,6 +223,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
                     configEvaluator =
                         Evaluator(network, options, statsigScope, errorBoundary, diagnostics)
                     configEvaluator.initialize()
+                    initialized = true
                     endInitDiagnostics(isSDKInitialized())
                 }
             },
@@ -472,6 +478,7 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
             configEvaluator.shutdown()
             statsigJob.cancelAndJoin()
             statsigScope.cancel()
+            initialized = false
         }
     }
 
@@ -503,9 +510,10 @@ private class StatsigServerImpl(serverSecret: String, private val options: Stats
         }, { return@captureSync })
     }
 
-    override fun initializeAsync(): CompletableFuture<Void?> {
+    override fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<Void?> {
+        setup(serverSecret, options)
         return statsigScope.future {
-            initialize()
+            initialize(serverSecret, options)
             null
         }
     }
