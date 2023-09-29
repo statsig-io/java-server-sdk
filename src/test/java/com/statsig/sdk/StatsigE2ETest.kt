@@ -235,7 +235,6 @@ class StatsigE2ETest {
         val eventLogInput = withTimeout(TEST_TIMEOUT) {
             eventLogInputCompletable.await()
         }
-
         assert(eventLogInput.events.size == 3)
         assert(eventLogInput.events[0].eventName == "statsig::gate_exposure")
         assert(eventLogInput.events[0].eventMetadata!!["gate"].equals("always_on_gate"))
@@ -292,6 +291,12 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventMetadata!!["config"].equals("test_config"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("1kNmlB23wylPFZi1M0Divl"))
         assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
+        val statsigMetadata = eventLogInput.events[0].statsigMetadata!!
+        assert(statsigMetadata != null)
+        assert(statsigMetadata.languageVersion != null)
+        assert(statsigMetadata.sdkType == "java-server")
+        assert(statsigMetadata.sessionID != null)
+        assert(statsigMetadata.exposureLoggingDisabled == null)
 
         assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["config"].equals("test_config"))

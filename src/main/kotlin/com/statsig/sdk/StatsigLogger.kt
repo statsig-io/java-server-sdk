@@ -33,7 +33,7 @@ internal fun safeAddEvaluationToEvent(evaluationDetails: EvaluationDetails?, met
 internal class StatsigLogger(
     private val coroutineScope: CoroutineScope,
     private val network: StatsigNetwork,
-    private val statsigMetadata: Map<String, String>,
+    private val statsigMetadata: StatsigMetadata,
 ) {
 
     private val executor = Executors.newSingleThreadExecutor()

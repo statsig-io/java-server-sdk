@@ -32,12 +32,11 @@ class NetworkTest {
         successResponse.setBody("{}")
         server.enqueue(successResponse)
 
-        val metadata: MutableMap<String, String> = HashMap()
-        metadata["sdkType"] = "test"
+        val metadata = StatsigMetadata()
         val options = StatsigOptions()
         options.api = server.url("/v1").toString()
 
-        val eb = ErrorBoundary("", options)
+        val eb = ErrorBoundary("", options, metadata)
         val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, 1))
 
         net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)

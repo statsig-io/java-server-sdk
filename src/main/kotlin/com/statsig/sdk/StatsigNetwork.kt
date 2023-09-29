@@ -27,7 +27,7 @@ private const val MS_IN_S: Long = 1000
 internal class StatsigNetwork(
     private val sdkKey: String,
     private val options: StatsigOptions,
-    private val statsigMetadata: Map<String, String>,
+    private val statsigMetadata: StatsigMetadata,
     private val errorBoundary: ErrorBoundary,
     private val backoffMultiplier: Int = BACKOFF_MULTIPLIER,
 ) {
@@ -60,8 +60,8 @@ internal class StatsigNetwork(
                     .addHeader("STATSIG-API-KEY", sdkKey)
                     .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
                     .addHeader("STATSIG-SERVER-SESSION-ID", serverSessionID)
-                    .addHeader("STATSIG-SDK-TYPE", statsigMetadata["sdkType"] ?: "")
-                    .addHeader("STATSIG-SDK-VERSION", statsigMetadata["sdkVersion"] ?: "")
+                    .addHeader("STATSIG-SDK-TYPE", statsigMetadata.sdkType)
+                    .addHeader("STATSIG-SDK-VERSION", statsigMetadata.sdkVersion)
                     .method(original.method, original.body)
                     .build()
                 it.proceed(request)
@@ -91,12 +91,12 @@ internal class StatsigNetwork(
     }
 
     suspend fun checkGate(user: StatsigUser?, gateName: String, disableExposureLogging: Boolean): ConfigEvaluation {
-        val exposureLoggingMap = mapOf("exposureLoggingDisabled" to disableExposureLogging)
+        statsigMetadata.exposureLoggingDisabled = disableExposureLogging
         val bodyJson = gson.toJson(
             mapOf(
                 "gateName" to gateName,
                 "user" to user,
-                "statsigMetadata" to statsigMetadata + exposureLoggingMap,
+                "statsigMetadata" to statsigMetadata,
             ),
         )
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
@@ -117,14 +117,15 @@ internal class StatsigNetwork(
     }
 
     suspend fun getConfig(user: StatsigUser?, configName: String, disableExposureLogging: Boolean): ConfigEvaluation {
-        val exposureLoggingMap = mapOf("exposureLoggingDisabled" to disableExposureLogging)
+        statsigMetadata.exposureLoggingDisabled = disableExposureLogging
         val bodyJson = gson.toJson(
             mapOf(
                 "configName" to configName,
                 "user" to user,
-                "statsigMetadata" to statsigMetadata + exposureLoggingMap,
+                "statsigMetadata" to statsigMetadata,
             ),
         )
+        statsigMetadata.exposureLoggingDisabled = null
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
@@ -196,13 +197,13 @@ internal class StatsigNetwork(
         }
     }
 
-    suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: Map<String, String>) {
+    suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: StatsigMetadata) {
         retryPostLogs(events, statsigMetadata, 5, 1)
     }
 
     suspend fun retryPostLogs(
         events: List<StatsigEvent>,
-        statsigMetadata: Map<String, String>,
+        statsigMetadata: StatsigMetadata,
         retries: Int,
         backoff: Int,
     ) {

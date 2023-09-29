@@ -36,6 +36,7 @@ internal class Evaluator(
     private val statsigScope: CoroutineScope,
     private val errorBoundary: ErrorBoundary,
     private val diagnostics: Diagnostics,
+    private val statsigMetadata: StatsigMetadata,
 ) {
     private var specStore: SpecStore
     private val uaParser: Parser by lazy {
@@ -55,7 +56,7 @@ internal class Evaluator(
 
     init {
         CountryLookup.initialize()
-        specStore = SpecStore(this.network, this.options, StatsigMetadata(), statsigScope, errorBoundary, diagnostics)
+        specStore = SpecStore(this.network, this.options, statsigMetadata, statsigScope, errorBoundary, diagnostics)
         network.setDiagnostics(diagnostics)
 
         statsigScope.launch {

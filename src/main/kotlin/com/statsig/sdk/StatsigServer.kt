@@ -1,6 +1,5 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.*
@@ -192,11 +191,11 @@ private class StatsigServerImpl() :
     private lateinit var diagnostics: Diagnostics
     private var options: StatsigOptions = StatsigOptions()
     private val mutex = Mutex()
-    private val statsigMetadata = StatsigMetadata.asMap()
+    private val statsigMetadata = StatsigMetadata()
     override var initialized = false
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
-        errorBoundary = ErrorBoundary(serverSecret, options)
+        errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
         coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
             // no-op - supervisor job should not throw when a child fails
             errorBoundary.logException("coroutineExceptionHandler", ex)
@@ -221,7 +220,7 @@ private class StatsigServerImpl() :
                     }
                     setupAndStartDiagnostics()
                     configEvaluator =
-                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics)
+                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics, statsigMetadata)
                     configEvaluator.initialize()
                     initialized = true
                     endInitDiagnostics(isSDKInitialized())
@@ -686,7 +685,7 @@ private class StatsigServerImpl() :
                             normalizedUser,
                             layer,
                             paramName,
-                            Gson().toJson(metadata),
+                            gson.toJson(metadata),
                         ),
                     )
                 } else {
