@@ -41,7 +41,7 @@ class DiagnosticsTest {
     @Test
     fun testInitialize() = runBlocking {
         setupWebServer(downloadConfigSpecsResponse)
-        driver.initializeAsync().get()
+        driver.initializeAsync("secret-testcase", options).get()
         driver.shutdown()
         val events = TestUtil.captureEvents(eventLogInputCompletable)
         val diagnosticsEvent = events.find { it.eventName == "statsig::diagnostics" }
@@ -61,7 +61,7 @@ class DiagnosticsTest {
     fun testSamping() = runBlocking {
         val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\"}").toString()
         setupWebServer(downloadConfigSpecsResponseWithSampling)
-        driver.initializeAsync().get()
+        driver.initializeAsync("secret-testcase", options).get()
         driver.shutdown()
         Assert.assertFalse(
             "should not have called log_event endpoint",
@@ -91,7 +91,7 @@ class DiagnosticsTest {
             options = StatsigOptions().apply {
                 api = server.url("/v1").toString()
             }
-            driver = StatsigServer.create("secret-testcase", options)
+            driver = StatsigServer.create()
         }
     }
 

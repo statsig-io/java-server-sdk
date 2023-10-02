@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets
 class ErrorBoundaryTest {
     private lateinit var boundary: ErrorBoundary
     private lateinit var server: MockWebServer
+    private lateinit var statsigMetadata: StatsigMetadata
 
     @Before
     internal fun setup() {
@@ -31,8 +32,8 @@ class ErrorBoundaryTest {
                 }
             }
         }
-
-        boundary = ErrorBoundary("secret-key", StatsigOptions())
+        statsigMetadata = StatsigMetadata()
+        boundary = ErrorBoundary("secret-key", StatsigOptions(), statsigMetadata)
         boundary.uri = server.url("/v1/sdk_exception").toUri()
     }
 
@@ -75,7 +76,7 @@ class ErrorBoundaryTest {
         boundary.swallow("") { throw IOException() }
 
         val body = Gson().fromJson(server.takeRequest().body.readUtf8(), Map::class.java)
-        assertEquals(body["statsigMetadata"], StatsigMetadata.asMap())
+        assertEquals(body["statsigMetadata"], Gson().fromJson(statsigMetadata.asJson(), Map::class.java))
     }
 
     @Test

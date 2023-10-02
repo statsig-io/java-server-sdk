@@ -1,9 +1,6 @@
 package com.statsig.sdk
 
-import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockkConstructor
-import io.mockk.unmockkAll
+import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -68,14 +65,20 @@ class StatsigErrorBoundaryUsage {
     }
 
     private fun getStatsigInstance(shouldInitialize: Boolean = true) = runBlocking {
-        val statsig = StatsigServer.create("secret-key", StatsigOptions(api = "http://localhost", disableDiagnostics = true))
+        val statsig = spyk(StatsigServer.create())
+        every {
+            statsig.setup(any(), any())
+        } answers {
+            callOriginal()
+            statsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
+        }
+
         if (shouldInitialize) {
             runBlocking {
-                statsig.initialize()
+                statsig.initialize("secret-key", StatsigOptions(disableDiagnostics = true))
             }
         }
 
-        statsig.errorBoundary.uri = server.url("/v1/sdk_exception").toUri()
         return@runBlocking statsig
     }
 
@@ -92,7 +95,7 @@ class StatsigErrorBoundaryUsage {
         throwOnDownloadConfigSpecs = true
 
         runBlocking {
-            statsig.initialize()
+            statsig.initialize("secret-key", StatsigOptions(disableDiagnostics = true))
         }
 
         assertEquals(1, requests.size)

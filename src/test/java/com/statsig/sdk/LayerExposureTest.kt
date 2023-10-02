@@ -68,16 +68,16 @@ class LayerExposureTest {
             }
         }
 
-        val options = StatsigOptions().apply {
+        options = StatsigOptions().apply {
             api = server.url("/v1").toString()
             disableDiagnostics = true
         }
-        driver = StatsigServer.create("secret-testcase", options)
+        driver = StatsigServer.create()
     }
 
     @Test
     fun testDoesNotLogOnGetLayer() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         driver.getLayer(user, "unallocated_layer")
         driver.shutdown()
 
@@ -86,7 +86,7 @@ class LayerExposureTest {
 
     @Test
     fun testDoesNotLogOnInvalidType() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val layer = driver.getLayer(user, "unallocated_layer")
         layer.getString("an_int", "err")
         driver.shutdown()
@@ -96,7 +96,7 @@ class LayerExposureTest {
 
     @Test
     fun testDoesNotLogNonExistentKeys() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val layer = driver.getLayer(user, "unallocated_layer")
         layer.getString("a_string", "err")
         driver.shutdown()
@@ -106,7 +106,7 @@ class LayerExposureTest {
 
     @Test
     fun testUnallocatedLayerLogging() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val layer = driver.getLayer(user, "unallocated_layer")
         layer.getInt("an_int", 0)
         driver.shutdown()
@@ -140,7 +140,7 @@ class LayerExposureTest {
 
     @Test
     fun testExplicitVsImplicitParameterLogging() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val layer = driver.getLayer(user, "explicit_vs_implicit_parameter_layer")
         stutter { layer.getInt("an_int", 0) }
         stutter { layer.getString("a_string", "err") }
@@ -200,7 +200,7 @@ class LayerExposureTest {
 
     @Test
     fun testDifferentObjectTypeLogging() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val layer = driver.getLayer(user, "different_object_type_logging_layer")
         stutter { layer.getBoolean("a_bool", false) }
         stutter { layer.getInt("an_int", 0) }
@@ -230,7 +230,7 @@ class LayerExposureTest {
         val user = StatsigUser("dloomb")
         user.email = "dan@statsigly.com"
 
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val layer = driver.getLayer(user, "unallocated_layer")
         layer.getInt("an_int", 0)
         driver.shutdown()

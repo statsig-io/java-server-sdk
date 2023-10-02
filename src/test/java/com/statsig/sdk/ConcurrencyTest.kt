@@ -90,7 +90,7 @@ class ConcurrencyTest {
             }
         }
 
-        val options = StatsigOptions().apply {
+        options = StatsigOptions().apply {
             api = server.url("/v1").toString()
             disableDiagnostics = true
 
@@ -98,12 +98,12 @@ class ConcurrencyTest {
             rulesetsSyncIntervalMs = 10
             idListsSyncIntervalMs = 10
         }
-        driver = StatsigServer.create("secret-testcase", options)
+        driver = StatsigServer.create()
     }
 
     @Test
     fun testCallingAPIsFromDifferentThreads() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val threads = arrayListOf<Thread>()
         for (i in 1..20) {
             val t =

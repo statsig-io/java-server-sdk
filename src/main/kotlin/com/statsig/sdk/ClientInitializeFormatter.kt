@@ -18,11 +18,7 @@ internal data class ClientInitializeResponse(
     fun toMap(): Map<String, Any> {
         val gson = Gson()
         val json = gson.toJson(this)
-        return try {
-            return gson.fromJson(json, object : TypeToken<Map<String, Any>>() {}.type)
-        } catch (e: Exception) {
-            emptyMap()
-        }
+        return gson.fromJson(json, object : TypeToken<Map<String, Any>>() {}.type)
     }
 }
 

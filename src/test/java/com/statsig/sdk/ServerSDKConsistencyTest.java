@@ -59,8 +59,8 @@ public class ServerSDKConsistencyTest {
         System.out.println("Testing for " + api);
         String response = this.postRequestRulesetsTest(api);
         APITestDataSet[] data = gson.fromJson(response, APIEvaluationConsistencyTestData.class).getData();
-        StatsigServer driver = StatsigServer.create(secret, new StatsigOptions(api));
-        Future initFuture = driver.initializeAsync();
+        StatsigServer driver = StatsigServer.create();
+        Future initFuture = driver.initializeAsync(secret, new StatsigOptions(api));
         initFuture.get();
 
         Evaluator evaluator = TestUtilJava.getEvaluatorFromStatsigServer(driver);

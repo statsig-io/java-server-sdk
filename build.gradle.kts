@@ -21,6 +21,7 @@ repositories {
 
 configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
     verbose.set(true)
+    disabledRules.set(setOf("no-wildcard-imports"))
 }
 
 dependencies {

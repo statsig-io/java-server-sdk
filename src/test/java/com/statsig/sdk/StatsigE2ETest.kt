@@ -205,7 +205,7 @@ class StatsigE2ETest {
         }
 
         randomUser = StatsigUser("random")
-        driver = StatsigServer.create("secret-testcase", options)
+        driver = StatsigServer.create()
     }
 
     @After
@@ -225,7 +225,7 @@ class StatsigE2ETest {
     }
 
     private fun featureGateHelper() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val now = System.currentTimeMillis()
         assert(driver.checkGate(statsigUser, "always_on_gate"))
         assert(driver.checkGate(statsigUser, "on_for_statsig_email"))
@@ -235,7 +235,6 @@ class StatsigE2ETest {
         val eventLogInput = withTimeout(TEST_TIMEOUT) {
             eventLogInputCompletable.await()
         }
-
         assert(eventLogInput.events.size == 3)
         assert(eventLogInput.events[0].eventName == "statsig::gate_exposure")
         assert(eventLogInput.events[0].eventMetadata!!["gate"].equals("always_on_gate"))
@@ -268,7 +267,7 @@ class StatsigE2ETest {
     }
 
     private fun dynamicConfigHelper() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val now = System.currentTimeMillis()
         var config = driver.getConfig(statsigUser, "test_config")
         assert(config.getInt("number", 0) == 7)
@@ -292,6 +291,12 @@ class StatsigE2ETest {
         assert(eventLogInput.events[0].eventMetadata!!["config"].equals("test_config"))
         assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("1kNmlB23wylPFZi1M0Divl"))
         assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
+        val statsigMetadata = eventLogInput.events[0].statsigMetadata!!
+        assert(statsigMetadata != null)
+        assert(statsigMetadata.languageVersion != null)
+        assert(statsigMetadata.sdkType == "java-server")
+        assert(statsigMetadata.sessionID != null)
+        assert(statsigMetadata.exposureLoggingDisabled == null)
 
         assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
         assert(eventLogInput.events[1].eventMetadata!!["config"].equals("test_config"))
@@ -311,7 +316,7 @@ class StatsigE2ETest {
     }
 
     private fun experimentHelper() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val now = System.currentTimeMillis()
         var config = driver.getExperiment(statsigUser, "sample_experiment")
         assert(config.getString("experiment_param", "") == "test")
@@ -348,7 +353,7 @@ class StatsigE2ETest {
     }
 
     private fun logEventHelper() = runBlocking {
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
         val now = System.currentTimeMillis()
         driver.logEvent(statsigUser, "purchase", 2.99, mapOf("item_name" to "remove_ads"))
         driver.shutdown()
@@ -375,7 +380,7 @@ class StatsigE2ETest {
             disableDiagnostics = true
         }
 
-        driver = StatsigServer.create("secret-testcase", options)
+        driver = StatsigServer.create()
         backgroundSyncHelper()
     }
 
@@ -408,7 +413,7 @@ class StatsigE2ETest {
             }
         }
 
-        driver = StatsigServer.create("secret-testcase", options)
+        driver = StatsigServer.create()
     }
 
     @Test
@@ -439,7 +444,7 @@ class StatsigE2ETest {
     private fun backgroundSyncHelper(withBootstrap: Boolean = false) = runBlocking {
         download_list_1_count = 0
         download_list_2_count = 0
-        driver.initialize()
+        driver.initialize("secret-testcase", options)
 
         val specStore = TestUtil.getSpecStoreFromStatsigServer(driver)
 

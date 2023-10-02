@@ -8,7 +8,7 @@ import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-internal class ErrorBoundary(private val apiKey: String, private val options: StatsigOptions) {
+internal class ErrorBoundary(private val apiKey: String, private val options: StatsigOptions, private val statsigMetadata: StatsigMetadata) {
     internal var uri = URI("https://statsigapi.net/v1/sdk_exception")
     private val seen = HashSet<String>()
     private val maxInfoLength = 3000
@@ -68,7 +68,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 "tag": "$tag",
                 "exception": "${ex.javaClass.name}",
                 "info": "$safeInfo",
-                "statsigMetadata": ${StatsigMetadata.asJson()}
+                "statsigMetadata": ${statsigMetadata.asJson()}
             }
             """.trimIndent()
             val req =
