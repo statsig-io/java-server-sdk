@@ -2,6 +2,7 @@ package com.statsig.sdk
 
 import com.google.gson.annotations.SerializedName
 import java.lang.StringBuilder
+import java.util.TreeMap
 
 /**
  * An object of properties relating to the current user
@@ -72,6 +73,31 @@ data class StatsigUser private constructor(
         userCopy.privateAttributes = null
 
         return userCopy
+    }
+
+    fun getHashWithoutStableID(): String {
+        val map = TreeMap<String, Any>()
+        userID?.let { map.put("userID", it) }
+        email?.let { map.put("email", it) }
+        ip?.let { map.put("ip", it) }
+        userAgent?.let { map.put("userAgent", it) }
+        country?.let { map.put("country", it) }
+        locale?.let { map.put("locale", it) }
+        appVersion?.let { map.put("appVersion", it) }
+        statsigEnvironment?.let { map.put("statsigEnvironment", it.toSortedMap()) }
+        val sortedCustomIDs = TreeMap<String, String>()
+        if (customIDs != null) {
+            for (key in customIDs!!.keys) {
+                if (key == "stableID") {
+                    continue
+                }
+                sortedCustomIDs.put(key, customIDs!![key]!!)
+            }
+        }
+        map.put("customIDs", sortedCustomIDs)
+        custom?.let { map.put("custom", Utils.sortMap(it)) }
+        privateAttributes?.let { map.put("privateAttributes", Utils.sortMap(it)) }
+        return Hashing.djb2ForMap(map)
     }
 
     override fun toString(): String {
