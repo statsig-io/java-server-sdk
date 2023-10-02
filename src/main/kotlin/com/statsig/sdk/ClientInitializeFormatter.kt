@@ -14,6 +14,7 @@ internal data class ClientInitializeResponse(
     @SerializedName("generator") var generator: String,
     @SerializedName("evaluated_keys") var evaluated_keys: Map<String, Any>,
     @SerializedName("hash_used") var hash_used: String,
+    @SerializedName("user_hash") var user_hash: String,
 ) {
     fun toMap(): Map<String, Any> {
         val gson = Gson()
@@ -81,6 +82,7 @@ internal class ClientInitializeFormatter(
             "statsig-java-sdk",
             evaluatedKeys,
             this.hash.toString().lowercase(),
+            user.getHashWithoutStableID(),
         ).toMap()
     }
 
