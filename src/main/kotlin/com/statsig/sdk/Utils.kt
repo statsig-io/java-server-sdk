@@ -12,17 +12,20 @@ internal class Utils {
             return value?.toString() ?: ""
         }
 
-        fun sortMap(map: Map<String, Any>): SortedMap<String, Any> {
+        fun sortMap(map: Map<*, *>): SortedMap<String, Any> {
             val sortedMap = TreeMap<String, Any>()
             for (key in map.keys) {
                 val value = map[key]
+
                 if (value == null) {
                     continue
                 }
-                if (value is Map<*, *>) {
-                    sortedMap.put(key, sortMap(value as Map<String, Any>))
-                } else {
-                    sortedMap.put(key, value)
+                if (key is String) {
+                    if (value is Map<*, *>) {
+                        sortedMap.put(key, sortMap(value))
+                    } else {
+                        sortedMap.put(key, value)
+                    }
                 }
             }
             return sortedMap
