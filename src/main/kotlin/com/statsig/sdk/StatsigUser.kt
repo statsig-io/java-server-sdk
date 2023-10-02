@@ -85,7 +85,7 @@ data class StatsigUser private constructor(
         locale?.let { map.put("locale", it) }
         appVersion?.let { map.put("appVersion", it) }
         statsigEnvironment?.let { map.put("statsigEnvironment", it.toSortedMap()) }
-        val sortedCustomIDs = TreeMap<String, String>();
+        val sortedCustomIDs = TreeMap<String, String>()
         if (customIDs != null) {
             for (key in customIDs!!.keys) {
                 if (key == "stableID") {
@@ -97,7 +97,6 @@ data class StatsigUser private constructor(
         map.put("customIDs", sortedCustomIDs)
         custom?.let { map.put("custom", Utils.sortMap(it)) }
         privateAttributes?.let { map.put("privateAttributes", Utils.sortMap(it)) }
-        
         return Hashing.djb2ForMap(map)
     }
 

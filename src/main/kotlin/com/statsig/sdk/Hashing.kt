@@ -3,7 +3,6 @@ package com.statsig.sdk
 import com.google.gson.Gson
 import java.security.MessageDigest
 import java.util.Base64
-import java.util.SortedMap
 
 enum class HashAlgo {
     SHA256,
