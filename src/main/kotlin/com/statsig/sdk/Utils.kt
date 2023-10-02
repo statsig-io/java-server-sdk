@@ -21,8 +21,7 @@ internal class Utils {
                 }
                 if (value is Map<*, *>) {
                     sortedMap.put(key, sortMap(value as Map<String, Any>))
-                }
-                else {
+                } else {
                     sortedMap.put(key, value)
                 }
             }
