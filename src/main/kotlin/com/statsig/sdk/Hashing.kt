@@ -1,7 +1,9 @@
 package com.statsig.sdk
 
+import com.google.gson.Gson
 import java.security.MessageDigest
 import java.util.Base64
+import java.util.SortedMap
 
 enum class HashAlgo {
     SHA256,
@@ -18,6 +20,11 @@ class Hashing {
                 hash = hash and hash // Convert to 32-bit integer
             }
             return hash.toUInt().toString()
+        }
+
+        fun djb2ForMap(map: Map<String, Any>): String {
+            val gson = Gson()
+            return djb2(gson.toJson(Utils.sortMap(map)))
         }
 
         fun sha256(input: String): String {
