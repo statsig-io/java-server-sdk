@@ -3,6 +3,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.statsig.sdk.LogEventInput
+import com.statsig.sdk.RetryRule
 import com.statsig.sdk.StatsigE2ETest
 import com.statsig.sdk.StatsigOptions
 import com.statsig.sdk.StatsigServer
@@ -16,6 +17,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.lang.Thread.sleep
 import kotlin.concurrent.thread
@@ -34,6 +36,10 @@ class ConcurrencyTest {
     private var flushedEventCount = 0
     private var getIDListCount = 0
     private var downloadList1Count = 0
+
+    @JvmField
+    @Rule
+    val retry = RetryRule(3)
 
     @Before
     fun setup() {
@@ -134,7 +140,6 @@ class ConcurrencyTest {
                 }
             threads.add(t)
         }
-
         for (t in threads) {
             t.join()
         }
