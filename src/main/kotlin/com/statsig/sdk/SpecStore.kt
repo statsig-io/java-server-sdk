@@ -35,6 +35,7 @@ internal class SpecStore constructor(
     private var layers: Map<String, Array<String>> = HashMap()
     private var idLists: MutableMap<String, IDList> = HashMap()
     private var sdkKeysToAppIDs: Map<String, String> = HashMap()
+    private var hashedSDKKeysToAppIDs: Map<String, String> = HashMap()
 
     private var layerConfigs: Map<String, APIConfig> = emptyMap()
     private var experimentToLayer: Map<String, String> = emptyMap()
@@ -264,6 +265,7 @@ internal class SpecStore constructor(
         this.experimentToLayer = newExperimentToLayer
         this.lastUpdateTime = downloadedConfig.time
         this.sdkKeysToAppIDs = downloadedConfig.sdkKeysToAppIDs ?: mapOf()
+        this.hashedSDKKeysToAppIDs = downloadedConfig.hashedSDKKeysToAppIDs ?: mapOf()
 
         if (downloadedConfig.diagnostics != null) {
             diagnostics.setSamplingRate(downloadedConfig.diagnostics)
@@ -328,6 +330,9 @@ internal class SpecStore constructor(
     }
 
     fun getAppIDFromKey(clientSDKKey: String): String? {
+        if (this.hashedSDKKeysToAppIDs.containsKey(Hashing.djb2(clientSDKKey))) {
+            return this.hashedSDKKeysToAppIDs[Hashing.djb2(clientSDKKey)]
+        }
         return this.sdkKeysToAppIDs[clientSDKKey]
     }
 
