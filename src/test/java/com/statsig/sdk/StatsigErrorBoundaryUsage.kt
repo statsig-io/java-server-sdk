@@ -46,14 +46,17 @@ class StatsigErrorBoundaryUsage {
             }
 
             server = MockWebServer()
-            server.dispatcher =
-                object : Dispatcher() {
+            server.apply {
+                dispatcher = object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
-                        requests.add(request)
+                        if (request.path == "/v1/sdk_exception") {
+                            requests.add(request)
+                        }
                         onRequestWaiter.countDown()
-                        return MockResponse().setResponseCode(202)
+                        return MockResponse().setResponseCode(200).setBody("{}")
                     }
                 }
+            }
         }
 
         @AfterClass
@@ -75,7 +78,9 @@ class StatsigErrorBoundaryUsage {
 
         if (shouldInitialize) {
             runBlocking {
-                statsig.initialize("secret-key", StatsigOptions(disableDiagnostics = true))
+                println("ha")
+                statsig.initialize("secret-key", StatsigOptions(disableDiagnostics = true, api = server.url("/v1").toString()))
+                println("ha1")
             }
         }
 
