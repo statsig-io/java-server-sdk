@@ -93,7 +93,9 @@ internal class Evaluator(
                 percent = (cond.targetValue.toDouble() - previousAllocation) / 1000.0
                 previousAllocation = cond.targetValue.toDouble()
             }
-            variants[r.groupName] = mapOf("value" to value, "percent" to percent)
+            if (r.groupName != null) {
+                variants[r.groupName] = mapOf("value" to value, "percent" to percent)
+            }
         }
         return variants
     }
@@ -288,7 +290,7 @@ internal class Evaluator(
             booleanValue = false,
             config.defaultValue,
             "default",
-            "",
+            null,
             secondaryExposures,
             evaluationDetails = evaluationDetails,
         )
@@ -400,7 +402,7 @@ internal class Evaluator(
                         },
                         result.jsonValue,
                         "",
-                        "",
+                        null,
                         secondaryExposures,
                     )
                 }
