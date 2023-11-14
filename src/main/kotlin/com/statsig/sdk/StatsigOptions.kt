@@ -1,11 +1,5 @@
 package com.statsig.sdk
 
-enum class Tier {
-    PRODUCTION,
-    STAGING,
-    DEVELOPMENT,
-}
-
 private const val TIER_KEY: String = "tier"
 private const val DEFAULT_API_URL_BASE: String = "https://statsigapi.net/v1"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
@@ -44,8 +38,8 @@ class StatsigOptions(
 
     private var environment: MutableMap<String, String>? = null
 
-    fun setTier(tier: Tier) {
-        setEnvironmentParameter(TIER_KEY, tier.toString().lowercase())
+    fun setTier(tier: String) {
+        setEnvironmentParameter(TIER_KEY, tier.lowercase())
     }
 
     fun setEnvironmentParameter(key: String, value: String) {
