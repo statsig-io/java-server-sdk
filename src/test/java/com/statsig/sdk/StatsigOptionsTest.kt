@@ -19,7 +19,7 @@ class StatsigOptionsTest {
             "PRODUCTION" to "production",
             "STAGING" to "staging",
             "Development" to "development",
-            "Custom Tier" to "custom tier"
+            "Custom Tier" to "custom tier",
         )
 
         for ((inputTier, expectedTier) in tierTestCases) {
@@ -33,7 +33,7 @@ class StatsigOptionsTest {
         val parameterTestCases = mapOf(
             "key1" to "value1",
             "key2" to "value2",
-            "key1" to "updatedValue1"
+            "key1" to "updatedValue1",
         )
 
         for ((key, value) in parameterTestCases) {

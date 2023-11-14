@@ -195,6 +195,7 @@ private class StatsigServerImpl() :
     override var initialized = false
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
+        Thread.setDefaultUncaughtExceptionHandler(MainThreadExceptionHandler(this, Thread.currentThread()))
         errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
         coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
             // no-op - supervisor job should not throw when a child fails
@@ -209,6 +210,10 @@ private class StatsigServerImpl() :
 
     override suspend fun initialize(serverSecret: String, options: StatsigOptions) {
         setup(serverSecret, options)
+        initializeImpl(serverSecret, options)
+    }
+
+    private suspend fun initializeImpl(serverSecret: String, options: StatsigOptions) {
         errorBoundary.capture(
             "initialize",
             {
@@ -512,7 +517,7 @@ private class StatsigServerImpl() :
     override fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<Void?> {
         setup(serverSecret, options)
         return statsigScope.future {
-            initialize(serverSecret, options)
+            initializeImpl(serverSecret, options)
             null
         }
     }
@@ -786,5 +791,16 @@ private class StatsigServerImpl() :
         diagnostics?.markEnd(KeyType.OVERALL, success)
         diagnostics?.logDiagnostics(ContextType.INITIALIZE)
         diagnostics.diagnosticsContext = ContextType.CONFIG_SYNC
+    }
+
+    class MainThreadExceptionHandler(val server: StatsigServer, val currentThread: Thread) : Thread.UncaughtExceptionHandler {
+        override fun uncaughtException(t: Thread, e: Throwable) {
+            if (!t.name.equals(currentThread.name)) {
+                throw e
+            }
+            println("[Statsig]: Shutting down Statsig because of unhandled exception from your server")
+            server.shutdown()
+            throw e
+        }
     }
 }
