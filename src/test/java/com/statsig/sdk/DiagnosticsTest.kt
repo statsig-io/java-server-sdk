@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
+import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
@@ -55,6 +56,7 @@ class DiagnosticsTest {
         verifyMarker(markers[5], Marker(key = KeyType.GET_ID_LIST_SOURCES, action = ActionType.START, step = StepType.NETWORK_REQUEST))
         verifyMarker(markers[6], Marker(key = KeyType.GET_ID_LIST_SOURCES, action = ActionType.END, step = StepType.NETWORK_REQUEST))
         verifyMarker(markers[7], Marker(key = KeyType.OVERALL, action = ActionType.END))
+        assertEquals(Gson().toJson(options.getLoggingCopy()), diagnosticsEvent!!.eventMetadata!!["statsigOptions"])
     }
 
     @Test

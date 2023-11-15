@@ -1,5 +1,6 @@
 package com.statsig.sdk
 
+import com.google.gson.Gson
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -27,30 +28,30 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
     }
 
     suspend fun swallow(tag: String, task: suspend () -> Unit) {
-        capture(tag, task) {
-            // no-op
-        }
+        capture(tag, task, {
+            // no op
+        })
     }
 
-    suspend fun <T> capture(tag: String, task: suspend () -> T, recover: suspend () -> T): T {
+    suspend fun <T> capture(tag: String, task: suspend () -> T, recover: suspend () -> T, configName: String? = null): T {
         return try {
             task()
         } catch (ex: Throwable) {
-            onException(tag, ex)
+            onException(tag, ex, configName)
             recover()
         }
     }
 
-    fun <T> captureSync(tag: String, task: () -> T, recover: () -> T): T {
+    fun <T> captureSync(tag: String, task: () -> T, recover: () -> T, configName: String? = null): T {
         return try {
             task()
         } catch (ex: Throwable) {
-            onException(tag, ex)
+            onException(tag, ex, configName)
             recover()
         }
     }
 
-    internal fun logException(tag: String, ex: Throwable) {
+    internal fun logException(tag: String, ex: Throwable, configName: String? = null) {
         try {
             if (options.localMode || seen.contains(ex.javaClass.name)) {
                 return
@@ -63,12 +64,14 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
             if (safeInfo.length > maxInfoLength) {
                 safeInfo = safeInfo.substring(0, maxInfoLength)
             }
-
+            val optionsCopy = Gson().toJson(options.getLoggingCopy())
             val body = """{
                 "tag": "$tag",
                 "exception": "${ex.javaClass.name}",
                 "info": "$safeInfo",
-                "statsigMetadata": ${statsigMetadata.asJson()}
+                "statsigMetadata": ${statsigMetadata.asJson()},
+                "configName": "$configName",
+                "setupOptions": $optionsCopy
             }
             """.trimIndent()
             val req =
@@ -84,7 +87,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         }
     }
 
-    private fun onException(tag: String, ex: Throwable) {
+    private fun onException(tag: String, ex: Throwable, configName: String? = null) {
         if (ex is StatsigIllegalStateException ||
             ex is StatsigUninitializedException
         ) {
@@ -94,6 +97,6 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         println("[Statsig]: An unexpected exception occurred.")
         println(ex)
 
-        logException(tag, ex)
+        logException(tag, ex, configName)
     }
 }
