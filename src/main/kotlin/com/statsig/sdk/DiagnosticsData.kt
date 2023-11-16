@@ -3,6 +3,7 @@ package com.statsig.sdk
 import com.google.gson.annotations.SerializedName
 
 data class Marker(
+    @SerializedName("markerID") var markerID: String? = null,
     @SerializedName("key") val key: KeyType? = null,
     @SerializedName("action") val action: ActionType? = null,
     @SerializedName("timestamp") val timestamp: Double? = null,
@@ -13,6 +14,7 @@ data class Marker(
     @SerializedName("idListCount") var idListCount: Int? = null,
     @SerializedName("reason") var reason: String? = null,
     @SerializedName("sdkRegion") var sdkRegion: String? = null,
+    @SerializedName("configName") var configName: String? = null,
 )
 
 enum class ContextType {
@@ -21,6 +23,9 @@ enum class ContextType {
 
     @SerializedName("config_sync")
     CONFIG_SYNC,
+
+    @SerializedName("api_call")
+    API_CALL,
 }
 
 enum class KeyType {
@@ -38,6 +43,35 @@ enum class KeyType {
 
     @SerializedName("overall")
     OVERALL,
+
+    @SerializedName("check_gate")
+    CHECK_GATE,
+
+    @SerializedName("get_config")
+    GET_CONFIG,
+
+    @SerializedName("get_experiment")
+    GET_EXPERIMENT,
+
+    @SerializedName("get_layer")
+    GET_LAYER, ;
+
+    companion object {
+        fun convertFromString(value: String): KeyType? {
+            return when (value) {
+                in "checkGate", "checkGateWithExposureLoggingDisabled" ->
+                    CHECK_GATE
+                in "getExperiment", "getExperimentWithExposureLoggingDisabled" ->
+                    GET_EXPERIMENT
+                in "getConfig", "getConfigWithExposureLoggingDisabled" ->
+                    GET_CONFIG
+                in "getLayer", "getLayerWithExposureLoggingDisabled" ->
+                    GET_LAYER
+                else ->
+                    null
+            }
+        }
+    }
 }
 
 enum class StepType {
