@@ -54,41 +54,39 @@ class ConcurrencyTest {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
-                    when (request.path) {
-                        "/v1/download_config_specs" -> {
-                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
-                        }
-                        "/v1/log_event" -> {
-                            val logBody = request.body.readUtf8()
-                            val input = gson.fromJson(logBody, LogEventInput::class.java)
-                            flushedEventCount += input.events.size
-                            return MockResponse().setResponseCode(200).setBody("")
-                        }
-                        "/v1/get_id_lists" -> {
-                            getIDListCount++
-                            return MockResponse().setResponseCode(200).setBody(
-                                Gson().toJson(
-                                    mapOf(
-                                        "list_1" to
-                                            mapOf(
-                                                "name" to "list_1",
-                                                "size" to 3 * getIDListCount,
-                                                "url" to server.url("/list_1").toString(),
-                                                "creationTime" to 1,
-                                                "fileID" to "file_id_1",
-                                            ),
-                                    ),
+                    if ("/v1/download_config_specs" in request.path!!) {
+                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    }
+                    if ("/v1/log_event" in request.path!!) {
+                        val logBody = request.body.readUtf8()
+                        val input = gson.fromJson(logBody, LogEventInput::class.java)
+                        flushedEventCount += input.events.size
+                        return MockResponse().setResponseCode(200).setBody("")
+                    }
+                    if ("/v1/get_id_lists" in request.path!!) {
+                        getIDListCount++
+                        return MockResponse().setResponseCode(200).setBody(
+                            Gson().toJson(
+                                mapOf(
+                                    "list_1" to
+                                        mapOf(
+                                            "name" to "list_1",
+                                            "size" to 3 * getIDListCount,
+                                            "url" to server.url("/list_1").toString(),
+                                            "creationTime" to 1,
+                                            "fileID" to "file_id_1",
+                                        ),
                                 ),
-                            )
+                            ),
+                        )
+                    }
+                    if ("/list_1" in request.path!!) {
+                        downloadList1Count++
+                        var body = "+7/rrkvF6\n"
+                        if (downloadList1Count > 1) {
+                            body = "+$downloadList1Count\n-$downloadList1Count\n"
                         }
-                        "/list_1" -> {
-                            downloadList1Count++
-                            var body = "+7/rrkvF6\n"
-                            if (downloadList1Count > 1) {
-                                body = "+$downloadList1Count\n-$downloadList1Count\n"
-                            }
-                            return MockResponse().setResponseCode(200).setBody(body)
-                        }
+                        return MockResponse().setResponseCode(200).setBody(body)
                     }
 
                     return MockResponse().setResponseCode(404)

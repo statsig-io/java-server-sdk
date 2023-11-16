@@ -1,7 +1,6 @@
 package com.statsig.sdk
 
 private const val TIER_KEY: String = "tier"
-private const val DEFAULT_API_URL_BASE: String = "https://statsigapi.net/v1"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
 private const val CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000
 private const val ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
@@ -22,7 +21,7 @@ fun interface RulesUpdatedCallback {
  * callback to initialize will fire after, at most, the time specified
  */
 class StatsigOptions(
-    var api: String = DEFAULT_API_URL_BASE,
+    var api: String? = null,
     var initTimeoutMs: Long = DEFAULT_INIT_TIME_OUT_MS,
     var bootstrapValues: String? = null,
     var rulesUpdatedCallback: RulesUpdatedCallback? = null,
@@ -33,8 +32,7 @@ class StatsigOptions(
     var dataStore: IDataStore? = null,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
-
-    constructor(initTimeoutMs: Long) : this(DEFAULT_API_URL_BASE, initTimeoutMs)
+    constructor(initTimeoutMs: Long) : this(null, initTimeoutMs)
 
     private var environment: MutableMap<String, String>? = null
 

@@ -41,19 +41,16 @@ public class ExposureLoggingTestJava {
             @NotNull
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) throws InterruptedException {
-
-                switch (recordedRequest.getPath()) {
-                    case "/v1/download_config_specs": {
-                        return new MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse);
-                    }
-                    case "/v1/check_gate": {
-                        return new MockResponse().setResponseCode(200).setBody(mockResponseBody);
-                    }
-                    case "/v1/log_event": {
-                        String logBody = recordedRequest.getBody().readUtf8();
-                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput.class));
-                        return new MockResponse().setResponseCode(200);
-                    }
+                if (recordedRequest.getPath().contains("/v1/download_config_specs")) {
+                    return new MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse);
+                }
+                if (recordedRequest.getPath().contains("/v1/check_gate")) {
+                    return new MockResponse().setResponseCode(200).setBody(mockResponseBody);
+                }
+                if (recordedRequest.getPath().contains("/v1/log_event")) {
+                    String logBody = recordedRequest.getBody().readUtf8();
+                    eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput.class));
+                    return new MockResponse().setResponseCode(200);
                 }
                 return new MockResponse().setResponseCode(404);
             }

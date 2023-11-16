@@ -70,125 +70,120 @@ class StatsigE2ETest {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
-                    when (request.path) {
-                        "/v1/download_config_specs" -> {
-                            download_config_count++
-                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
-                                throw Exception("No content type set!")
-                            }
-                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    if ("/v1/download_config_specs" in request.path!!) {
+                        download_config_count++
+                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    }
+                    if ("/v1/log_event" in request.path!!) {
+                        val logBody = request.body.readUtf8()
+                        if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
+                            throw Exception("No content type set!")
                         }
-                        "/v1/log_event" -> {
-                            val logBody = request.body.readUtf8()
-                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
-                                throw Exception("No content type set!")
-                            }
-                            eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
+                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    }
+                    if ("/v1/get_id_lists" in request.path!!) {
+                        download_id_list_count++
+                        if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
+                            throw Exception("No content type set!")
                         }
-                        "/v1/get_id_lists" -> {
-                            download_id_list_count++
-                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
-                                throw Exception("No content type set!")
-                            }
-                            var list: Map<String, Any>
-                            if (download_id_list_count == 1) {
-                                list = mapOf(
-                                    "list_1" to mapOf(
-                                        "name" to "list_1",
-                                        "size" to 6,
-                                        "creationTime" to 1,
-                                        "url" to server.url("/v1/list_1").toString(),
-                                        "fileID" to "file_id_1",
-                                    ),
-                                    "list_2" to mapOf(
-                                        "name" to "list_2",
-                                        "size" to 6,
-                                        "creationTime" to 1,
-                                        "url" to server.url("/v1/list_2").toString(),
-                                        "fileID" to "file_id_2",
-                                    ),
-                                )
-                            } else if (download_id_list_count == 2) {
-                                list = mapOf(
-                                    "list_1" to mapOf(
-                                        "name" to "list_1",
-                                        "size" to 15,
-                                        "creationTime" to 1,
-                                        "url" to server.url("/v1/list_1").toString(),
-                                        "fileID" to "file_id_1",
-                                    ),
-                                    "list_2" to mapOf(
-                                        "name" to "list_2",
-                                        "size" to 18,
-                                        "creationTime" to 1,
-                                        "url" to server.url("/v1/list_2").toString(),
-                                        "fileID" to "file_id_2",
-                                    ),
-                                )
-                            } else if (download_id_list_count == 3) {
-                                list = mapOf(
-                                    "list_1" to mapOf(
-                                        "name" to "list_1",
-                                        "size" to 18,
-                                        "creationTime" to 1,
-                                        "url" to server.url("/v1/list_1").toString(),
-                                        "fileID" to "file_id_1",
-                                    ),
-                                    "list_2" to mapOf(
-                                        "name" to "list_2",
-                                        "size" to 6,
-                                        "creationTime" to 2,
-                                        "url" to server.url("/v1/list_2").toString(),
-                                        "fileID" to "file_id_2_a",
-                                    ),
-                                )
-                            } else {
-                                list = mapOf(
-                                    "list_1" to mapOf(
-                                        "name" to "list_1",
-                                        "size" to 18,
-                                        "creationTime" to 1,
-                                        "url" to server.url("/v1/list_1").toString(),
-                                        "fileID" to "file_id_1",
-                                    ),
-                                    "list_2" to mapOf(
-                                        "name" to "list_2",
-                                        "size" to 9,
-                                        "creationTime" to 2,
-                                        "url" to server.url("/v1/list_2").toString(),
-                                        "fileID" to "file_id_2_a",
-                                    ),
-                                )
-                            }
-                            return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
+                        var list: Map<String, Any>
+                        if (download_id_list_count == 1) {
+                            list = mapOf(
+                                "list_1" to mapOf(
+                                    "name" to "list_1",
+                                    "size" to 6,
+                                    "creationTime" to 1,
+                                    "url" to server.url("/v1/list_1").toString(),
+                                    "fileID" to "file_id_1",
+                                ),
+                                "list_2" to mapOf(
+                                    "name" to "list_2",
+                                    "size" to 6,
+                                    "creationTime" to 1,
+                                    "url" to server.url("/v1/list_2").toString(),
+                                    "fileID" to "file_id_2",
+                                ),
+                            )
+                        } else if (download_id_list_count == 2) {
+                            list = mapOf(
+                                "list_1" to mapOf(
+                                    "name" to "list_1",
+                                    "size" to 15,
+                                    "creationTime" to 1,
+                                    "url" to server.url("/v1/list_1").toString(),
+                                    "fileID" to "file_id_1",
+                                ),
+                                "list_2" to mapOf(
+                                    "name" to "list_2",
+                                    "size" to 18,
+                                    "creationTime" to 1,
+                                    "url" to server.url("/v1/list_2").toString(),
+                                    "fileID" to "file_id_2",
+                                ),
+                            )
+                        } else if (download_id_list_count == 3) {
+                            list = mapOf(
+                                "list_1" to mapOf(
+                                    "name" to "list_1",
+                                    "size" to 18,
+                                    "creationTime" to 1,
+                                    "url" to server.url("/v1/list_1").toString(),
+                                    "fileID" to "file_id_1",
+                                ),
+                                "list_2" to mapOf(
+                                    "name" to "list_2",
+                                    "size" to 6,
+                                    "creationTime" to 2,
+                                    "url" to server.url("/v1/list_2").toString(),
+                                    "fileID" to "file_id_2_a",
+                                ),
+                            )
+                        } else {
+                            list = mapOf(
+                                "list_1" to mapOf(
+                                    "name" to "list_1",
+                                    "size" to 18,
+                                    "creationTime" to 1,
+                                    "url" to server.url("/v1/list_1").toString(),
+                                    "fileID" to "file_id_1",
+                                ),
+                                "list_2" to mapOf(
+                                    "name" to "list_2",
+                                    "size" to 9,
+                                    "creationTime" to 2,
+                                    "url" to server.url("/v1/list_2").toString(),
+                                    "fileID" to "file_id_2_a",
+                                ),
+                            )
                         }
-                        "/v1/list_1" -> {
-                            val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
-                            download_list_1_count++
+                        return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
+                    }
+                    if ("/v1/list_1" in request.path!!) {
+                        val range = request.headers["range"]
+                        val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
+                        download_list_1_count++
 
-                            var content: String = when (download_list_1_count) {
-                                1 -> "+1\r+2\r"
-                                2 -> "+1\r+2\r+3\r+4\r-1\r"
-                                3 -> "+1\r+2\r+3\r+4\r-1\r?5\r" // append invalid entry, should reset the list
-                                else -> "+1\r+2\r+3\r+4\r-1\r+5\r"
-                            }
-                            return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
+                        var content: String = when (download_list_1_count) {
+                            1 -> "+1\r+2\r"
+                            2 -> "+1\r+2\r+3\r+4\r-1\r"
+                            3 -> "+1\r+2\r+3\r+4\r-1\r?5\r" // append invalid entry, should reset the list
+                            else -> "+1\r+2\r+3\r+4\r-1\r+5\r"
                         }
-                        "/v1/list_2" -> {
-                            val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
-                            download_list_2_count++
+                        return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
+                    }
+                    if ("/v1/list_2" in request.path!!) {
+                        val range = request.headers["range"]
+                        val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
+                        download_list_2_count++
 
-                            var content: String = when (download_list_2_count) {
-                                1 -> "+a\r+b\r"
-                                2 -> "+a\r+b\r+c\r+d\r-a\r-b\r"
-                                3 -> "+c\r+d\r" // new file, ids are consolidated
-                                else -> "+c\r+d\r-a\r"
-                            }
-                            return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
+                        var content: String = when (download_list_2_count) {
+                            1 -> "+a\r+b\r"
+                            2 -> "+a\r+b\r+c\r+d\r-a\r-b\r"
+                            3 -> "+c\r+d\r" // new file, ids are consolidated
+                            else -> "+c\r+d\r-a\r"
                         }
+                        return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
                     }
                     return MockResponse().setResponseCode(404)
                 }

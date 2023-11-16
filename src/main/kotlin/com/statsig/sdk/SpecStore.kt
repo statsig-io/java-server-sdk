@@ -198,7 +198,7 @@ internal class SpecStore constructor(
 
         try {
             diagnostics.markStart(KeyType.GET_ID_LIST, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
-            val response = network.postExternal(list.url!!, null, mapOf("Range" to "bytes=${list.size}-"))
+            val response = network.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
             diagnostics.markEnd(KeyType.GET_ID_LIST, response?.isSuccessful === true, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url, statusCode = response?.code, sdkRegion = response?.headers?.get("x-statsig-region")))
 
             if (response?.isSuccessful !== true) {
@@ -425,12 +425,7 @@ internal class SpecStore constructor(
 
     suspend fun downloadConfigSpecs(): APIDownloadedConfigs? {
         try {
-            val specs = this.network.post(
-                options.api + "/download_config_specs",
-                mapOf("statsigMetadata" to statsigMetadata, "sinceTime" to this.lastUpdateTime),
-                emptyMap(),
-                this.options.initTimeoutMs,
-            ) ?: return null
+            val specs = this.network.downloadConfigSpecs(this.lastUpdateTime, this.options.initTimeoutMs) ?: return null
             val configs = gson.fromJson(specs.body?.charStream(), APIDownloadedConfigs::class.java)
             if (configs.hasUpdates) {
                 this.lastUpdateTime = configs.time

@@ -57,19 +57,17 @@ class DataStoreTest {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
-                    when (request.path) {
-                        "/v1/download_config_specs" -> {
-                            didCallDownloadConfig = true
-                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
-                                throw Exception("No content type set!")
-                            }
-                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
-                        }
-                        "/v1/log_event" -> {
-                            val logBody = request.body.readUtf8()
-                            eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                            return MockResponse().setResponseCode(200)
-                        }
+                    if (request.path == null) {
+                        return MockResponse().setResponseCode(404)
+                    }
+                    if ("/v1/download_config_specs" in request.path!!) {
+                        didCallDownloadConfig = true
+                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    }
+                    if ("/v1/log_event" in request.path!!) {
+                        val logBody = request.body.readUtf8()
+                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
+                        return MockResponse().setResponseCode(200)
                     }
                     return MockResponse().setResponseCode(404)
                 }

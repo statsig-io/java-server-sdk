@@ -117,10 +117,10 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
     }
 
     fun getDiagnosticKeyFromURL(url: String): KeyType? {
-        if (url.endsWith("/download_config_specs")) {
+        if (url.contains("/download_config_specs")) {
             return KeyType.DOWNLOAD_CONFIG_SPECS
         }
-        if (url.endsWith("/get_id_lists")) {
+        if (url.contains("/get_id_lists")) {
             return KeyType.GET_ID_LIST_SOURCES
         }
         return null

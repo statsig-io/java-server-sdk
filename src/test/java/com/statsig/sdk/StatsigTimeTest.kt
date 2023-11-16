@@ -37,54 +37,49 @@ class StatsigTimeTest {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
-                    when (request.path) {
-                        "/v1/download_config_specs" -> {
-                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
-                                throw Exception("No content type set!")
-                            }
-                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    if ("/v1/download_config_specs" in request.path!!) {
+                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    }
+                    if ("/v1/log_event" in request.path!!) {
+                        val logBody = request.body.readUtf8()
+                        if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
+                            throw Exception("No content type set!")
                         }
-                        "/v1/log_event" -> {
-                            val logBody = request.body.readUtf8()
-                            if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
-                                throw Exception("No content type set!")
-                            }
-                            eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
-                        }
-                        "/v1/get_id_lists" -> {
-                            val list = mapOf(
-                                "list_1" to mapOf(
-                                    "name" to "list_1",
-                                    "size" to 18,
-                                    "creationTime" to 1,
-                                    "url" to server.url("/v1/list_1").toString(),
-                                    "fileID" to "file_id_1",
-                                ),
-                                "list_2" to mapOf(
-                                    "name" to "list_2",
-                                    "size" to 9,
-                                    "creationTime" to 2,
-                                    "url" to server.url("/v1/list_2").toString(),
-                                    "fileID" to "file_id_2_a",
-                                ),
-                            )
-                            return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
-                        }
-                        "/v1/list_1" -> {
-                            val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
+                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
+                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    }
+                    if ("/v1/get_id_lists" in request.path!!) {
+                        val list = mapOf(
+                            "list_1" to mapOf(
+                                "name" to "list_1",
+                                "size" to 18,
+                                "creationTime" to 1,
+                                "url" to server.url("/v1/list_1").toString(),
+                                "fileID" to "file_id_1",
+                            ),
+                            "list_2" to mapOf(
+                                "name" to "list_2",
+                                "size" to 9,
+                                "creationTime" to 2,
+                                "url" to server.url("/v1/list_2").toString(),
+                                "fileID" to "file_id_2_a",
+                            ),
+                        )
+                        return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
+                    }
+                    if ("/v1/list_1" in request.path!!) {
+                        val range = request.headers["range"]
+                        val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
 
-                            var content = "+1\r+2\r"
-                            return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
-                        }
-                        "/v1/list_2" -> {
-                            val range = request.headers["range"]
-                            val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
+                        var content = "+1\r+2\r"
+                        return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
+                    }
+                    if ("/v1/list_2" in request.path!!) {
+                        val range = request.headers["range"]
+                        val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
 
-                            var content = "+a\r+b\r"
-                            return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
-                        }
+                        var content = "+a\r+b\r"
+                        return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
                     }
                     return MockResponse().setResponseCode(404)
                 }
