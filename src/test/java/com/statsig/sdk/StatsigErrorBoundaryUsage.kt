@@ -78,9 +78,7 @@ class StatsigErrorBoundaryUsage {
 
         if (shouldInitialize) {
             runBlocking {
-                println("ha")
                 statsig.initialize("secret-key", StatsigOptions(disableDiagnostics = true, api = server.url("/v1").toString()))
-                println("ha1")
             }
         }
 
