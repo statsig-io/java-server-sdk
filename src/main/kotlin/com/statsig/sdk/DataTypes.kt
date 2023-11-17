@@ -74,9 +74,9 @@ internal data class APIDynamicConfig(
 internal data class IDList(
     @SerializedName("name") val name: String,
     @SerializedName("size") var size: Long = 0,
-    @SerializedName("creationTime") var creationTime: Long = 0,
-    @SerializedName("url") var url: String? = null,
-    @SerializedName("fileID") var fileID: String? = null,
+    @SerializedName("creationTime") val creationTime: Long = 0,
+    @SerializedName("url") val url: String? = null,
+    @SerializedName("fileID") val fileID: String? = null,
 ) {
     internal val ids: MutableSet<String> = ConcurrentHashMap.newKeySet()
     fun contains(id: String): Boolean {

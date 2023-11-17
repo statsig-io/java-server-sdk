@@ -23,16 +23,14 @@ class ReInitializeTest {
             server.dispatcher =
                 object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
-                        when (request.path) {
-                            "/v1/download_config_specs" -> {
-                                val downloadConfigSpecsResponse =
-                                    StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
-                                dcs.add(request)
-                                return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
-                            }
-                            "/v1/log_event" -> {
-                                logEvent.add(request)
-                            }
+                        if ("/v1/download_config_specs" in request.path!!) {
+                            val downloadConfigSpecsResponse =
+                                StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
+                            dcs.add(request)
+                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                        }
+                        if ("/v1/log_event" in request.path!!) {
+                            logEvent.add(request)
                         }
                         return MockResponse().setResponseCode(202)
                     }

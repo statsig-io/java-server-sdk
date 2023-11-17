@@ -37,18 +37,16 @@ class ExceptionHandlerTest {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
-                    when (request.path) {
-                        "/v1/download_config_specs" -> {
-                            return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
-                        }
-                        "/v1/check_gate" -> {
-                            return MockResponse().setResponseCode(200).setBody(mockResponseBody)
-                        }
-                        "/v1/log_event" -> {
-                            val logBody = request.body.readUtf8()
-                            eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                            return MockResponse().setResponseCode(200)
-                        }
+                    if ("/v1/download_config_specs" in request.path!!) {
+                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                    }
+                    if ("/v1/check_gate" in request.path!!) {
+                        return MockResponse().setResponseCode(200).setBody(mockResponseBody)
+                    }
+                    if ("/v1/log_event" in request.path!!) {
+                        val logBody = request.body.readUtf8()
+                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
+                        return MockResponse().setResponseCode(200)
                     }
                     return MockResponse().setResponseCode(404)
                 }

@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit
 
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
+private const val STATSIG_API_URL_BASE: String = "https://statsigapi.net/v1"
+private const val STATSIG_CDN_URL_BASE: String = "https://api.statsigcdn.com/v1"
 
 internal class StatsigNetwork(
     private val sdkKey: String,
@@ -47,6 +49,8 @@ internal class StatsigNetwork(
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     private val serverSessionID = UUID.randomUUID().toString()
     private var diagnostics: Diagnostics? = null
+    private val api = options.api ?: STATSIG_API_URL_BASE
+    private val apiForDownloadConfigSpecs = options.api ?: STATSIG_CDN_URL_BASE
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
@@ -102,7 +106,7 @@ internal class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
-            .url(options.api + "/check_gate")
+            .url("$api/check_gate")
             .post(requestBody)
             .build()
         statsigHttpClient.newCall(request).await().use { response ->
@@ -129,7 +133,7 @@ internal class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
-            .url(options.api + "/get_config")
+            .url("$api/get_config")
             .post(requestBody)
             .build()
         statsigHttpClient.newCall(request).await().use { response ->
@@ -145,11 +149,11 @@ internal class StatsigNetwork(
 
     suspend fun post(
         url: String,
-        body: Map<String, Any>?,
+        body: Map<String, Any> = emptyMap(),
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
     ): Response? {
-        return postImpl(
+        return request(
             statsigHttpClient.newBuilder().callTimeout(
                 timeoutMs,
                 TimeUnit.MILLISECONDS,
@@ -160,15 +164,37 @@ internal class StatsigNetwork(
         )
     }
 
-    suspend fun postExternal(
+    suspend fun get(
         url: String,
-        body: Map<String, Any>?,
         headers: Map<String, String> = emptyMap(),
+        timeoutMs: Long = 3000L,
     ): Response? {
-        return postImpl(externalHttpClient, url, body, headers)
+        return request(
+            statsigHttpClient.newBuilder().callTimeout(
+                timeoutMs, TimeUnit.MILLISECONDS
+            ).build(),
+            url,
+            null,
+            headers
+        )
     }
 
-    private suspend fun postImpl(
+    suspend fun downloadConfigSpecs(sinceTime: Long, timeoutMs: Long): Response? {
+        return get(
+            "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
+            emptyMap(),
+            timeoutMs
+        )
+    }
+
+    suspend fun getExternal(
+        url: String,
+        headers: Map<String, String> = emptyMap(),
+    ): Response? {
+        return request(externalHttpClient, url, null, headers)
+    }
+
+    private suspend fun request(
         client: OkHttpClient,
         url: String,
         body: Map<String, Any>?,
@@ -214,7 +240,7 @@ internal class StatsigNetwork(
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
 
         val request: Request = Request.Builder()
-            .url(options.api + "/log_event")
+            .url("$api/log_event")
             .post(requestBody)
             .build()
         coroutineScope { // Creates a coroutine scope to be used within this suspend function
