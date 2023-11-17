@@ -14,7 +14,7 @@ class Layer internal constructor(
     val groupName: String? = null,
     val value: Map<String, Any>,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-    val allocatedExperiment: String = "",
+    val allocatedExperiment: String? = null,
     private val onExposure: OnLayerExposureInternal? = null,
 ) {
 

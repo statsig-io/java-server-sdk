@@ -678,7 +678,7 @@ private class StatsigServerImpl() :
                 result.groupName,
                 value as Map<String, Any>,
                 result.secondaryExposures,
-                result.configDelegate ?: "",
+                result.configDelegate,
             ) exposureFun@{ layer, paramName ->
                 val metadata = createLayerExposureMetadata(layer, paramName, result)
                 if (disableExposure) {
@@ -720,7 +720,7 @@ private class StatsigServerImpl() :
             result.groupName,
             value as Map<String, Any>,
             result.secondaryExposures,
-            result.configDelegate ?: "",
+            result.configDelegate,
         )
         var metadata = createLayerExposureMetadata(layer, paramName, result)
         metadata.isManualExposure = "true"
