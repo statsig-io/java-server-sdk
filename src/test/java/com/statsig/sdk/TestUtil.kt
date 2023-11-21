@@ -46,13 +46,18 @@ class TestUtil {
 
             return obj.returnValue as Map<String, Any>
         }
-        internal fun captureEvents(eventLogInputCompletable: CompletableDeferred<LogEventInput>): Array<StatsigEvent> = runBlocking {
+        internal fun captureEvents(eventLogInputCompletable: CompletableDeferred<LogEventInput>, filterDiagnostics: Boolean = true): Array<StatsigEvent> = runBlocking {
             val logs = withTimeout(TEST_TIMEOUT) {
                 eventLogInputCompletable.await()
             }
+            val events: Array<StatsigEvent> = if (filterDiagnostics) {
+                logs.events.filter { it.eventName != "statsig::diagnostics" }.toTypedArray()
+            } else {
+                logs.events
+            }
 
-            logs.events.sortBy { it.time }
-            return@runBlocking logs.events
+            events.sortBy { it.time }
+            return@runBlocking events
         }
 
         private fun getEvaluatorFromStatsigServer(driver: StatsigServer): Evaluator {

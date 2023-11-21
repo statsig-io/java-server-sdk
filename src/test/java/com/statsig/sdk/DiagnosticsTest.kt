@@ -25,6 +25,8 @@ class DiagnosticsTest {
     private lateinit var gson: Gson
     lateinit var downloadConfigSpecsResponse: String
 
+    private val user = StatsigUser("testUser")
+
     @Before
     fun setup() {
         downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
@@ -44,7 +46,7 @@ class DiagnosticsTest {
         setupWebServer(downloadConfigSpecsResponse)
         driver.initializeAsync("secret-testcase", options).get()
         driver.shutdown()
-        val events = TestUtil.captureEvents(eventLogInputCompletable)
+        val events = TestUtil.captureEvents(eventLogInputCompletable, false)
         val diagnosticsEvent = events.find { it.eventName == "statsig::diagnostics" }
         val markers: List<Marker> = gson.fromJson(diagnosticsEvent!!.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
         Assert.assertEquals(8, markers.size)
@@ -64,13 +66,12 @@ class DiagnosticsTest {
         val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\", \"api_call\": \"10000\"}").toString()
         setupWebServer(downloadConfigSpecsResponseWithSampling)
         driver.initializeAsync("secret-testcase", options).get()
-        val user = StatsigUser("testUser")
         driver.checkGate(user, "always_on_gate")
         driver.getConfig(user, "test_config")
         driver.getExperiment(user, "sample_experiment")
         driver.getLayer(user, "a_layer")
         driver.shutdown()
-        val events = TestUtil.captureEvents(eventLogInputCompletable)
+        val events = TestUtil.captureEvents(eventLogInputCompletable, false)
         val diagnosticsEvent = events.find { it.eventName == "statsig::diagnostics" }
         val markers: List<Marker> = gson.fromJson(diagnosticsEvent!!.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
         assertEquals(8, markers.size)
@@ -158,6 +159,21 @@ class DiagnosticsTest {
             "should not have called log_event endpoint",
             eventLogInputCompletable.isCompleted,
         )
+    }
+
+    @Test
+    fun testDisableDiagnostics() = runBlocking {
+        val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"10000\", \"api_call\": \"0\"}").toString()
+        setupWebServer(downloadConfigSpecsResponseWithSampling)
+        options.disableDiagnostics = true
+        driver.initializeAsync("secret-testcase", options).get()
+        driver.checkGate(user, "always_on_gate")
+        driver.shutdown()
+        val events = TestUtil.captureEvents(eventLogInputCompletable, false)
+        val diagnosticsEvents = events.filter { it.eventName == "statsig::diagnostics" }
+        // Only log initialize
+        assertEquals(1, diagnosticsEvents.size)
+        assertEquals("initialize", events[0]!!.eventMetadata!!["context"])
     }
 
     private fun setupWebServer(downLoadConfigResponse: String) {

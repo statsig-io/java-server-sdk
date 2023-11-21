@@ -30,10 +30,10 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
     }
 
     fun markStart(key: KeyType, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null) {
-        if (isDisabled) {
+        val contextType = context ?: diagnosticsContext
+        if (contextType == ContextType.API_CALL && isDisabled) {
             return
         }
-        val contextType = context ?: diagnosticsContext
         val marker = Marker(key = key, action = ActionType.START, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
         when (key) {
             KeyType.GET_ID_LIST -> {
@@ -55,10 +55,10 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
     }
 
     fun markEnd(key: KeyType, success: Boolean, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null) {
-        if (isDisabled) {
+        val contextType = context ?: diagnosticsContext
+        if (contextType == ContextType.API_CALL && isDisabled) {
             return
         }
-        val contextType = context ?: diagnosticsContext
         val marker = Marker(key = key, action = ActionType.END, success = success, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
         when (key) {
             KeyType.DOWNLOAD_CONFIG_SPECS -> {

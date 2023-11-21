@@ -4,10 +4,10 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.annotations.SerializedName
+import com.statsig.sdk.TestUtil.Companion.captureEvents
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -18,7 +18,7 @@ import org.junit.Rule
 import org.junit.Test
 
 internal data class LogEventInput(
-    @SerializedName("events") val events: Array<StatsigEvent>,
+    @SerializedName("events") var events: Array<StatsigEvent>,
 )
 
 private const val TEST_TIMEOUT = 100L
@@ -227,27 +227,26 @@ class StatsigE2ETest {
         assert(!driver.checkGate(randomUser, "on_for_statsig_email"))
         driver.shutdown()
 
-        val eventLogInput = withTimeout(TEST_TIMEOUT) {
-            eventLogInputCompletable.await()
-        }
-        assert(eventLogInput.events.size == 3)
-        assert(eventLogInput.events[0].eventName == "statsig::gate_exposure")
-        assert(eventLogInput.events[0].eventMetadata!!["gate"].equals("always_on_gate"))
-        assert(eventLogInput.events[0].eventMetadata!!["gateValue"].equals("true"))
-        assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("6N6Z8ODekNYZ7F8gFdoLP5"))
-        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
+        val events = captureEvents(eventLogInputCompletable)
 
-        assert(eventLogInput.events[1].eventName == "statsig::gate_exposure")
-        assert(eventLogInput.events[1].eventMetadata!!["gate"].equals("on_for_statsig_email"))
-        assert(eventLogInput.events[1].eventMetadata!!["gateValue"].equals("true"))
-        assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("7w9rbTSffLT89pxqpyhuqK"))
-        assert(eventLogInput.events[1].time!! / 1000 == now / 1000)
+        assert(events.size == 3)
+        assert(events[0].eventName == "statsig::gate_exposure")
+        assert(events[0].eventMetadata!!["gate"].equals("always_on_gate"))
+        assert(events[0].eventMetadata!!["gateValue"].equals("true"))
+        assert(events[0].eventMetadata!!["ruleID"].equals("6N6Z8ODekNYZ7F8gFdoLP5"))
+        assert(events[0].time!! / 1000 == now / 1000)
 
-        assert(eventLogInput.events[2].eventName == "statsig::gate_exposure")
-        assert(eventLogInput.events[2].eventMetadata!!["gate"].equals("on_for_statsig_email"))
-        assert(eventLogInput.events[2].eventMetadata!!["gateValue"].equals("false"))
-        assert(eventLogInput.events[2].eventMetadata!!["ruleID"].equals("default"))
-        assert(eventLogInput.events[2].time!! / 1000 == now / 1000)
+        assert(events[1].eventName == "statsig::gate_exposure")
+        assert(events[1].eventMetadata!!["gate"].equals("on_for_statsig_email"))
+        assert(events[1].eventMetadata!!["gateValue"].equals("true"))
+        assert(events[1].eventMetadata!!["ruleID"].equals("7w9rbTSffLT89pxqpyhuqK"))
+        assert(events[1].time!! / 1000 == now / 1000)
+
+        assert(events[2].eventName == "statsig::gate_exposure")
+        assert(events[2].eventMetadata!!["gate"].equals("on_for_statsig_email"))
+        assert(events[2].eventMetadata!!["gateValue"].equals("false"))
+        assert(events[2].eventMetadata!!["ruleID"].equals("default"))
+        assert(events[2].time!! / 1000 == now / 1000)
     }
 
     @Test
@@ -278,25 +277,24 @@ class StatsigE2ETest {
 
         driver.shutdown()
 
-        val eventLogInput = withTimeout(TEST_TIMEOUT) {
-            eventLogInputCompletable.await()
-        }
-        assert(eventLogInput.events.size == 2)
-        assert(eventLogInput.events[0].eventName == "statsig::config_exposure")
-        assert(eventLogInput.events[0].eventMetadata!!["config"].equals("test_config"))
-        assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("1kNmlB23wylPFZi1M0Divl"))
-        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
-        val statsigMetadata = eventLogInput.events[0].statsigMetadata!!
+        val events = captureEvents(eventLogInputCompletable)
+
+        assert(events.size == 2)
+        assert(events[0].eventName == "statsig::config_exposure")
+        assert(events[0].eventMetadata!!["config"].equals("test_config"))
+        assert(events[0].eventMetadata!!["ruleID"].equals("1kNmlB23wylPFZi1M0Divl"))
+        assert(events[0].time!! / 1000 == now / 1000)
+        val statsigMetadata = events[0].statsigMetadata!!
         assert(statsigMetadata != null)
         assert(statsigMetadata.languageVersion != null)
         assert(statsigMetadata.sdkType == "java-server")
         assert(statsigMetadata.sessionID != null)
         assert(statsigMetadata.exposureLoggingDisabled == null)
 
-        assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
-        assert(eventLogInput.events[1].eventMetadata!!["config"].equals("test_config"))
-        assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("default"))
-        assert(eventLogInput.events[1].time!! / 1000 == now / 1000)
+        assert(events[1].eventName == "statsig::config_exposure")
+        assert(events[1].eventMetadata!!["config"].equals("test_config"))
+        assert(events[1].eventMetadata!!["ruleID"].equals("default"))
+        assert(events[1].time!! / 1000 == now / 1000)
     }
 
     @Test
@@ -321,19 +319,18 @@ class StatsigE2ETest {
         driver.getExperimentWithExposureLoggingDisabled(randomUser, "sample_experiment_2")
         driver.shutdown()
 
-        val eventLogInput = withTimeout(TEST_TIMEOUT) {
-            eventLogInputCompletable.await()
-        }
-        assert(eventLogInput.events.size == 2)
-        assert(eventLogInput.events[0].eventName == "statsig::config_exposure")
-        assert(eventLogInput.events[0].eventMetadata!!["config"].equals("sample_experiment"))
-        assert(eventLogInput.events[0].eventMetadata!!["ruleID"].equals("2RamGujUou6h2bVNQWhtNZ"))
-        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
+        val events = captureEvents(eventLogInputCompletable)
 
-        assert(eventLogInput.events[1].eventName == "statsig::config_exposure")
-        assert(eventLogInput.events[1].eventMetadata!!["config"].equals("sample_experiment"))
-        assert(eventLogInput.events[1].eventMetadata!!["ruleID"].equals("2RamGsERWbWMIMnSfOlQuX"))
-        assert(eventLogInput.events[1].time!! / 1000 == now / 1000)
+        assert(events.size == 2)
+        assert(events[0].eventName == "statsig::config_exposure")
+        assert(events[0].eventMetadata!!["config"].equals("sample_experiment"))
+        assert(events[0].eventMetadata!!["ruleID"].equals("2RamGujUou6h2bVNQWhtNZ"))
+        assert(events[0].time!! / 1000 == now / 1000)
+
+        assert(events[1].eventName == "statsig::config_exposure")
+        assert(events[1].eventMetadata!!["config"].equals("sample_experiment"))
+        assert(events[1].eventMetadata!!["ruleID"].equals("2RamGsERWbWMIMnSfOlQuX"))
+        assert(events[1].time!! / 1000 == now / 1000)
     }
 
     @Test
@@ -353,15 +350,13 @@ class StatsigE2ETest {
         driver.logEvent(statsigUser, "purchase", 2.99, mapOf("item_name" to "remove_ads"))
         driver.shutdown()
 
-        val eventLogInput = withTimeout(TEST_TIMEOUT) {
-            eventLogInputCompletable.await()
-        }
+        val events = captureEvents(eventLogInputCompletable)
 
-        assert(eventLogInput.events.size == 1)
-        assert(eventLogInput.events[0].eventName == "purchase")
-        assert(eventLogInput.events[0].eventValue == 2.99)
-        assert(eventLogInput.events[0].eventMetadata!!["item_name"].equals("remove_ads"))
-        assert(eventLogInput.events[0].time!! / 1000 == now / 1000)
+        assert(events.size == 1)
+        assert(events[0].eventName == "purchase")
+        assert(events[0].eventValue == 2.99)
+        assert(events[0].eventMetadata!!["item_name"].equals("remove_ads"))
+        assert(events[0].time!! / 1000 == now / 1000)
     }
 
     @Test
