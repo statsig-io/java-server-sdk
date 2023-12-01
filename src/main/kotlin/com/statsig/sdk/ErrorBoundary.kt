@@ -13,8 +13,9 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
     internal var uri = URI("https://statsigapi.net/v1/sdk_exception")
     private val seen = HashSet<String>()
     private val maxInfoLength = 3000
-
     private val client = OkHttpClient()
+    internal var diagnostics: Diagnostics? = null
+
     private companion object {
         val MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
@@ -34,10 +35,17 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
     }
 
     suspend fun <T> capture(tag: String, task: suspend () -> T, recover: suspend () -> T, configName: String? = null): T {
+        var markerID: String? = null
+        var keyType: KeyType? = null
         return try {
-            task()
+            keyType = KeyType.convertFromString(tag)
+            markerID = markStart(keyType, configName)
+            val result = task()
+            markEnd(keyType, true, configName, markerID)
+            return result
         } catch (ex: Throwable) {
             onException(tag, ex, configName)
+            markEnd(keyType, false, configName, markerID)
             recover()
         }
     }
@@ -98,5 +106,22 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         println(ex)
 
         logException(tag, ex, configName)
+    }
+
+    private fun markStart(keyType: KeyType?, configName: String?): String? {
+        if (diagnostics == null || keyType == null) {
+            return null
+        }
+        val markerID = keyType.name + "_" + (diagnostics?.markers?.get(ContextType.API_CALL)?.count() ?: 0)
+
+        diagnostics?.markStart(keyType, context = ContextType.API_CALL, additionalMarker = Marker(markerID = markerID, configName = configName))
+        return markerID
+    }
+
+    private fun markEnd(keyType: KeyType?, success: Boolean, configName: String?, markerID: String?) {
+        if (diagnostics == null || keyType == null) {
+            return
+        }
+        diagnostics?.markEnd(keyType, success, context = ContextType.API_CALL, additionalMarker = Marker(markerID = markerID, configName = configName))
     }
 }

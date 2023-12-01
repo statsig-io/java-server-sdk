@@ -6,8 +6,14 @@ const val NANO_IN_MS = 1_000_000.0
 const val MAX_SAMPLING_RATE = 10_000
 internal class Diagnostics(private var isDisabled: Boolean, private var logger: StatsigLogger) {
     var diagnosticsContext: ContextType = ContextType.INITIALIZE
-    private val samplingRates: MutableMap<String, Int> = mutableMapOf("dcs" to 0, "log" to 0, "initialize" to MAX_SAMPLING_RATE, "idlist" to 0)
-    private var markers: DiagnosticsMarkers = mutableMapOf()
+    private val samplingRates: MutableMap<String, Int> = mutableMapOf(
+        "dcs" to 0,
+        "log" to 0,
+        "initialize" to MAX_SAMPLING_RATE,
+        "idlist" to 0,
+        "api_call" to 0,
+    )
+    internal var markers: DiagnosticsMarkers = mutableMapOf()
 
     fun setSamplingRate(rates: Map<String, Int>) {
         rates.forEach { entry ->
@@ -23,10 +29,11 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         }
     }
 
-    fun markStart(key: KeyType, step: StepType? = null, additionalMarker: Marker? = null) {
+    fun markStart(key: KeyType, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null) {
         if (isDisabled) {
             return
         }
+        val contextType = context ?: diagnosticsContext
         val marker = Marker(key = key, action = ActionType.START, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
         when (key) {
             KeyType.GET_ID_LIST -> {
@@ -38,13 +45,20 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
                 }
             }
         }
-        this.addMarker(marker)
+        when (contextType) {
+            ContextType.API_CALL -> {
+                marker.configName = additionalMarker?.configName
+                marker.markerID = additionalMarker?.markerID
+            }
+        }
+        this.addMarker(marker, contextType)
     }
 
-    fun markEnd(key: KeyType, success: Boolean, step: StepType? = null, additionalMarker: Marker? = null) {
+    fun markEnd(key: KeyType, success: Boolean, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null) {
         if (isDisabled) {
             return
         }
+        val contextType = context ?: diagnosticsContext
         val marker = Marker(key = key, action = ActionType.END, success = success, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
         when (key) {
             KeyType.DOWNLOAD_CONFIG_SPECS -> {
@@ -72,24 +86,31 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
                 marker.reason = additionalMarker?.reason
             }
         }
-        this.addMarker(marker)
+        when (contextType) {
+            ContextType.API_CALL -> {
+                marker.configName = additionalMarker?.configName
+                marker.markerID = additionalMarker?.markerID
+            }
+        }
+        this.addMarker(marker, contextType)
     }
 
-    private fun shouldLogDiagnostics(context: ContextType): Boolean {
+    internal fun shouldLogDiagnostics(context: ContextType): Boolean {
         val samplingKey: String =
             when (context) {
                 ContextType.CONFIG_SYNC -> "dcs"
                 ContextType.INITIALIZE -> "initialize"
+                ContextType.API_CALL -> "api_call"
             }
         val rand = Math.random() * MAX_SAMPLING_RATE
         return samplingRates[samplingKey] ?: 0 > rand
     }
 
-    private fun addMarker(marker: Marker) {
-        if (this.markers[diagnosticsContext] == null) {
-            this.markers[diagnosticsContext] = mutableListOf()
+    private fun addMarker(marker: Marker, context: ContextType) {
+        if (this.markers[context] == null) {
+            this.markers[context] = mutableListOf()
         }
-        this.markers[diagnosticsContext]?.add(marker)
+        this.markers[context]?.add(marker)
         this.markers.values
     }
 

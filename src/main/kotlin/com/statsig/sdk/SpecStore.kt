@@ -141,7 +141,7 @@ internal class SpecStore constructor(
         }
         val body = response.body ?: return
         val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
-        diagnostics.markStart(KeyType.GET_ID_LIST_SOURCES, StepType.PROCESS, Marker(idListCount = jsonResponse.size))
+        diagnostics.markStart(KeyType.GET_ID_LIST_SOURCES, StepType.PROCESS, additionalMarker = Marker(idListCount = jsonResponse.size))
         val tasks = mutableListOf<Job>()
 
         for ((name, serverList) in jsonResponse) {

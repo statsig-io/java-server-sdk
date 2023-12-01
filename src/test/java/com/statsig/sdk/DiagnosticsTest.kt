@@ -60,8 +60,97 @@ class DiagnosticsTest {
     }
 
     @Test
+    fun testCoreAPI() = runBlocking {
+        val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\", \"api_call\": \"10000\"}").toString()
+        setupWebServer(downloadConfigSpecsResponseWithSampling)
+        driver.initializeAsync("secret-testcase", options).get()
+        val user = StatsigUser("testUser")
+        driver.checkGate(user, "always_on_gate")
+        driver.getConfig(user, "test_config")
+        driver.getExperiment(user, "sample_experiment")
+        driver.getLayer(user, "a_layer")
+        driver.shutdown()
+        val events = TestUtil.captureEvents(eventLogInputCompletable)
+        val diagnosticsEvent = events.find { it.eventName == "statsig::diagnostics" }
+        val markers: List<Marker> = gson.fromJson(diagnosticsEvent!!.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
+        assertEquals(8, markers.size)
+        verifyMarker(
+            markers[0],
+            Marker(
+                markerID = "CHECK_GATE_0",
+                action = ActionType.START,
+                configName = "always_on_gate",
+                key = KeyType.CHECK_GATE,
+            ),
+        )
+        verifyMarker(
+            markers[1],
+            Marker(
+                markerID = "CHECK_GATE_0",
+                action = ActionType.END,
+                configName = "always_on_gate",
+                key = KeyType.CHECK_GATE,
+            ),
+        )
+        verifyMarker(
+            markers[2],
+            Marker(
+                markerID = "GET_CONFIG_2",
+                action = ActionType.START,
+                configName = "test_config",
+                key = KeyType.GET_CONFIG,
+            ),
+        )
+        verifyMarker(
+            markers[3],
+            Marker(
+                markerID = "GET_CONFIG_2",
+                action = ActionType.END,
+                configName = "test_config",
+                key = KeyType.GET_CONFIG,
+            ),
+        )
+        verifyMarker(
+            markers[4],
+            Marker(
+                markerID = "GET_EXPERIMENT_4",
+                action = ActionType.START,
+                configName = "sample_experiment",
+                key = KeyType.GET_EXPERIMENT,
+            ),
+        )
+        verifyMarker(
+            markers[5],
+            Marker(
+                markerID = "GET_EXPERIMENT_4",
+                action = ActionType.END,
+                configName = "sample_experiment",
+                key = KeyType.GET_EXPERIMENT,
+            ),
+        )
+        verifyMarker(
+            markers[6],
+            Marker(
+                markerID = "GET_LAYER_6",
+                action = ActionType.START,
+                configName = "a_layer",
+                key = KeyType.GET_LAYER,
+            ),
+        )
+        verifyMarker(
+            markers[7],
+            Marker(
+                markerID = "GET_LAYER_6",
+                action = ActionType.END,
+                configName = "a_layer",
+                key = KeyType.GET_LAYER,
+            ),
+        )
+    }
+
+    @Test
     fun testSamping() = runBlocking {
-        val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\"}").toString()
+        val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\", \"api_call\": \"0\"}").toString()
         setupWebServer(downloadConfigSpecsResponseWithSampling)
         driver.initializeAsync("secret-testcase", options).get()
         driver.shutdown()
@@ -99,5 +188,7 @@ class DiagnosticsTest {
         Assert.assertEquals(expected.key, actual.key)
         Assert.assertEquals(expected.action, actual.action)
         Assert.assertEquals(expected.step, actual.step)
+        Assert.assertEquals(expected.configName, actual.configName)
+        Assert.assertEquals(expected.markerID, actual.markerID)
     }
 }

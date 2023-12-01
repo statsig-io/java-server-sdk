@@ -47,7 +47,7 @@ internal class StatsigLogger(
         }
     }
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
-
+    internal var diagnostics: Diagnostics? = null
     fun log(event: StatsigEvent) {
         events.add(event)
 
@@ -131,6 +131,9 @@ internal class StatsigLogger(
     }
 
     fun logDiagnostics(context: ContextType, markers: Collection<Marker>) {
+        if (markers.isEmpty()) {
+            return
+        }
         val event = StatsigEvent(DIAGNOSTICS_EVENT)
         event.eventMetadata = mapOf(
             "context" to context.toString().lowercase(),
@@ -140,8 +143,25 @@ internal class StatsigLogger(
         log(event)
     }
 
+    fun addAPICallDiagnostics() {
+        val markers = diagnostics?.markers?.get(ContextType.API_CALL)
+        if (markers.isNullOrEmpty() ||
+            diagnostics?.shouldLogDiagnostics(ContextType.API_CALL) != true
+        ) {
+            return
+        }
+        val event = StatsigEvent(DIAGNOSTICS_EVENT)
+        event.eventMetadata = mapOf(
+            "context" to "api_call",
+            "markers" to gson.toJson(markers),
+            "setupOptions" to gson.toJson(statsigOptions.getLoggingCopy()),
+        )
+        events.add(event)
+    }
+
     suspend fun flush() {
         withContext(Dispatchers.IO) {
+            addAPICallDiagnostics()
             if (events.size() == 0) {
                 return@withContext
             }

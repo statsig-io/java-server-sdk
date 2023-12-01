@@ -327,7 +327,10 @@ private class StatsigServerImpl() :
             return DynamicConfig.empty(experimentName)
         }
         return this.errorBoundary.capture("getExperiment", {
-            return@capture getConfig(user, experimentName)
+            val normalizedUser = normalizeUser(user)
+            val result = getConfigImpl(user, experimentName)
+            logConfigImpl(normalizedUser, experimentName, result)
+            return@capture getDynamicConfigFromEvalResult(result, user, experimentName)
         }, {
             return@capture DynamicConfig.empty(experimentName)
         }, configName = experimentName)
@@ -784,6 +787,8 @@ private class StatsigServerImpl() :
 
     private fun setupAndStartDiagnostics() {
         diagnostics = Diagnostics(options.disableDiagnostics, logger)
+        errorBoundary.diagnostics = diagnostics
+        logger.diagnostics = diagnostics
         diagnostics.markStart(KeyType.OVERALL)
     }
 
