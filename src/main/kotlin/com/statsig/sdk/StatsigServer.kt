@@ -204,7 +204,7 @@ private class StatsigServerImpl() :
         statsigJob = SupervisorJob()
         statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
         network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary)
-        logger = StatsigLogger(statsigScope, network, statsigMetadata)
+        logger = StatsigLogger(statsigScope, network, statsigMetadata, options)
         this.options = options
     }
 
@@ -244,14 +244,14 @@ private class StatsigServerImpl() :
                 logGateExposureImpl(user, gateName, result)
             }
             return@capture result.booleanValue
-        }, { return@capture false })
+        }, { return@capture false }, configName = gateName)
     }
 
     override suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean {
         return errorBoundary.capture("checkGateWithExposureLoggingDisabled", {
             val result = checkGateImpl(user, gateName)
             return@capture result.booleanValue
-        }, { return@capture false })
+        }, { return@capture false }, configName = gateName)
     }
 
     private suspend fun checkGateImpl(user: StatsigUser, gateName: String): ConfigEvaluation {
@@ -298,7 +298,7 @@ private class StatsigServerImpl() :
             return@capture getDynamicConfigFromEvalResult(result, user, dynamicConfigName)
         }, {
             return@capture DynamicConfig.empty(dynamicConfigName)
-        })
+        }, configName = dynamicConfigName)
     }
 
     override suspend fun getConfigWithExposureLoggingDisabled(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
@@ -311,7 +311,7 @@ private class StatsigServerImpl() :
             return@capture getDynamicConfigFromEvalResult(result, normalizedUser, dynamicConfigName)
         }, {
             return@capture DynamicConfig.empty(dynamicConfigName)
-        })
+        }, configName = dynamicConfigName)
     }
 
     override suspend fun manuallyLogConfigExposure(user: StatsigUser, configName: String) {
@@ -330,7 +330,7 @@ private class StatsigServerImpl() :
             return@capture getConfig(user, experimentName)
         }, {
             return@capture DynamicConfig.empty(experimentName)
-        })
+        }, configName = experimentName)
     }
 
     override suspend fun getExperimentWithExposureLoggingDisabled(
@@ -346,7 +346,7 @@ private class StatsigServerImpl() :
             return@capture getDynamicConfigFromEvalResult(result, user, experimentName)
         }, {
             return@capture DynamicConfig.empty(experimentName)
-        })
+        }, configName = experimentName)
     }
 
     override suspend fun getExperimentInLayerForUser(
@@ -383,7 +383,7 @@ private class StatsigServerImpl() :
             return@capture DynamicConfig.empty()
         }, {
             return@capture DynamicConfig.empty()
-        })
+        }, configName = layerName)
     }
 
     override suspend fun getLayer(user: StatsigUser, layerName: String): Layer {
@@ -391,7 +391,7 @@ private class StatsigServerImpl() :
             return@capture getLayerImpl(user, layerName, false)
         }, {
             return@capture Layer.empty(layerName)
-        })
+        }, configName = layerName)
     }
 
     override suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer {
@@ -399,7 +399,7 @@ private class StatsigServerImpl() :
             return@capture getLayerImpl(user, layerName, true)
         }, {
             return@capture Layer.empty(layerName)
-        })
+        }, configName = layerName)
     }
 
     override fun getClientInitializeResponse(

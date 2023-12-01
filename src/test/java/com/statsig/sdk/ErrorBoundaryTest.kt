@@ -21,6 +21,7 @@ class ErrorBoundaryTest {
     private lateinit var boundary: ErrorBoundary
     private lateinit var server: MockWebServer
     private lateinit var statsigMetadata: StatsigMetadata
+    private lateinit var options: StatsigOptions
 
     @Before
     internal fun setup() {
@@ -33,7 +34,8 @@ class ErrorBoundaryTest {
             }
         }
         statsigMetadata = StatsigMetadata()
-        boundary = ErrorBoundary("secret-key", StatsigOptions(), statsigMetadata)
+        options = StatsigOptions(idListsSyncIntervalMs = 4000)
+        boundary = ErrorBoundary("secret-key", options, statsigMetadata)
         boundary.uri = server.url("/v1/sdk_exception").toUri()
     }
 
@@ -72,11 +74,12 @@ class ErrorBoundaryTest {
     }
 
     @Test
-    fun testLogsStatsigMetadata() = runBlocking {
+    fun testLogsStatsigMetadataAndOptions() = runBlocking {
         boundary.swallow("") { throw IOException() }
 
         val body = Gson().fromJson(server.takeRequest().body.readUtf8(), Map::class.java)
         assertEquals(body["statsigMetadata"], Gson().fromJson(statsigMetadata.asJson(), Map::class.java))
+        assertEquals(Gson().fromJson(Gson().toJson(options.getLoggingCopy()), Map::class.java), body["setupOptions"])
     }
 
     @Test

@@ -51,4 +51,17 @@ class StatsigOptions(
     fun getEnvironment(): MutableMap<String, String>? {
         return environment
     }
+
+    fun getLoggingCopy(): Map<String, Any> {
+        return mapOf(
+            "api" to (api ?: "DEFAULT"),
+            "initTimeoutMs" to initTimeoutMs,
+            "localMode" to localMode,
+            "disableDiagnostics" to disableDiagnostics,
+            "rulesetsSyncIntervalMs" to rulesetsSyncIntervalMs,
+            "idListsSyncIntervalMs" to idListsSyncIntervalMs,
+            "setDataStore" to (dataStore != null),
+            "setBootstrapValues" to (bootstrapValues != null),
+        )
+    }
 }

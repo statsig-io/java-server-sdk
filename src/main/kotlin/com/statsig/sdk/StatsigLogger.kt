@@ -34,6 +34,7 @@ internal class StatsigLogger(
     private val coroutineScope: CoroutineScope,
     private val network: StatsigNetwork,
     private val statsigMetadata: StatsigMetadata,
+    private val statsigOptions: StatsigOptions,
 ) {
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -131,7 +132,11 @@ internal class StatsigLogger(
 
     fun logDiagnostics(context: ContextType, markers: Collection<Marker>) {
         val event = StatsigEvent(DIAGNOSTICS_EVENT)
-        event.eventMetadata = mapOf("context" to context.toString().lowercase(), "markers" to gson.toJson(markers))
+        event.eventMetadata = mapOf(
+            "context" to context.toString().lowercase(),
+            "markers" to gson.toJson(markers),
+            "statsigOptions" to gson.toJson(statsigOptions.getLoggingCopy()),
+        )
         log(event)
     }
 
