@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import okhttp3.Response
 import kotlin.collections.HashMap
 
 const val STORAGE_ADAPTER_KEY = "statsig.cache"
@@ -130,64 +131,71 @@ internal class SpecStore constructor(
     }
 
     private suspend fun syncIdListsFromNetwork() {
-        val response = network.post(
-            options.api + "/get_id_lists",
-            mapOf("statsigMetadata" to statsigMetadata),
-            emptyMap(),
-            this.options.initTimeoutMs,
-        ) ?: return
-        if (!response.isSuccessful) {
-            return
-        }
-        val body = response.body ?: return
-        val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
-        diagnostics.markStart(KeyType.GET_ID_LIST_SOURCES, StepType.PROCESS, additionalMarker = Marker(idListCount = jsonResponse.size))
-        val tasks = mutableListOf<Job>()
-
-        for ((name, serverList) in jsonResponse) {
-            var localList = idLists[name]
-            if (localList == null) {
-                localList = IDList(name = name)
-                idLists[name] = localList
+        var response: Response? = null
+        try {
+            response = network.post(
+                options.api + "/get_id_lists",
+                mapOf("statsigMetadata" to statsigMetadata),
+                emptyMap(),
+                this.options.initTimeoutMs,
+            ) ?: return
+            if (!response.isSuccessful) {
+                return
             }
-            if (serverList.url == null || serverList.fileID == null || serverList.creationTime < localList.creationTime) {
-                continue
-            }
+            val body = response.body ?: return
+            val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
+            diagnostics.markStart(KeyType.GET_ID_LIST_SOURCES, StepType.PROCESS, additionalMarker = Marker(idListCount = jsonResponse.size))
+            val tasks = mutableListOf<Job>()
 
-            // check if fileID has changed, and it is indeed a newer file. If so, reset the list
-            if (serverList.fileID != localList.fileID && serverList.creationTime >= localList.creationTime) {
-                localList = IDList(
-                    name = name,
-                    url = serverList.url,
-                    fileID = serverList.fileID,
-                    size = 0,
-                    creationTime = serverList.creationTime,
+            for ((name, serverList) in jsonResponse) {
+                var localList = idLists[name]
+                if (localList == null) {
+                    localList = IDList(name = name)
+                    idLists[name] = localList
+                }
+                if (serverList.url == null || serverList.fileID == null || serverList.creationTime < localList.creationTime) {
+                    continue
+                }
+
+                // check if fileID has changed, and it is indeed a newer file. If so, reset the list
+                if (serverList.fileID != localList.fileID && serverList.creationTime >= localList.creationTime) {
+                    localList = IDList(
+                        name = name,
+                        url = serverList.url,
+                        fileID = serverList.fileID,
+                        size = 0,
+                        creationTime = serverList.creationTime,
+                    )
+                    idLists[name] = localList
+                }
+                if (serverList.size <= localList.size) {
+                    continue
+                }
+
+                tasks.add(
+                    statsigScope.launch {
+                        downloadIDList(localList)
+                    },
                 )
-                idLists[name] = localList
-            }
-            if (serverList.size <= localList.size) {
-                continue
             }
 
-            tasks.add(
-                statsigScope.launch {
-                    downloadIDList(localList)
-                },
-            )
-        }
+            tasks.joinAll()
+            diagnostics.markEnd(KeyType.GET_ID_LIST_SOURCES, true, StepType.PROCESS)
 
-        tasks.joinAll()
-        diagnostics.markEnd(KeyType.GET_ID_LIST_SOURCES, true, StepType.PROCESS)
-
-        // remove deleted id lists
-        val deletedLists = mutableListOf<String>()
-        for (name in idLists.keys) {
-            if (!jsonResponse.containsKey(name)) {
-                deletedLists.add(name)
+            // remove deleted id lists
+            val deletedLists = mutableListOf<String>()
+            for (name in idLists.keys) {
+                if (!jsonResponse.containsKey(name)) {
+                    deletedLists.add(name)
+                }
             }
-        }
-        for (name in deletedLists) {
-            idLists.remove(name)
+            for (name in deletedLists) {
+                idLists.remove(name)
+            }
+        } catch (e: Exception) {
+            throw e
+        } finally {
+            response?.close()
         }
     }
 
@@ -195,10 +203,10 @@ internal class SpecStore constructor(
         if (list.url == null) {
             return
         }
-
+        var response: Response? = null
         try {
             diagnostics.markStart(KeyType.GET_ID_LIST, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
-            val response = network.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
+            response = network.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
             diagnostics.markEnd(KeyType.GET_ID_LIST, response?.isSuccessful === true, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url, statusCode = response?.code, sdkRegion = response?.headers?.get("x-statsig-region")))
 
             if (response?.isSuccessful !== true) {
@@ -234,6 +242,8 @@ internal class SpecStore constructor(
             errorBoundary.logException("downloadIDList", e)
             println("[Statsig]: An exception was caught:  $e")
             diagnostics.markEnd(KeyType.GET_ID_LIST, false, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
+        } finally {
+            response?.close()
         }
     }
 
@@ -424,9 +434,10 @@ internal class SpecStore constructor(
     }
 
     suspend fun downloadConfigSpecs(): APIDownloadedConfigs? {
+        var response: Response? = null
         try {
-            val specs = this.network.downloadConfigSpecs(this.lastUpdateTime, this.options.initTimeoutMs) ?: return null
-            val configs = gson.fromJson(specs.body?.charStream(), APIDownloadedConfigs::class.java)
+            response = this.network.downloadConfigSpecs(this.lastUpdateTime, this.options.initTimeoutMs) ?: return null
+            val configs = gson.fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
             if (configs.hasUpdates) {
                 this.lastUpdateTime = configs.time
             }
@@ -434,6 +445,8 @@ internal class SpecStore constructor(
         } catch (e: Exception) {
             errorBoundary.logException("downloadConfigSpecs", e)
             println("[Statsig]: An exception was caught:  $e")
+        } finally {
+            response?.close()
         }
         return null
     }
