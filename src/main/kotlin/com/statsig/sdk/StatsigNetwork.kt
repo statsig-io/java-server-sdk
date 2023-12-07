@@ -171,11 +171,12 @@ internal class StatsigNetwork(
     ): Response? {
         return request(
             statsigHttpClient.newBuilder().callTimeout(
-                timeoutMs, TimeUnit.MILLISECONDS
+                timeoutMs,
+                TimeUnit.MILLISECONDS,
             ).build(),
             url,
             null,
-            headers
+            headers,
         )
     }
 
@@ -183,7 +184,7 @@ internal class StatsigNetwork(
         return get(
             "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
             emptyMap(),
-            timeoutMs
+            timeoutMs,
         )
     }
 
