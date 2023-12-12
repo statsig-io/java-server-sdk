@@ -11,7 +11,6 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -81,7 +80,8 @@ class ExposureLoggingTest {
         driver.checkGateWithExposureLoggingDisabled(user, "a_gate")
         driver.shutdown()
 
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
     }
 
     @Test
@@ -111,7 +111,8 @@ class ExposureLoggingTest {
         driver.getConfigWithExposureLoggingDisabled(user, "a_config")
         driver.shutdown()
 
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
     }
 
     @Test
@@ -141,7 +142,8 @@ class ExposureLoggingTest {
         driver.getExperimentWithExposureLoggingDisabled(user, "a_config")
         driver.shutdown()
 
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
     }
 
     @Test
@@ -161,7 +163,8 @@ class ExposureLoggingTest {
         layer.getInt("an_int", 0)
         driver.shutdown()
 
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
     }
 
     @Test

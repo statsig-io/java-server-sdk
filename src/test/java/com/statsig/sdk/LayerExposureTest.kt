@@ -15,7 +15,6 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,7 +53,7 @@ class LayerExposureTest {
                             throw Exception("No content type set!")
                         }
                         eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                        return MockResponse().setResponseCode(200)
                     }
 
                     return MockResponse().setResponseCode(404)
@@ -74,8 +73,9 @@ class LayerExposureTest {
         driver.initialize("secret-testcase", options)
         driver.getLayer(user, "unallocated_layer")
         driver.shutdown()
+        val events = captureEvents()
 
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        assertEquals(events.size, 0)
     }
 
     @Test
@@ -84,8 +84,9 @@ class LayerExposureTest {
         val layer = driver.getLayer(user, "unallocated_layer")
         layer.getString("an_int", "err")
         driver.shutdown()
+        val events = captureEvents()
 
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        assertEquals(events.size, 0)
     }
 
     @Test
@@ -94,8 +95,9 @@ class LayerExposureTest {
         val layer = driver.getLayer(user, "unallocated_layer")
         layer.getString("a_string", "err")
         driver.shutdown()
+        val events = captureEvents()
 
-        assertFalse("should not have called log_event endpoint", eventLogInputCompletable.isCompleted)
+        assertEquals(events.size, 0)
     }
 
     @Test
@@ -251,7 +253,7 @@ class LayerExposureTest {
         val logs = withTimeout(TEST_TIMEOUT) {
             eventLogInputCompletable.await()
         }
-
+        logs.events = logs.events.filter { it.eventName != "statsig::diagnostics" }.toTypedArray()
         logs.events.sortBy { it.time }
         return@runBlocking logs.events
     }
