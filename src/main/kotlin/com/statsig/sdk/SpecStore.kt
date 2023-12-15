@@ -23,6 +23,7 @@ internal class SpecStore constructor(
     private var statsigScope: CoroutineScope,
     private val errorBoundary: ErrorBoundary,
     private val diagnostics: Diagnostics,
+    private val serverSecret: String,
 ) {
     private var initTime: Long = 0
     private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
@@ -367,6 +368,9 @@ internal class SpecStore constructor(
         // If Bootstrap and DataAdapter failed to load, defaulting to download config spec from network
         if (initReason == EvaluationReason.UNINITIALIZED) {
             downloadedConfigs = this.downloadConfigSpecsFromNetwork()
+            if (downloadedConfigs != null) {
+                initReason = EvaluationReason.NETWORK
+            }
         }
         if (downloadedConfigs != null) {
             if (options.bootstrapValues == null) {
@@ -378,7 +382,6 @@ internal class SpecStore constructor(
     }
 
     private suspend fun downloadConfigSpecsFromNetwork(): APIDownloadedConfigs? {
-        this.initReason = EvaluationReason.NETWORK
         return this.downloadConfigSpecs()
     }
 
@@ -438,6 +441,9 @@ internal class SpecStore constructor(
         try {
             response = this.network.downloadConfigSpecs(this.lastUpdateTime, this.options.initTimeoutMs) ?: return null
             val configs = gson.fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
+            if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
+                return null
+            }
             if (configs.hasUpdates) {
                 this.lastUpdateTime = configs.time
             }

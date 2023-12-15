@@ -225,7 +225,7 @@ private class StatsigServerImpl() :
                     }
                     setupAndStartDiagnostics()
                     configEvaluator =
-                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics, statsigMetadata)
+                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics, statsigMetadata, serverSecret)
                     configEvaluator.initialize()
                     initialized = true
                     endInitDiagnostics(isSDKInitialized())
