@@ -1,6 +1,7 @@
 package com.statsig.sdk
 
 import okhttp3.Response
+import java.util.Collections
 
 const val NANO_IN_MS = 1_000_000.0
 const val MAX_SAMPLING_RATE = 10_000
@@ -13,7 +14,7 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         "idlist" to 0,
         "api_call" to 0,
     )
-    internal var markers: DiagnosticsMarkers = mutableMapOf()
+    internal var markers: DiagnosticsMarkers = Collections.synchronizedMap(mutableMapOf())
 
     fun setSamplingRate(rates: Map<String, Int>) {
         rates.forEach { entry ->
@@ -108,10 +109,9 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
 
     private fun addMarker(marker: Marker, context: ContextType) {
         if (this.markers[context] == null) {
-            this.markers[context] = mutableListOf()
+            this.markers[context] = Collections.synchronizedList(mutableListOf())
         }
         this.markers[context]?.add(marker)
-        this.markers.values
     }
 
     fun logDiagnostics(context: ContextType) {
@@ -119,7 +119,7 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
             return
         }
         logger.logDiagnostics(context, markers[context]!!)
-        markers[context] = mutableListOf()
+        clearContext(context)
     }
 
     fun startNetworkRequestDiagnostics(key: KeyType?) {
@@ -145,5 +145,9 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
             return KeyType.GET_ID_LIST_SOURCES
         }
         return null
+    }
+
+    fun clearContext(context: ContextType) {
+        this.markers[context] = Collections.synchronizedList(mutableListOf())
     }
 }

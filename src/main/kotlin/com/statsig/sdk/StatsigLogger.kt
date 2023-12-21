@@ -143,18 +143,18 @@ internal class StatsigLogger(
         log(event)
     }
 
-    fun addAPICallDiagnostics() {
+    private fun addAPICallDiagnostics() {
         val markers = diagnostics?.markers?.get(ContextType.API_CALL)
         if (markers.isNullOrEmpty() ||
             diagnostics?.shouldLogDiagnostics(ContextType.API_CALL) != true
         ) {
             return
         }
+        diagnostics?.clearContext(ContextType.API_CALL)
         val event = StatsigEvent(DIAGNOSTICS_EVENT)
         event.eventMetadata = mapOf(
             "context" to "api_call",
             "markers" to gson.toJson(markers),
-            "setupOptions" to gson.toJson(statsigOptions.getLoggingCopy()),
         )
         events.add(event)
     }

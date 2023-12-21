@@ -20,6 +20,7 @@ import java.lang.StringBuilder
 class DiagnosticsTest {
     lateinit var driver: StatsigServer
     private lateinit var eventLogInputCompletable: CompletableDeferred<LogEventInput>
+    private lateinit var logEvents: MutableList<StatsigEvent>
     private lateinit var server: MockWebServer
     private lateinit var options: StatsigOptions
     private lateinit var gson: Gson
@@ -34,6 +35,7 @@ class DiagnosticsTest {
         server.start(8899)
         gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
         eventLogInputCompletable = CompletableDeferred()
+        logEvents = mutableListOf()
     }
 
     @After
@@ -150,7 +152,7 @@ class DiagnosticsTest {
     }
 
     @Test
-    fun testSamping() = runBlocking {
+    fun testSampling() = runBlocking {
         val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\", \"api_call\": \"0\"}").toString()
         setupWebServer(downloadConfigSpecsResponseWithSampling)
         driver.initializeAsync("secret-testcase", options).get()
@@ -176,6 +178,44 @@ class DiagnosticsTest {
         assertEquals("initialize", events[0]!!.eventMetadata!!["context"])
     }
 
+    @Test
+    fun testConcurrentCoreApiCall() = runBlocking {
+        val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\", \"api_call\": \"10000\"}").toString()
+        setupWebServer(downloadConfigSpecsResponseWithSampling)
+        driver.initializeAsync("secret-testcase", options).get()
+        val threads = arrayListOf<Thread>()
+        val threadSize = 10
+        val iterations = 10
+        for (i in 1..threadSize) {
+            val t =
+                Thread {
+                    for (j in 1..iterations) {
+                        val user = StatsigUser("user_id_$i")
+                        user.email = "testuser@statsig.com"
+
+                        runBlocking {
+                            driver.checkGate(user, "always_on_gate")
+                        }
+                    }
+                }
+            threads.add(t)
+        }
+        for (t in threads) {
+            t.start()
+        }
+        for (t in threads) {
+            t.join()
+        }
+        driver.shutdown()
+        val diagnosticsEvents = logEvents.filter { it.eventName == "statsig::diagnostics" && it.eventMetadata?.get("context") == "api_call" }
+        val markers = mutableListOf<Marker>()
+        diagnosticsEvents.forEach {
+            val temp: List<Marker> = gson.fromJson(it.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
+            markers.addAll(temp)
+        }
+        assert(markers.size == threadSize * iterations * 2)
+    }
+
     private fun setupWebServer(downLoadConfigResponse: String) {
         server.apply {
             dispatcher = object : Dispatcher() {
@@ -187,7 +227,9 @@ class DiagnosticsTest {
                     }
                     if ("/v1/log_event" in request.path!!) {
                         val logBody = request.body.readUtf8()
+                        val input = gson.fromJson(logBody, LogEventInput::class.java)
                         eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
+                        logEvents.addAll(input.events)
                         return MockResponse().setResponseCode(200)
                     }
                     return MockResponse().setResponseCode(404)
