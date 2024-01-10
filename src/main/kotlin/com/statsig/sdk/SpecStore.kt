@@ -109,7 +109,7 @@ internal class SpecStore constructor(
             configString = gson.toJson(configSpecs)
         } catch (e: Exception) {
             errorBoundary.logException("fireRulesUpdatedCallback", e)
-            println("[Statsig]: An exception was caught:  $e")
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
         }
 
         if (configString.isEmpty()) {
@@ -241,7 +241,7 @@ internal class SpecStore constructor(
             diagnostics.markEnd(KeyType.GET_ID_LIST, true, StepType.PROCESS, additionalMarker = Marker(url = list.url))
         } catch (e: Exception) {
             errorBoundary.logException("downloadIDList", e)
-            println("[Statsig]: An exception was caught:  $e")
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
             diagnostics.markEnd(KeyType.GET_ID_LIST, false, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
         } finally {
             response?.close()
@@ -431,7 +431,7 @@ internal class SpecStore constructor(
             return gson.fromJson(specs, APIDownloadedConfigs::class.java)
         } catch (e: Exception) {
             errorBoundary.logException("parseConfigSpecs", e)
-            println("[Statsig]: An exception was caught:  $e")
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
         }
         return null
     }
@@ -450,7 +450,7 @@ internal class SpecStore constructor(
             return configs
         } catch (e: Exception) {
             errorBoundary.logException("downloadConfigSpecs", e)
-            println("[Statsig]: An exception was caught:  $e")
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
         } finally {
             response?.close()
         }

@@ -639,7 +639,11 @@ class Statsig {
         private fun checkInitialized(): Boolean {
             val initialized = isInitialized()
             if (!initialized) {
-                println("Call and wait for initialize to complete before calling SDK methods.")
+                if (::statsigServer.isInitialized) {
+                    statsigServer.getCustomLogger().warning("Call and wait for initialize to complete before calling SDK methods.")
+                } else {
+                    println("Call and wait for initialize to complete before calling SDK methods.")
+                }
             }
             return initialized
         }

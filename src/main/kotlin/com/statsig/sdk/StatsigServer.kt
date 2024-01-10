@@ -167,6 +167,7 @@ sealed class StatsigServer {
     abstract fun shutdown()
 
     internal abstract suspend fun flush()
+    internal abstract fun getCustomLogger(): LoggerInterface
 
     companion object {
 
@@ -661,6 +662,10 @@ private class StatsigServerImpl() :
         logger.flush()
     }
 
+    override fun getCustomLogger(): LoggerInterface {
+        return options.customLogger
+    }
+
     private suspend fun getLayerImpl(user: StatsigUser, layerName: String, disableExposure: Boolean, onExposure: OnLayerExposure? = null): Layer {
         if (!isSDKInitialized()) {
             return Layer.empty(layerName)
@@ -748,11 +753,11 @@ private class StatsigServerImpl() :
 
     private fun isSDKInitialized(): Boolean {
         if (statsigJob.isCancelled || statsigJob.isCompleted) {
-            println("StatsigServer was shutdown")
+            options.customLogger.info("StatsigServer was shutdown")
             return false
         }
         if (!this::configEvaluator.isInitialized || !configEvaluator.isInitialized) { // If the server was never initialized
-            println("Must initialize a server before calling other APIs")
+            options.customLogger.warning("Must initialize a server before calling other APIs")
             return false
         }
         return true
@@ -803,7 +808,7 @@ private class StatsigServerImpl() :
             if (!t.name.equals(currentThread.name)) {
                 throw e
             }
-            println("[Statsig]: Shutting down Statsig because of unhandled exception from your server")
+            server.getCustomLogger().info("[Statsig]: Shutting down Statsig because of unhandled exception from your server")
             server.shutdown()
             throw e
         }

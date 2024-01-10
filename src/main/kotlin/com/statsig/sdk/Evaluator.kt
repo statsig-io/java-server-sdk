@@ -374,7 +374,7 @@ internal class Evaluator(
                 conditionFromString(condition.type)
             } catch (e: java.lang.IllegalArgumentException) {
                 errorBoundary.logException("evaluateCondition:condition", e)
-                println("[Statsig]: An exception was caught:  $e")
+                options.customLogger.warning("[Statsig]: An exception was caught:  $e")
                 null
             }
 
@@ -872,7 +872,7 @@ internal class Evaluator(
             false
         } catch (e: Exception) {
             errorBoundary.logException("versionCompareHelper", e)
-            println("[Statsig]: An exception was caught:  $e")
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
             false
         }
     }

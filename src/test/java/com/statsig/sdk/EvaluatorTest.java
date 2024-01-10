@@ -29,6 +29,7 @@ public class EvaluatorTest {
 
         APIDownloadedConfigs configs = gson.fromJson(CONFIG_SPEC, APIDownloadedConfigs.class);
         specStore.setDownloadedConfigs(configs,false);
+        TestUtilJava.setInitReasonFromSpecStore(specStore, EvaluationReason.NETWORK);
 
         // IP Passes, but ID doesnt pass rollout percentage
         StatsigUser user = new StatsigUser("123");

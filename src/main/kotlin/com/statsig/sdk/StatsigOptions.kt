@@ -4,6 +4,16 @@ private const val TIER_KEY: String = "tier"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
 private const val CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000
 private const val ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
+private val defaultLogger = object : LoggerInterface {
+
+    override fun warning(message: String) {
+        println(message)
+    }
+
+    override fun info(message: String) {
+        println(message)
+    }
+}
 
 /**
  * A SAM for Java compatibility
@@ -11,6 +21,11 @@ private const val ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
 @FunctionalInterface
 fun interface RulesUpdatedCallback {
     fun accept(rules: String)
+}
+
+interface LoggerInterface {
+    fun warning(message: String)
+    fun info(message: String)
 }
 
 /**
@@ -30,6 +45,7 @@ class StatsigOptions(
     var rulesetsSyncIntervalMs: Long = CONFIG_SYNC_INTERVAL_MS,
     var idListsSyncIntervalMs: Long = ID_LISTS_SYNC_INTERVAL_MS,
     var dataStore: IDataStore? = null,
+    var customLogger: LoggerInterface = defaultLogger,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(null, initTimeoutMs)

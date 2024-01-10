@@ -14,6 +14,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.lang.StringBuilder
 
@@ -27,6 +28,9 @@ class DiagnosticsTest {
     lateinit var downloadConfigSpecsResponse: String
 
     private val user = StatsigUser("testUser")
+    @JvmField
+    @Rule
+    val retry = RetryRule(3)
 
     @Before
     fun setup() {

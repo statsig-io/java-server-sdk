@@ -215,7 +215,7 @@ internal class StatsigNetwork(
             diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, response.isSuccessful, response)
             return response
         } catch (e: Exception) {
-            println("[Statsig]: An exception was caught: $e")
+            options.customLogger.warning("[Statsig]: An exception was caught: $e")
             if (e is JsonParseException) {
                 errorBoundary.logException("postImpl", e)
             }
@@ -257,7 +257,7 @@ internal class StatsigNetwork(
                         }
                     }
                 } catch (e: Exception) {
-                    println("[Statsig]: An exception was caught: $e")
+                    options.customLogger.warning("[Statsig]: An exception was caught: $e")
                     if (e is JsonParseException) {
                         errorBoundary.logException("retryPostLogs", e)
                     }

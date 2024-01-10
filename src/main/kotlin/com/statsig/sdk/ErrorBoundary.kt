@@ -102,8 +102,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
             throw ex
         }
 
-        println("[Statsig]: An unexpected exception occurred.")
-        println(ex)
+        options.customLogger.warning("[Statsig]: An unexpected exception occurred: $ex")
 
         logException(tag, ex, configName)
     }
