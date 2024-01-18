@@ -4,6 +4,7 @@ import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import ua_parser.Parser
+import java.lang.IllegalStateException
 import java.lang.Long.parseLong
 import java.lang.NumberFormatException
 import java.nio.ByteBuffer
@@ -59,7 +60,6 @@ internal class Evaluator(
         CountryLookup.initialize()
         specStore = SpecStore(this.network, this.options, statsigMetadata, statsigScope, errorBoundary, diagnostics, serverSecret)
         network.setDiagnostics(diagnostics)
-
         statsigScope.launch {
             uaParser // This will cause the 'lazy' load to occur on a BG thread
         }
@@ -175,13 +175,20 @@ internal class Evaluator(
         hash: HashAlgo = HashAlgo.SHA256,
         clientSDKKey: String? = null,
     ): Map<String, Any> {
-        return ClientInitializeFormatter(
+        val response = ClientInitializeFormatter(
             this.specStore,
             this::evaluateConfig,
             user,
             hash,
             clientSDKKey,
         ).getFormattedResponse()
+        if (response == null || response.isEmpty()) {
+            errorBoundary.logException(
+                "getClientInitializeResponse",
+                IllegalStateException("getClientInitializeResponse returns empty result: Possibly SDK failed to initialize"),
+            )
+        }
+        return response
     }
 
     fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
