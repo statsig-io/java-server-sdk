@@ -86,6 +86,7 @@ internal class SpecStore constructor(
                     if (it.hasUpdates) {
                         fireRulesUpdatedCallback(it)
                     }
+                    diagnostics.clearContext(ContextType.CONFIG_SYNC)
                 }
             }
     }
@@ -95,6 +96,7 @@ internal class SpecStore constructor(
             while (true) {
                 delay(options.idListsSyncIntervalMs)
                 syncIdListsFromNetwork()
+                diagnostics.clearContext(ContextType.CONFIG_SYNC)
             }
         }
     }

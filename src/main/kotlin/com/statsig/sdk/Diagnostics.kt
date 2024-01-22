@@ -5,6 +5,7 @@ import java.util.Collections
 
 const val NANO_IN_MS = 1_000_000.0
 const val MAX_SAMPLING_RATE = 10_000
+const val MAX_MARKERS = 50
 internal class Diagnostics(private var isDisabled: Boolean, private var logger: StatsigLogger) {
     var diagnosticsContext: ContextType = ContextType.INITIALIZE
     private val samplingRates: MutableMap<String, Int> = mutableMapOf(
@@ -15,7 +16,6 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         "api_call" to 0,
     )
     internal var markers: DiagnosticsMarkers = Collections.synchronizedMap(mutableMapOf())
-
     fun setSamplingRate(rates: Map<String, Int>) {
         rates.forEach { entry ->
             if (samplingRates.containsKey(entry.key)) {
@@ -111,15 +111,19 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         if (this.markers[context] == null) {
             this.markers[context] = Collections.synchronizedList(mutableListOf())
         }
+        if ((this.markers[context]?.size ?: 0) >= MAX_MARKERS) {
+            return
+        }
         this.markers[context]?.add(marker)
     }
 
     fun logDiagnostics(context: ContextType) {
-        if ((markers[context]?.size ?: 0) <= 0 || !shouldLogDiagnostics(context)) {
+        val markersToLog = markers[context]
+        clearContext(context)
+        if (markersToLog == null || markersToLog.size <= 0 || !shouldLogDiagnostics(context)) {
             return
         }
-        logger.logDiagnostics(context, markers[context]!!)
-        clearContext(context)
+        logger.logDiagnostics(context, markersToLog)
     }
 
     fun startNetworkRequestDiagnostics(key: KeyType?) {

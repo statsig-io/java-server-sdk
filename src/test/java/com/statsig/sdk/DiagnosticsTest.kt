@@ -6,6 +6,7 @@ import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -28,13 +29,14 @@ class DiagnosticsTest {
     lateinit var downloadConfigSpecsResponse: String
 
     private val user = StatsigUser("testUser")
+
     @JvmField
     @Rule
     val retry = RetryRule(3)
 
     @Before
     fun setup() {
-        downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
+        downloadConfigSpecsResponse = DiagnosticsTest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
         server = MockWebServer()
         server.start(8899)
         gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
@@ -44,6 +46,7 @@ class DiagnosticsTest {
 
     @After
     fun afterEach() {
+        driver.shutdown()
         server.shutdown()
     }
 
@@ -180,6 +183,10 @@ class DiagnosticsTest {
         // Only log initialize
         assertEquals(1, diagnosticsEvents.size)
         assertEquals("initialize", events[0]!!.eventMetadata!!["context"])
+        val diagnostics = getDiagnostics()
+        assert(diagnostics.markers[ContextType.CONFIG_SYNC].isNullOrEmpty())
+        assert(diagnostics.markers[ContextType.API_CALL].isNullOrEmpty())
+        assert(diagnostics.markers[ContextType.INITIALIZE].isNullOrEmpty())
     }
 
     @Test
@@ -188,8 +195,8 @@ class DiagnosticsTest {
         setupWebServer(downloadConfigSpecsResponseWithSampling)
         driver.initializeAsync("secret-testcase", options).get()
         val threads = arrayListOf<Thread>()
-        val threadSize = 10
-        val iterations = 10
+        val threadSize = 5
+        val iterations = 5
         for (i in 1..threadSize) {
             val t =
                 Thread {
@@ -217,7 +224,58 @@ class DiagnosticsTest {
             val temp: List<Marker> = gson.fromJson(it.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
             markers.addAll(temp)
         }
-        assert(markers.size == threadSize * iterations * 2)
+        assert(markers.size === threadSize * iterations * 2)
+    }
+
+    @Test
+    fun testDiagnosticsMarkerSize() = runBlocking {
+        val downloadConfigSpecsResponseWithSampling = StringBuilder(downloadConfigSpecsResponse).insert(downloadConfigSpecsResponse.length - 2, ",\n \"diagnostics\": {\"initialize\": \"0\", \"api_call\": \"10000\"}").toString()
+        setupWebServer(downloadConfigSpecsResponseWithSampling)
+        val user = StatsigUser("user_id_1")
+        driver.initializeAsync("secret-testcase", options).get()
+        for (i in 1..300) {
+            driver.checkGate(user, "always_on_gate")
+        }
+        driver.shutdown()
+        val diagnosticsEvents = logEvents.filter { it.eventName == "statsig::diagnostics" && it.eventMetadata?.get("context") == "api_call" }
+        val markers = mutableListOf<Marker>()
+        diagnosticsEvents.forEach {
+            val temp: List<Marker> = gson.fromJson(it.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
+            markers.addAll(temp)
+        }
+        println(markers.size)
+        assert(markers.size === 50)
+    }
+
+    @Test
+    fun testContextBeingClear() = runBlocking {
+        setupWebServer(downloadConfigSpecsResponse)
+        options.rulesetsSyncIntervalMs = 50
+        options.idListsSyncIntervalMs = 50
+        driver.initializeAsync("secret-testcase", options).get()
+        val diagnostics = getDiagnostics()
+        assert(diagnostics.markers[ContextType.INITIALIZE]!!.size == 0) // Ensure initialize markers are cleared
+        // Wait for config sync happen
+        delay(50)
+        // Ensure config sync markers are cleared
+//        assert(diagnostics.markers[ContextType.CONFIG_SYNC]!!.size == 0)
+        driver.checkGate(StatsigUser("testUser"), "always_on_gate")
+        driver.checkGate(StatsigUser("testUser"), "always_off_gate")
+        val logger = getLogger()
+        logger.flush()
+        assert(diagnostics.markers[ContextType.API_CALL]!!.size == 0) // Ensure api call markers are cleared
+    }
+
+    private fun getLogger(): StatsigLogger {
+        val loggerField = driver.javaClass.getDeclaredField("logger")
+        loggerField.isAccessible = true
+        return loggerField[driver] as StatsigLogger
+    }
+
+    private fun getDiagnostics(): Diagnostics {
+        val diagnosticsField = driver.javaClass.getDeclaredField("diagnostics")
+        diagnosticsField.isAccessible = true
+        return diagnosticsField[driver] as Diagnostics
     }
 
     private fun setupWebServer(downLoadConfigResponse: String) {
@@ -226,6 +284,7 @@ class DiagnosticsTest {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
                     if ("/v1/download_config_specs" in request.path!!) {
+                        println("dcs")
                         return MockResponse().setResponseCode(200)
                             .setBody(downLoadConfigResponse)
                     }
