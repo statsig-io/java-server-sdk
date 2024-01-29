@@ -46,6 +46,7 @@ class StatsigOptions(
     var idListsSyncIntervalMs: Long = ID_LISTS_SYNC_INTERVAL_MS,
     var dataStore: IDataStore? = null,
     var customLogger: LoggerInterface = defaultLogger,
+    var disableAllLogging: Boolean = false,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(null, initTimeoutMs)
@@ -78,6 +79,7 @@ class StatsigOptions(
             "idListsSyncIntervalMs" to idListsSyncIntervalMs,
             "setDataStore" to (dataStore != null),
             "setBootstrapValues" to (bootstrapValues != null),
+            "disableAllLogging" to disableAllLogging,
         )
     }
 }

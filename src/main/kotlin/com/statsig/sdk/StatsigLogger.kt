@@ -49,6 +49,9 @@ internal class StatsigLogger(
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     internal var diagnostics: Diagnostics? = null
     fun log(event: StatsigEvent) {
+        if (statsigOptions.disableAllLogging) {
+            return
+        }
         events.add(event)
 
         if (events.size() >= MAX_EVENTS) {
@@ -156,6 +159,9 @@ internal class StatsigLogger(
             "context" to "api_call",
             "markers" to gson.toJson(markers),
         )
+        if (statsigOptions.disableAllLogging) {
+            return
+        }
         events.add(event)
     }
 

@@ -61,7 +61,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
 
     internal fun logException(tag: String, ex: Throwable, configName: String? = null) {
         try {
-            if (options.localMode || seen.contains(ex.javaClass.name)) {
+            if (options.localMode || options.disableAllLogging || seen.contains(ex.javaClass.name)) {
                 return
             }
 
