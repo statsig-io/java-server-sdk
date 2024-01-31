@@ -22,7 +22,7 @@ class CustomLoggerTest {
     @Test
     fun testExceptionLogger() = runBlocking {
         server.initialize("server-secret", StatsigOptions(customLogger = fakeLogger))
-        assert(warningMessage.size == 2) // One from network one from gson
+        assert(warningMessage.size == 1)
         server.shutdown()
         server.checkGate(StatsigUser("user_id"), "test_gate")
         assert(infoMessage.size == 1)

@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
-private const val STATSIG_API_URL_BASE: String = "https://statsigapi.net/v1"
+const val STATSIG_API_URL_BASE: String = "https://statsigapi.net/v1"
 private const val STATSIG_CDN_URL_BASE: String = "https://api.statsigcdn.com/v1"
 
 internal class StatsigNetwork(

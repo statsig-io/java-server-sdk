@@ -136,8 +136,9 @@ internal class SpecStore constructor(
     private suspend fun syncIdListsFromNetwork() {
         var response: Response? = null
         try {
+            val api = options.api ?: STATSIG_API_URL_BASE
             response = network.post(
-                options.api + "/get_id_lists",
+                "$api/get_id_lists",
                 mapOf("statsigMetadata" to statsigMetadata),
                 emptyMap(),
                 this.options.initTimeoutMs,
