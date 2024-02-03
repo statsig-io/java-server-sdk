@@ -59,7 +59,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         }
     }
 
-    internal fun logException(tag: String, ex: Throwable, configName: String? = null) {
+    internal fun logException(tag: String, ex: Throwable, configName: String? = null, extraInfo: String? = null) {
         try {
             if (options.localMode || options.disableAllLogging || seen.contains(ex.javaClass.name)) {
                 return
@@ -79,7 +79,8 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 "info": "$safeInfo",
                 "statsigMetadata": ${statsigMetadata.asJson()},
                 "configName": "$configName",
-                "setupOptions": $optionsCopy
+                "setupOptions": $optionsCopy,
+                "extraInfo": $extraInfo
             }
             """.trimIndent()
             val req =
@@ -111,16 +112,18 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         if (diagnostics == null || keyType == null) {
             return null
         }
-        val markerID = keyType.name + "_" + (diagnostics?.markers?.get(ContextType.API_CALL)?.count() ?: 0)
-
-        diagnostics?.markStart(keyType, context = ContextType.API_CALL, additionalMarker = Marker(markerID = markerID, configName = configName))
-        return markerID
+        return diagnostics?.markStart(keyType, context = ContextType.API_CALL, additionalMarker = Marker(configName = configName))
     }
 
     private fun markEnd(keyType: KeyType?, success: Boolean, configName: String?, markerID: String?) {
         if (diagnostics == null || keyType == null) {
             return
         }
-        diagnostics?.markEnd(keyType, success, context = ContextType.API_CALL, additionalMarker = Marker(markerID = markerID, configName = configName))
+        diagnostics?.markEnd(
+            keyType,
+            success,
+            context = ContextType.API_CALL,
+            additionalMarker = Marker(markerID = markerID, configName = configName),
+        )
     }
 }

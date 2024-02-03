@@ -258,12 +258,14 @@ class DiagnosticsTest {
         // Wait for config sync happen
         delay(50)
         // Ensure config sync markers are cleared
-//        assert(diagnostics.markers[ContextType.CONFIG_SYNC]!!.size == 0)
+        assert(diagnostics.markers[ContextType.CONFIG_SYNC]!!.size == 0)
         driver.checkGate(StatsigUser("testUser"), "always_on_gate")
         driver.checkGate(StatsigUser("testUser"), "always_off_gate")
+        driver.getClientInitializeResponse(StatsigUser("testUser"))
         val logger = getLogger()
         logger.flush()
         assert(diagnostics.markers[ContextType.API_CALL]!!.size == 0) // Ensure api call markers are cleared
+        assert(diagnostics.markers[ContextType.GET_CLIENT_INITIALIZE_RESPONSE]!!.size == 0) // Ensure api call markers are cleared
     }
 
     private fun getLogger(): StatsigLogger {

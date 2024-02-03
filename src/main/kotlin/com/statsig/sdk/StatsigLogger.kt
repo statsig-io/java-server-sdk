@@ -146,17 +146,17 @@ internal class StatsigLogger(
         log(event)
     }
 
-    private fun addAPICallDiagnostics() {
-        val markers = diagnostics?.markers?.get(ContextType.API_CALL)
-        diagnostics?.clearContext(ContextType.API_CALL)
+    private fun addDiagnostics(context: ContextType) {
+        val markers = diagnostics?.markers?.get(context)
+        diagnostics?.clearContext(context)
         if (markers.isNullOrEmpty() ||
-            diagnostics?.shouldLogDiagnostics(ContextType.API_CALL) != true
+            diagnostics?.shouldLogDiagnostics(context) != true
         ) {
             return
         }
         val event = StatsigEvent(DIAGNOSTICS_EVENT)
         event.eventMetadata = mapOf(
-            "context" to "api_call",
+            "context" to context.name.lowercase(),
             "markers" to gson.toJson(markers),
         )
         if (statsigOptions.disableAllLogging) {
@@ -167,7 +167,8 @@ internal class StatsigLogger(
 
     suspend fun flush() {
         withContext(Dispatchers.IO) {
-            addAPICallDiagnostics()
+            addDiagnostics(ContextType.API_CALL)
+            addDiagnostics(ContextType.GET_CLIENT_INITIALIZE_RESPONSE)
             if (events.size() == 0) {
                 return@withContext
             }

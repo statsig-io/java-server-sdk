@@ -174,7 +174,7 @@ internal class Evaluator(
         user: StatsigUser,
         hash: HashAlgo = HashAlgo.SHA256,
         clientSDKKey: String? = null,
-    ): Map<String, Any> {
+    ): ClientInitializeResponse {
         val response = ClientInitializeFormatter(
             this.specStore,
             this::evaluateConfig,
@@ -183,9 +183,15 @@ internal class Evaluator(
             clientSDKKey,
         ).getFormattedResponse()
         if (response == null || response.isEmpty()) {
+            val extraInfo = """{
+                "hash": "$hash",
+                "clientKey": "$clientSDKKey"
+                }
+            """.trimIndent()
             errorBoundary.logException(
                 "getClientInitializeResponse",
                 IllegalStateException("getClientInitializeResponse returns empty result: Possibly SDK failed to initialize"),
+                extraInfo = extraInfo,
             )
         }
         return response

@@ -26,6 +26,9 @@ enum class ContextType {
 
     @SerializedName("api_call")
     API_CALL,
+
+    @SerializedName("get_client_initialize_response")
+    GET_CLIENT_INITIALIZE_RESPONSE,
 }
 
 enum class KeyType {
@@ -54,7 +57,10 @@ enum class KeyType {
     GET_EXPERIMENT,
 
     @SerializedName("get_layer")
-    GET_LAYER, ;
+    GET_LAYER,
+
+    @SerializedName("get_client_initialize_response")
+    GET_CLIENT_INITIALIZE_RESPONSE, ;
 
     companion object {
         fun convertFromString(value: String): KeyType? {

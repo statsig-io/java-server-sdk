@@ -21,6 +21,10 @@ internal data class ClientInitializeResponse(
         val json = gson.toJson(this)
         return gson.fromJson(json, object : TypeToken<Map<String, Any>>() {}.type)
     }
+
+    fun isEmpty(): Boolean {
+        return feature_gates.isEmpty() && dynamic_configs.isEmpty() && layer_configs.isEmpty()
+    }
 }
 
 internal data class ClientConfig(
@@ -47,7 +51,7 @@ internal class ClientInitializeFormatter(
     private val clientSDKKey: String? = null,
 ) {
 
-    fun getFormattedResponse(): Map<String, Any> {
+    fun getFormattedResponse(): ClientInitializeResponse {
         val evaluatedKeys = mutableMapOf<String, Any>()
         if (user.userID != null) {
             evaluatedKeys["userID"] = user.userID!!
@@ -83,7 +87,7 @@ internal class ClientInitializeFormatter(
             evaluatedKeys,
             this.hash.toString().lowercase(),
             user.getHashWithoutStableID(),
-        ).toMap()
+        )
     }
 
     private fun populateExperimentFields(

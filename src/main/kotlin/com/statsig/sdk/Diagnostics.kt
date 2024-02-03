@@ -14,6 +14,7 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         "initialize" to MAX_SAMPLING_RATE,
         "idlist" to 0,
         "api_call" to 0,
+        "gcir" to 0,
     )
     internal var markers: DiagnosticsMarkers = Collections.synchronizedMap(mutableMapOf())
     fun setSamplingRate(rates: Map<String, Int>) {
@@ -30,10 +31,10 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         }
     }
 
-    fun markStart(key: KeyType, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null) {
+    fun markStart(key: KeyType, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null): String? {
         val contextType = context ?: diagnosticsContext
         if (contextType == ContextType.API_CALL && isDisabled) {
-            return
+            return null
         }
         val marker = Marker(key = key, action = ActionType.START, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
         when (key) {
@@ -52,7 +53,11 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
                 marker.markerID = additionalMarker?.markerID
             }
         }
+        if (contextType == ContextType.API_CALL || contextType == ContextType.GET_CLIENT_INITIALIZE_RESPONSE) {
+            marker.markerID = key.name + "_" + (markers?.get(contextType)?.count() ?: 0)
+        }
         this.addMarker(marker, contextType)
+        return marker.markerID
     }
 
     fun markEnd(key: KeyType, success: Boolean, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null) {
@@ -92,6 +97,9 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
                 marker.configName = additionalMarker?.configName
                 marker.markerID = additionalMarker?.markerID
             }
+            ContextType.GET_CLIENT_INITIALIZE_RESPONSE -> {
+                marker.markerID = additionalMarker?.markerID
+            }
         }
         this.addMarker(marker, contextType)
     }
@@ -102,6 +110,7 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
                 ContextType.CONFIG_SYNC -> "dcs"
                 ContextType.INITIALIZE -> "initialize"
                 ContextType.API_CALL -> "api_call"
+                ContextType.GET_CLIENT_INITIALIZE_RESPONSE -> "gcir"
             }
         val rand = Math.random() * MAX_SAMPLING_RATE
         return samplingRates[samplingKey] ?: 0 > rand

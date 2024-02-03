@@ -411,10 +411,29 @@ private class StatsigServerImpl() :
         hash: HashAlgo,
         clientSDKKey: String?,
     ): Map<String, Any> {
+        var markerID: String? = null
         return this.errorBoundary.captureSync("getClientInitializeResponse", {
+            markerID = diagnostics.markStart(KeyType.GET_CLIENT_INITIALIZE_RESPONSE, StepType.PROCESS, ContextType.GET_CLIENT_INITIALIZE_RESPONSE)
             val normalizedUser = normalizeUser(user)
-            return@captureSync configEvaluator.getClientInitializeResponse(normalizedUser, hash, clientSDKKey)
-        }, { return@captureSync emptyMap() })
+            val response = configEvaluator.getClientInitializeResponse(normalizedUser, hash, clientSDKKey)
+            diagnostics.markEnd(
+                KeyType.GET_CLIENT_INITIALIZE_RESPONSE,
+                !response.isEmpty(),
+                StepType.PROCESS,
+                ContextType.GET_CLIENT_INITIALIZE_RESPONSE,
+                Marker(markerID = markerID),
+            )
+            return@captureSync response.toMap()
+        }, {
+            diagnostics.markEnd(
+                KeyType.GET_CLIENT_INITIALIZE_RESPONSE,
+                false,
+                StepType.PROCESS,
+                ContextType.GET_CLIENT_INITIALIZE_RESPONSE,
+                Marker(markerID = markerID),
+            )
+            return@captureSync emptyMap()
+        })
     }
 
     override fun overrideLayer(layerName: String, value: Map<String, Any>) {
