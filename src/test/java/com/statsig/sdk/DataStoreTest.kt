@@ -92,7 +92,10 @@ class DataStoreTest {
         driver.initializeAsync("secret-local", networkOptions).get()
 
         val res = driver.checkGateAsync(user, "gate_from_adapter_always_on").get()
+        val checkGateSyncRes = driver.checkGateSync(user, "gate_from_adapter_always_on")
+
         Assert.assertTrue(res)
+        Assert.assertTrue(checkGateSyncRes)
     }
 
     @Test
@@ -107,16 +110,21 @@ class DataStoreTest {
         driver.initializeAsync("secret-local", networkOptions).get()
         val dataStoreGateRes = driver.checkGateAsync(user, "gate_from_adapter_always_on").get()
         val bootstrapGateRes = driver.checkGateAsync(user, "always_on").get()
+
+        val dataStoreGateSyncRes = driver.checkGateSync(user, "gate_from_adapter_always_on")
+        val bootstrapGateSyncRes = driver.checkGateSync(user, "always_on")
         driver.shutdown()
 
         val events = TestUtil.captureEvents(eventLogInputCompletable)
-        Assert.assertEquals(2, events.size)
+        Assert.assertEquals(4, events.size)
 
         Assert.assertEquals("DATA_ADAPTER", events[0].eventMetadata?.get("reason") ?: "")
         Assert.assertTrue(dataStoreGateRes)
+        Assert.assertTrue(dataStoreGateSyncRes)
 
         Assert.assertEquals("UNRECOGNIZED", events[1].eventMetadata?.get("reason") ?: "")
         Assert.assertFalse(bootstrapGateRes)
+        Assert.assertFalse(bootstrapGateSyncRes)
     }
 
     @Test
@@ -132,11 +140,13 @@ class DataStoreTest {
         driver = StatsigServer.create()
         driver.initializeAsync("secret-local", networkOptions).get()
         val bootstrapGateRes = driver.checkGateAsync(user, "always_on").get()
+        val bootstrapGateSyncRes = driver.checkGateSync(user, "always_on")
         driver.shutdown()
 
         val events = TestUtil.captureEvents(eventLogInputCompletable)
         Assert.assertEquals("UNRECOGNIZED", events[0].eventMetadata?.get("reason") ?: "")
         Assert.assertFalse(bootstrapGateRes)
+        Assert.assertFalse(bootstrapGateSyncRes)
         Assert.assertTrue(didCallDownloadConfig)
     }
 

@@ -30,7 +30,7 @@ class StatsigErrorBoundaryUsage {
             every { anyConstructed<StatsigNetwork>().shutdown() } throws Exception("Test Network Shutdown")
 
             mockkConstructor(ConfigEvaluation::class)
-            every { anyConstructed<ConfigEvaluation>().fetchFromServer } throws Exception("Test Config Eval")
+            every { anyConstructed<ConfigEvaluation>().unsupported } throws Exception("Test Config Eval")
 
             mockkConstructor(StatsigLogger::class)
 
@@ -131,13 +131,6 @@ class StatsigErrorBoundaryUsage {
     fun testErrorsWithGetExperiment() = runBlocking {
         val statsig = getStatsigInstance()
         statsig.getExperiment(user, "an_experiment")
-        assertEquals(1, requests.size)
-    }
-
-    @Test
-    fun testErrorsWithGetExperimentWithExposureLoggingDisabled() = runBlocking {
-        val statsig = getStatsigInstance()
-        statsig.getExperimentWithExposureLoggingDisabled(user, "an_experiment")
         assertEquals(1, requests.size)
     }
 

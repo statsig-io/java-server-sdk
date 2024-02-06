@@ -17,7 +17,7 @@ import java.util.Date
 import kotlin.collections.set
 
 internal class ConfigEvaluation(
-    val fetchFromServer: Boolean = false,
+    val unsupported: Boolean = false,
     val booleanValue: Boolean = false,
     val jsonValue: Any? = null,
     val ruleID: String = "",
@@ -243,7 +243,7 @@ internal class Evaluator(
         val unwrappedConfig =
             config
                 ?: return ConfigEvaluation(
-                    fetchFromServer = false,
+                    unsupported = false,
                     booleanValue = false,
                     mapOf<String, Any>(),
                     evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED),
@@ -255,7 +255,7 @@ internal class Evaluator(
         val evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
         if (!config.enabled) {
             return ConfigEvaluation(
-                fetchFromServer = false,
+                unsupported = false,
                 booleanValue = false,
                 config.defaultValue,
                 "disabled",
@@ -267,7 +267,8 @@ internal class Evaluator(
             val result = this.evaluateRule(user, rule)
             result.evaluationDetails = evaluationDetails
 
-            if (result.fetchFromServer) {
+            if (result.unsupported) {
+                result.evaluationDetails?.reason = EvaluationReason.UNSUPPORTED
                 return result
             }
 
@@ -300,7 +301,7 @@ internal class Evaluator(
             }
         }
         return ConfigEvaluation(
-            fetchFromServer = false,
+            unsupported = false,
             booleanValue = false,
             config.defaultValue,
             "default",
@@ -324,7 +325,7 @@ internal class Evaluator(
         secondaryExposures.addAll(delegatedResult.secondaryExposures)
 
         val evaluation = ConfigEvaluation(
-            fetchFromServer = delegatedResult.fetchFromServer,
+            unsupported = delegatedResult.unsupported,
             booleanValue = delegatedResult.booleanValue,
             jsonValue = delegatedResult.jsonValue,
             ruleID = delegatedResult.ruleID,
@@ -343,7 +344,7 @@ internal class Evaluator(
         var pass = true
         for (condition in rule.conditions) {
             val result = this.evaluateCondition(user, condition)
-            if (result.fetchFromServer) {
+            if (result.unsupported) {
                 return result
             }
             if (!result.booleanValue) {
@@ -353,7 +354,7 @@ internal class Evaluator(
         }
 
         return ConfigEvaluation(
-            fetchFromServer = false,
+            unsupported = false,
             booleanValue = pass,
             rule.returnValue,
             rule.id,
@@ -393,7 +394,7 @@ internal class Evaluator(
 
             when (conditionEnum) {
                 ConfigCondition.PUBLIC ->
-                    return ConfigEvaluation(fetchFromServer = false, booleanValue = true)
+                    return ConfigEvaluation(unsupported = false, booleanValue = true)
 
                 ConfigCondition.FAIL_GATE, ConfigCondition.PASS_GATE -> {
                     val name = Utils.toStringOrEmpty(condition.targetValue)
@@ -408,7 +409,7 @@ internal class Evaluator(
                     secondaryExposures.addAll(result.secondaryExposures)
                     secondaryExposures.add(newExposure)
                     return ConfigEvaluation(
-                        result.fetchFromServer,
+                        result.unsupported,
                         if (conditionEnum == ConfigCondition.PASS_GATE) {
                             result.booleanValue
                         } else {
@@ -463,7 +464,7 @@ internal class Evaluator(
                 }
 
                 else -> {
-                    return ConfigEvaluation(fetchFromServer = true)
+                    return ConfigEvaluation(unsupported = true)
                 }
             }
 
@@ -472,10 +473,10 @@ internal class Evaluator(
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                        return ConfigEvaluation(unsupported = false, booleanValue = false)
                     }
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         doubleValue > doubleTargetValue,
                     )
                 }
@@ -484,10 +485,10 @@ internal class Evaluator(
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                        return ConfigEvaluation(unsupported = false, booleanValue = false)
                     }
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         doubleValue >= doubleTargetValue,
                     )
                 }
@@ -496,10 +497,10 @@ internal class Evaluator(
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                        return ConfigEvaluation(unsupported = false, booleanValue = false)
                     }
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         doubleValue < doubleTargetValue,
                     )
                 }
@@ -508,10 +509,10 @@ internal class Evaluator(
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+                        return ConfigEvaluation(unsupported = false, booleanValue = false)
                     }
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         doubleValue <= doubleTargetValue,
                     )
                 }
@@ -572,7 +573,7 @@ internal class Evaluator(
 
                 "any" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         matchStringInArray(value, condition.targetValue) { a, b ->
                             a.equals(b, true)
                         },
@@ -581,7 +582,7 @@ internal class Evaluator(
 
                 "none" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         !matchStringInArray(value, condition.targetValue) { a, b ->
                             a.equals(b, true)
                         },
@@ -590,7 +591,7 @@ internal class Evaluator(
 
                 "any_case_sensitive" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         matchStringInArray(value, condition.targetValue) { a, b ->
                             a.equals(b, false)
                         },
@@ -599,7 +600,7 @@ internal class Evaluator(
 
                 "none_case_sensitive" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         !matchStringInArray(value, condition.targetValue) { a, b ->
                             a.equals(b, false)
                         },
@@ -608,7 +609,7 @@ internal class Evaluator(
 
                 "str_starts_with_any" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         matchStringInArray(value, condition.targetValue) { a, b ->
                             a.startsWith(b, true)
                         },
@@ -617,7 +618,7 @@ internal class Evaluator(
 
                 "str_ends_with_any" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         matchStringInArray(value, condition.targetValue) { a, b ->
                             a.endsWith(b, true)
                         },
@@ -626,7 +627,7 @@ internal class Evaluator(
 
                 "str_contains_any" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         matchStringInArray(value, condition.targetValue) { a, b ->
                             a.contains(b, true)
                         },
@@ -635,7 +636,7 @@ internal class Evaluator(
 
                 "str_contains_none" -> {
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         !matchStringInArray(value, condition.targetValue) { a, b ->
                             a.contains(b, true)
                         },
@@ -645,29 +646,29 @@ internal class Evaluator(
                 "str_matches" -> {
                     val targetValue = getValueAsString(condition.targetValue)
                         ?: return ConfigEvaluation(
-                            fetchFromServer = false,
+                            unsupported = false,
                             booleanValue = false,
                         )
 
                     val strValue =
                         getValueAsString(value)
                             ?: return ConfigEvaluation(
-                                fetchFromServer = false,
+                                unsupported = false,
                                 booleanValue = false,
                             )
 
                     return ConfigEvaluation(
-                        fetchFromServer = false,
+                        unsupported = false,
                         booleanValue = Regex(targetValue).containsMatchIn(strValue),
                     )
                 }
 
                 "eq" -> {
-                    return ConfigEvaluation(fetchFromServer = false, value == condition.targetValue)
+                    return ConfigEvaluation(unsupported = false, value == condition.targetValue)
                 }
 
                 "neq" -> {
-                    return ConfigEvaluation(fetchFromServer = false, value != condition.targetValue)
+                    return ConfigEvaluation(unsupported = false, value != condition.targetValue)
                 }
 
                 "before" -> {
@@ -715,7 +716,7 @@ internal class Evaluator(
                         val base64 = Base64.getEncoder().encodeToString(bytes)
                         val containsID = idList.contains(base64.substring(0, 8))
                         return ConfigEvaluation(
-                            fetchFromServer = false,
+                            unsupported = false,
                             if (condition.operator == "in_segment_list") {
                                 containsID
                             } else {
@@ -723,11 +724,11 @@ internal class Evaluator(
                             },
                         )
                     }
-                    return ConfigEvaluation(fetchFromServer = false, false)
+                    return ConfigEvaluation(unsupported = false, false)
                 }
 
                 else -> {
-                    return ConfigEvaluation(fetchFromServer = true)
+                    return ConfigEvaluation(unsupported = true)
                 }
             }
         } catch (e: IllegalArgumentException) {
@@ -772,7 +773,7 @@ internal class Evaluator(
         b: Any?,
     ): ConfigEvaluation {
         if (a == null || b == null) {
-            return ConfigEvaluation(fetchFromServer = false, booleanValue = false)
+            return ConfigEvaluation(unsupported = false, booleanValue = false)
         }
 
         val firstEpoch = getDate(a)
@@ -780,12 +781,12 @@ internal class Evaluator(
 
         if (firstEpoch == null || secondEpoch == null) {
             return ConfigEvaluation(
-                fetchFromServer = false,
+                unsupported = false,
                 booleanValue = false,
             )
         }
         return ConfigEvaluation(
-            fetchFromServer = false,
+            unsupported = false,
             booleanValue = compare(firstEpoch, secondEpoch),
         )
     }

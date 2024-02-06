@@ -30,8 +30,8 @@ class Statsig {
         }
 
         /**
-         * Get the boolean result of a gate, evaluated against a given user.
-         * An exposure event will automatically be logged for the gate.
+         * @deprecated Please use checkGateSync instead.
+         * @see https://docs.statsig.com/server/deprecation-notices
          *
          * @param user A StatsigUser object used for evaluation
          * @param gateName The name of the gate being evaluated
@@ -41,6 +41,21 @@ class Statsig {
                 return false
             }
             return statsigServer.checkGate(user, gateName)
+        }
+
+        /**
+         * Get the boolean result of a gate synchronously, evaluated against a given user.
+         * An exposure event will automatically be logged for the gate.
+         *
+         * @param user A StatsigUser object used for evaluation
+         * @param gateName The name of the gate being evaluated
+         */
+        @JvmStatic
+        fun checkGateSync(user: StatsigUser, gateName: String): Boolean {
+            if (!checkInitialized()) {
+                return false
+            }
+            return statsigServer.checkGateSync(user, gateName)
         }
 
         /**
@@ -58,8 +73,8 @@ class Statsig {
         }
 
         /**
-         * Get the values of a DynamicConfig, evaluated against the given user.
-         * An exposure event will automatically be logged for the DynamicConfig.
+         * @deprecated Please use getConfigSync instead.
+         * @see https://docs.statsig.com/server/deprecation-notices
          *
          * @param user A StatsigUser object used for evaluation
          * @param dynamicConfigName The name of the DynamicConfig
@@ -70,6 +85,22 @@ class Statsig {
                 return DynamicConfig.empty(dynamicConfigName)
             }
             return statsigServer.getConfig(user, dynamicConfigName)
+        }
+
+        /**
+         * Get the values of a DynamicConfig synchronously, evaluated against the given user.
+         * An exposure event will automatically be logged for the DynamicConfig.
+         *
+         * @param user A StatsigUser object used for evaluation
+         * @param dynamicConfigName The name of the DynamicConfig
+         * @return DynamicConfig object evaluated for the selected StatsigUser
+         */
+        @JvmStatic
+        fun getConfigSync(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+            if (!checkInitialized()) {
+                return DynamicConfig.empty(dynamicConfigName)
+            }
+            return statsigServer.getConfigSync(user, dynamicConfigName)
         }
 
         /**
@@ -101,8 +132,8 @@ class Statsig {
         }
 
         /**
-         * Get the values of an experiment, evaluated against the given user.
-         * An exposure event will automatically be logged for the experiment.
+         * @deprecated Please use getExperimentSync instead.
+         * @see https://docs.statsig.com/server/deprecation-notices
          *
          * @param user A StatsigUser object used for the evaluation
          * @param experimentName The name of the experiment
@@ -113,6 +144,22 @@ class Statsig {
                 return DynamicConfig.empty(experimentName)
             }
             return statsigServer.getExperiment(user, experimentName)
+        }
+
+        /**
+         * Get the values of an experiment synchronously, evaluated against the given user.
+         * An exposure event will automatically be logged for the experiment.
+         *
+         * @param user A StatsigUser object used for the evaluation
+         * @param experimentName The name of the experiment
+         * @return DynamicConfig object evaluated for the selected StatsigUser
+         */
+        @JvmStatic
+        fun getExperimentSync(user: StatsigUser, experimentName: String): DynamicConfig {
+            if (!checkInitialized()) {
+                return DynamicConfig.empty(experimentName)
+            }
+            return statsigServer.getExperimentSync(user, experimentName)
         }
 
         /**
@@ -134,8 +181,8 @@ class Statsig {
         }
 
         /**
-         * Get the values of a layer, evaluated against the given user.
-         * Exposure events will be fired when get is called on resulting Layer object.
+         * @deprecated Please use getLayerSync instead.
+         * @see https://docs.statsig.com/server/deprecation-notices
          *
          * @param user A StatsigUser object used for the evaluation
          * @param layerName The name of the layer
@@ -146,6 +193,22 @@ class Statsig {
                 return Layer.empty(layerName)
             }
             return statsigServer.getLayer(user, layerName)
+        }
+
+        /**
+         * Get the values of a layer synchronously, evaluated against the given user.
+         * Exposure events will be fired when get is called on resulting Layer object.
+         *
+         * @param user A StatsigUser object used for the evaluation
+         * @param layerName The name of the layer
+         * @return Layer object evaluated for the selected StatsigUser
+         */
+        @JvmStatic
+        fun getLayerSync(user: StatsigUser, layerName: String): Layer {
+            if (!checkInitialized()) {
+                return Layer.empty(layerName)
+            }
+            return statsigServer.getLayerSync(user, layerName)
         }
 
         /**

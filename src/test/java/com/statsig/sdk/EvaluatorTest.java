@@ -36,19 +36,19 @@ public class EvaluatorTest {
         user.setIp("1.1.1.1");
         ConfigEvaluation evaluation = eval.checkGate(user, "test_country_partial");
         assertFalse(evaluation.getBooleanValue());
-        assertFalse(evaluation.getFetchFromServer());
+        assertFalse(evaluation.getUnsupported());
 
         // IP Passes and ID passes rollout percentage
         user.setUserID("4");
         evaluation = eval.checkGate(user, "test_country_partial");
         assertTrue(evaluation.getBooleanValue());
-        assertFalse(evaluation.getFetchFromServer());
+        assertFalse(evaluation.getUnsupported());
 
         // IP Does not pass and ID passes rollout percentage
         user.setIp("27.62.93.211");
         evaluation = eval.checkGate(user, "test_country_partial");
         assertFalse(evaluation.getBooleanValue());
-        assertFalse(evaluation.getFetchFromServer());
+        assertFalse(evaluation.getUnsupported());
     }
 
     private class CaseSensitiveTestCase {

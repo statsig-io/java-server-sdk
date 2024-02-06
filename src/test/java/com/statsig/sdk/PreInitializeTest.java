@@ -15,14 +15,27 @@ public class PreInitializeTest {
         CompletableFuture<Boolean> gateResult = Statsig.checkGateAsync(user, "any_gate");
         assertEquals(gateResult.getNow(true), false);
 
+        Boolean checkGateSyncRes = Statsig.checkGateSync(user, "any_gate");
+        assertEquals(checkGateSyncRes, false);
+
         CompletableFuture<DynamicConfig> configResult = Statsig.getConfigAsync(user, "any_config");
+
         assertEquals(configResult.getNow((DynamicConfig.Companion.empty("any_config"))).getValue().size(), 0);
+
+        DynamicConfig getConfigSyncRes = Statsig.getConfigSync(user, "any_config");
+        assertEquals(getConfigSyncRes.getValue().size(), 0);
 
         CompletableFuture<DynamicConfig> expResult = Statsig.getExperimentAsync(user, "any_exp");
         assertEquals(expResult.getNow((DynamicConfig.Companion.empty("any_exp"))).getValue().size(), 0);
 
+        DynamicConfig getExpSyncResult = Statsig.getExperimentSync(user, "any_exp");
+        assertEquals(getExpSyncResult.getValue().size(), 0);
+
         CompletableFuture<Layer> layerResult = Statsig.getLayerAsync(user, "any_layer");
         assertEquals(layerResult.getNow((Layer.Companion.empty("any_layer"))).getValue().size(), 0);
+
+        Layer getLayerSyncRes = Statsig.getLayerSync(user, "any_layer");
+        assertEquals(getLayerSyncRes.getValue().size(), 0);
 
         // Should not throw, should noop
         Statsig.overrideGate("test_gate", false);

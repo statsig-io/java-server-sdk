@@ -24,4 +24,5 @@ enum class EvaluationReason(val reason: String) {
     UNINITIALIZED("Uninitialized"),
     BOOTSTRAP("Bootstrap"),
     DATA_ADAPTER("DataAdapter"),
+    UNSUPPORTED("Unsupported")
 }

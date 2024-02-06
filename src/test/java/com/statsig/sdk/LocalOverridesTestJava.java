@@ -38,13 +38,17 @@ public class LocalOverridesTestJava {
        assertEquals(userB.getCopyForLogging$StatsigSDK().getCustomIDs().size(), 1);
 
        assertFalse(driver.checkGateAsync(userA, "override_me").get());
+       assertFalse(driver.checkGateSync(userA, "override_me"));
 
        evaluator.overrideGate("override_me", true);
        assertTrue(driver.checkGateAsync(userA, "override_me").get());
        assertTrue(driver.checkGateAsync(userB, "override_me").get());
+       assertTrue(driver.checkGateSync(userA, "override_me"));
+       assertTrue(driver.checkGateSync(userB, "override_me"));
 
        evaluator.overrideGate("override_me", false);
        assertFalse(driver.checkGateAsync(userB, "override_me").get());
+       assertFalse(driver.checkGateSync(userB, "override_me"));
    }
 
    @Test
@@ -56,18 +60,22 @@ public class LocalOverridesTestJava {
        Map<String, String> emptyMap = new HashMap<>();
 
        assertEquals(driver.getConfigAsync(userA, "override_me").get().getValue(), emptyMap);
+       assertEquals(driver.getConfigSync(userA, "override_me").getValue(), emptyMap);
 
        Map<String, String> overriddenValue = new HashMap<>();
        overriddenValue.put("hello", "its me");
        evaluator.overrideConfig("override_me", overriddenValue);
 
        assertEquals(driver.getConfigAsync(userA, "override_me").get().getValue(), overriddenValue);
+       assertEquals(driver.getConfigSync(userA, "override_me").getValue(), overriddenValue);
 
        overriddenValue.put("hello", "its no longer me");
        evaluator.overrideConfig("override_me", overriddenValue);
        assertEquals(driver.getConfigAsync(userB, "override_me").get().getValue(), overriddenValue);
+       assertEquals(driver.getConfigSync(userB, "override_me").getValue(), overriddenValue);
 
        evaluator.overrideConfig("override_me", emptyMap);
        assertEquals(driver.getConfigAsync(userB, "override_me").get().getValue(), emptyMap);
+       assertEquals(driver.getConfigSync(userB, "override_me").getValue(), emptyMap);
    }
 }
