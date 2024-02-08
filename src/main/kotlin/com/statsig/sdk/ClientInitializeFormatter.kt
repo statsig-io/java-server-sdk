@@ -76,9 +76,19 @@ internal class ClientInitializeFormatter(
             return filterNulls(res)
         }
 
+        var gates = specStore.getAllGates()
+        var configs = specStore.getAllConfigs()
+        if (clientSDKKey != null) {
+            val entities = specStore.getEntitiesFromKey(clientSDKKey)
+            if (entities != null) {
+                gates = gates.filter { entities.gates.contains(it.key) }
+                configs = configs.filter { entities.configs.contains(it.key) }
+            }
+        }
+
         return ClientInitializeResponse(
-            mapFn(specStore.getAllGates()),
-            mapFn(specStore.getAllConfigs()),
+            mapFn(gates),
+            mapFn(configs),
             mapFn(specStore.getAllLayerConfigs()),
             emptyMap(),
             true,
