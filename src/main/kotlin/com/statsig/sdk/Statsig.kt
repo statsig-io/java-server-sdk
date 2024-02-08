@@ -49,13 +49,15 @@ class Statsig {
          *
          * @param user A StatsigUser object used for evaluation
          * @param gateName The name of the gate being evaluated
+         * @param option advanced setup for checkGate, for example disable exposure logging
          */
         @JvmStatic
-        fun checkGateSync(user: StatsigUser, gateName: String): Boolean {
+        @JvmOverloads
+        fun checkGateSync(user: StatsigUser, gateName: String, option: CheckGateOptions? = null): Boolean {
             if (!checkInitialized()) {
                 return false
             }
-            return statsigServer.checkGateSync(user, gateName)
+            return statsigServer.checkGateSync(user, gateName, option)
         }
 
         /**
@@ -93,14 +95,16 @@ class Statsig {
          *
          * @param user A StatsigUser object used for evaluation
          * @param dynamicConfigName The name of the DynamicConfig
+         * @param option advanced setup for getConfig, for example disable exposure logging
          * @return DynamicConfig object evaluated for the selected StatsigUser
          */
         @JvmStatic
-        fun getConfigSync(user: StatsigUser, dynamicConfigName: String): DynamicConfig {
+        @JvmOverloads
+        fun getConfigSync(user: StatsigUser, dynamicConfigName: String, option: GetConfigOptions? = null): DynamicConfig {
             if (!checkInitialized()) {
                 return DynamicConfig.empty(dynamicConfigName)
             }
-            return statsigServer.getConfigSync(user, dynamicConfigName)
+            return statsigServer.getConfigSync(user, dynamicConfigName, option)
         }
 
         /**
@@ -152,14 +156,16 @@ class Statsig {
          *
          * @param user A StatsigUser object used for the evaluation
          * @param experimentName The name of the experiment
+         * @param option advanced setup for getExperiment, for example disable exposure logging
          * @return DynamicConfig object evaluated for the selected StatsigUser
          */
         @JvmStatic
-        fun getExperimentSync(user: StatsigUser, experimentName: String): DynamicConfig {
+        @JvmOverloads
+        fun getExperimentSync(user: StatsigUser, experimentName: String, option: GetExperimentOptions? = null): DynamicConfig {
             if (!checkInitialized()) {
                 return DynamicConfig.empty(experimentName)
             }
-            return statsigServer.getExperimentSync(user, experimentName)
+            return statsigServer.getExperimentSync(user, experimentName, option)
         }
 
         /**
@@ -201,14 +207,16 @@ class Statsig {
          *
          * @param user A StatsigUser object used for the evaluation
          * @param layerName The name of the layer
+         * @param option advanced setup for getLayer, for example disable exposure logging
          * @return Layer object evaluated for the selected StatsigUser
          */
         @JvmStatic
-        fun getLayerSync(user: StatsigUser, layerName: String): Layer {
+        @JvmOverloads
+        fun getLayerSync(user: StatsigUser, layerName: String, option: GetLayerOptions? = null): Layer {
             if (!checkInitialized()) {
                 return Layer.empty(layerName)
             }
-            return statsigServer.getLayerSync(user, layerName)
+            return statsigServer.getLayerSync(user, layerName, option)
         }
 
         /**

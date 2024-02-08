@@ -85,6 +85,38 @@ class ExposureLoggingTest {
     }
 
     @Test
+    fun testCheckGateSyncWithExposureLoggingDisabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = CheckGateOptions(true)
+        driver.checkGateSync(user, "a_gate", setExposureLoggingDisabled)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
+    }
+
+    @Test
+    fun testCheckGateSyncWithExposureLoggingEnabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = CheckGateOptions(false)
+        driver.checkGateSync(user, "a_gate", setExposureLoggingDisabled) // default
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
+    fun testCheckGateSyncWithExposureLoggingDefault() = runBlocking {
+        driver.initialize("secret-local", options)
+        driver.checkGateSync(user, "a_gate") // default
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
     fun testManuallyLogGateExposure() = runBlocking {
         driver.initialize("secret-local", options)
         driver.manuallyLogGateExposure(user, "a_gate")
@@ -126,6 +158,38 @@ class ExposureLoggingTest {
     }
 
     @Test
+    fun testGetConfigSyncWithExposureLoggingDisabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = GetConfigOptions(true)
+        driver.getConfigSync(user, "a_config", setExposureLoggingDisabled)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
+    }
+
+    @Test
+    fun testGetConfigSyncWithExposureLoggingEnabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = GetConfigOptions(false)
+        driver.getConfigSync(user, "a_config", setExposureLoggingDisabled)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
+    fun testGetConfigSyncWithExposureLoggingDefault() = runBlocking {
+        driver.initialize("secret-local", options)
+        driver.getConfigSync(user, "a_config")
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
     fun testManualLogConfigExposure() = runBlocking {
         driver.initialize("secret-local", options)
         driver.manuallyLogConfigExposure(user, "a_config")
@@ -157,6 +221,38 @@ class ExposureLoggingTest {
     }
 
     @Test
+    fun testGetExperimentSyncWithExposureLoggingDisabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = GetExperimentOptions(true)
+        driver.getExperimentSync(user, "a_config", setExposureLoggingDisabled)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
+    }
+
+    @Test
+    fun testGetExperimentSyncWithExposureLoggingEnabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = GetExperimentOptions(false)
+        driver.getExperimentSync(user, "a_config", setExposureLoggingDisabled)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
+    fun testGetExperimentSyncWithExposureLoggingDefault() = runBlocking {
+        driver.initialize("secret-local", options)
+        driver.getExperimentSync(user, "a_config")
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
     fun testGetLayerWithExposureLoggingDisabled() = runBlocking {
         driver.initialize("secret-local", options)
         val layer = driver.getLayerWithExposureLoggingDisabled(user, "explicit_vs_implicit_parameter_layer")
@@ -171,6 +267,41 @@ class ExposureLoggingTest {
     fun testGetLayerWithExposureLoggingEnabled() = runBlocking {
         driver.initialize("secret-local", options)
         val layer = driver.getLayer(user, "explicit_vs_implicit_parameter_layer")
+        layer.getInt("an_int", 0)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
+    fun testGetLayerSyncWithExposureLoggingDisabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = GetLayerOptions(true)
+        val layer = driver.getLayerSync(user, "explicit_vs_implicit_parameter_layer", setExposureLoggingDisabled)
+        layer.getInt("an_int", 0)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(0, events.size)
+    }
+
+    @Test
+    fun testGetLayerSyncWithExposureLoggingEnabled() = runBlocking {
+        driver.initialize("secret-local", options)
+        val setExposureLoggingDisabled = GetLayerOptions(false)
+        val layer = driver.getLayerSync(user, "explicit_vs_implicit_parameter_layer", setExposureLoggingDisabled)
+        layer.getInt("an_int", 0)
+        driver.shutdown()
+
+        val events = captureEvents(eventLogInputCompletable)
+        assertEquals(1, events.size)
+    }
+
+    @Test
+    fun testGetLayerSyncWithExposureLoggingDefault() = runBlocking {
+        driver.initialize("secret-local", options)
+        val layer = driver.getLayerSync(user, "explicit_vs_implicit_parameter_layer")
         layer.getInt("an_int", 0)
         driver.shutdown()
 

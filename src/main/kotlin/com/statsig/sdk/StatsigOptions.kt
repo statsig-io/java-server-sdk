@@ -83,3 +83,19 @@ class StatsigOptions(
         )
     }
 }
+
+data class CheckGateOptions(var disableExposureLogging: Boolean = false) {
+    constructor() : this(false)
+}
+
+data class GetConfigOptions(var disableExposureLogging: Boolean = false) {
+    constructor() : this(false)
+}
+
+data class GetLayerOptions(var disableExposureLogging: Boolean = false) {
+    constructor() : this(false)
+}
+
+data class GetExperimentOptions(var disableExposureLogging: Boolean = false) {
+    constructor() : this(false)
+}

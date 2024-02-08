@@ -38,9 +38,11 @@ public class LayerInJavaTest {
         CompletableFuture<Layer> futureLayer = driver.getLayerAsync(user, "empty_layer");
         Layer layer = futureLayer.get();
 
-        Layer getLayerSyncRes = driver.getLayerSync(user, "empty_layer");
+        Layer getLayerSyncRes = driver.getLayerSync(user, "empty_layer", new GetLayerOptions());
+        Layer getLayerSyncWithoutOption = driver.getLayerSync(user, "empty_layer", null);
 
         assertEquals(layer.getBoolean("default_bool", true), true);
         assertEquals(getLayerSyncRes.getBoolean("default_bool", true), true);
+        assertEquals(getLayerSyncWithoutOption.getBoolean("default_bool", true), true);
     }
 }
