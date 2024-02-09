@@ -51,6 +51,7 @@ internal class StatsigNetwork(
     private var diagnostics: Diagnostics? = null
     private val api = options.api ?: STATSIG_API_URL_BASE
     private val apiForDownloadConfigSpecs = options.api ?: STATSIG_CDN_URL_BASE
+    private var eventsCount: String = ""
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
@@ -66,6 +67,7 @@ internal class StatsigNetwork(
                     .addHeader("STATSIG-SERVER-SESSION-ID", serverSessionID)
                     .addHeader("STATSIG-SDK-TYPE", statsigMetadata.sdkType)
                     .addHeader("STATSIG-SDK-VERSION", statsigMetadata.sdkVersion)
+                    .addHeader("STATSIG-EVENT-COUNT", eventsCount)
                     .method(original.method, original.body)
                     .build()
                 it.proceed(request)
@@ -239,6 +241,7 @@ internal class StatsigNetwork(
         }
         val bodyJson = gson.toJson(mapOf("events" to events, "statsigMetadata" to statsigMetadata))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
+        eventsCount = events.size.toString()
 
         val request: Request = Request.Builder()
             .url("$api/log_event")
