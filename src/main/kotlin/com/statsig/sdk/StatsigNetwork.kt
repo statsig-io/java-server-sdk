@@ -25,7 +25,7 @@ private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
 const val STATSIG_API_URL_BASE: String = "https://statsigapi.net/v1"
 private const val STATSIG_CDN_URL_BASE: String = "https://api.statsigcdn.com/v1"
-
+const val LOG_EVENT_RETRY_COUNT = 5
 internal class StatsigNetwork(
     private val sdkKey: String,
     private val options: StatsigOptions,
@@ -227,7 +227,7 @@ internal class StatsigNetwork(
     }
 
     suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: StatsigMetadata) {
-        retryPostLogs(events, statsigMetadata, 5, 1)
+        retryPostLogs(events, statsigMetadata, LOG_EVENT_RETRY_COUNT, 1)
     }
 
     suspend fun retryPostLogs(
@@ -255,7 +255,7 @@ internal class StatsigNetwork(
                     statsigHttpClient.newCall(request).await().use { response ->
                         if (response.isSuccessful) {
                             return@coroutineScope
-                        } else if (!retryCodes.contains(response.code) || retries == 0) {
+                        } else if (!retryCodes.contains(response.code) || currRetry == 0) {
                             return@coroutineScope
                         }
                     }

@@ -80,7 +80,7 @@ class StatsigE2ETest {
                             throw Exception("No content type set!")
                         }
                         eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                        return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
+                        return MockResponse().setResponseCode(200)
                     }
                     if ("/v1/get_id_lists" in request.path!!) {
                         download_id_list_count++
