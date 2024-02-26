@@ -19,6 +19,7 @@ internal class NetworkTest {
     val metadata = StatsigMetadata()
     val options = StatsigOptions()
     val eb = ErrorBoundary("", options, metadata)
+
     @Before
     fun setup() {
         server = MockWebServer()

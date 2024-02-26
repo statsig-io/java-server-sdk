@@ -4,15 +4,17 @@ import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Collections
 import java.util.concurrent.Executors
 
 const val MAX_EVENTS: Int = 1000
+const val MAX_DEDUPER_SIZE: Int = 10000
 const val FLUSH_TIMER_MS: Long = 60000
+const val CLEAR_DEDUPER_MS: Long = 60 * 1000
 
 const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
 const val LAYER_EXPOSURE_EVENT = "statsig::layer_exposure"
@@ -38,12 +40,18 @@ internal class StatsigLogger(
 ) {
 
     private val executor = Executors.newSingleThreadExecutor()
-    private val singleThreadDispatcher = executor.asCoroutineDispatcher()
     private var events = LockableArray<StatsigEvent>()
-    private val timer = coroutineScope.launch {
+    private val flushTimer = coroutineScope.launch {
         while (coroutineScope.isActive) {
             delay(FLUSH_TIMER_MS)
             flush()
+        }
+    }
+    private var deduper = Collections.synchronizedSet<String>(mutableSetOf())
+    private val clearDeduperTimer = coroutineScope.launch {
+        while (coroutineScope.isActive) {
+            delay(CLEAR_DEDUPER_MS)
+            deduper = Collections.synchronizedSet(mutableSetOf())
         }
     }
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
@@ -68,6 +76,16 @@ internal class StatsigLogger(
         isManualExposure: Boolean = false,
         evaluationDetails: EvaluationDetails?,
     ) {
+        if (!isUniqueExposure(
+                user,
+                gateName,
+                ruleID,
+                value.toString(),
+                "",
+            )
+        ) {
+            return
+        }
         val metadata = mutableMapOf(
             "gate" to gateName,
             "gateValue" to value.toString(),
@@ -96,6 +114,16 @@ internal class StatsigLogger(
         isManualExposure: Boolean,
         evaluationDetails: EvaluationDetails?,
     ) {
+        if (!isUniqueExposure(
+                user,
+                configName,
+                ruleID,
+                "",
+                "",
+            )
+        ) {
+            return
+        }
         val metadata =
             mutableMapOf("config" to configName, "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString())
         safeAddEvaluationToEvent(evaluationDetails, metadata)
@@ -118,6 +146,16 @@ internal class StatsigLogger(
     ) {
         if (isManualExposure) {
             layerExposureMetadata.isManualExposure = "true"
+        }
+        if (!isUniqueExposure(
+                user,
+                layerExposureMetadata.config,
+                layerExposureMetadata.ruleID,
+                layerExposureMetadata.parameterName,
+                layerExposureMetadata.allocatedExperiment,
+            )
+        ) {
+            return
         }
         val metadata = layerExposureMetadata.toStatsigEventMetadataMap()
         safeAddEvaluationToEvent(layerExposureMetadata.evaluationDetails, metadata)
@@ -179,9 +217,23 @@ internal class StatsigLogger(
     }
 
     suspend fun shutdown() {
-        timer.cancel()
+        flushTimer.cancel()
+        clearDeduperTimer.cancel()
         // Order matters!  Shutdown the executor after posting the final batch
         flush()
         executor.shutdown()
+    }
+
+    private fun isUniqueExposure(user: StatsigUser?, configName: String, ruleID: String, value: String, allocatedExperiment: String): Boolean {
+        if (user == null) return true
+        if (deduper.size >= MAX_DEDUPER_SIZE) {
+            deduper = Collections.synchronizedSet(mutableSetOf())
+            return true
+        }
+        val customIDKeys = "${user.customIDs?.keys?.joinToString()}:${user.customIDs?.values?.joinToString()}"
+        val dedupeKey = "${user.userID}:$customIDKeys:$configName:$ruleID:$value:$allocatedExperiment"
+        val isUnique = !deduper.contains(dedupeKey)
+        deduper.add(dedupeKey)
+        return isUnique
     }
 }

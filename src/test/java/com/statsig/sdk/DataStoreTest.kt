@@ -116,7 +116,8 @@ class DataStoreTest {
         driver.shutdown()
 
         val events = TestUtil.captureEvents(eventLogInputCompletable)
-        Assert.assertEquals(4, events.size)
+        // Log event deduped
+        Assert.assertEquals(2, events.size)
 
         Assert.assertEquals("DATA_ADAPTER", events[0].eventMetadata?.get("reason") ?: "")
         Assert.assertTrue(dataStoreGateRes)

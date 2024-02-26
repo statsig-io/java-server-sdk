@@ -124,7 +124,7 @@ sealed class StatsigServer {
     abstract fun getConfigSync(
         user: StatsigUser,
         dynamicConfigName: String,
-        option: GetConfigOptions? = null
+        option: GetConfigOptions? = null,
     ): DynamicConfig
 
     abstract fun getConfigWithExposureLoggingDisabledAsync(
@@ -140,7 +140,7 @@ sealed class StatsigServer {
     abstract fun getExperimentSync(
         user: StatsigUser,
         experimentName: String,
-        option: GetExperimentOptions? = null
+        option: GetExperimentOptions? = null,
     ): DynamicConfig
 
     abstract fun getExperimentWithExposureLoggingDisabledAsync(
@@ -162,7 +162,7 @@ sealed class StatsigServer {
     abstract fun getLayerSync(
         user: StatsigUser,
         layerName: String,
-        option: GetLayerOptions? = null
+        option: GetLayerOptions? = null,
     ): Layer
 
     abstract fun getLayerWithExposureLoggingDisabledAsync(
