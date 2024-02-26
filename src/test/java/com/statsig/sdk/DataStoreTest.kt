@@ -18,6 +18,7 @@ private class TestDataAdapter : IDataStore() {
     var dataStore = mutableMapOf(
         STORAGE_ADAPTER_KEY to data,
     )
+
     override fun get(key: String): String? {
         return dataStore[key]
     }
