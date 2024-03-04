@@ -256,7 +256,10 @@ internal class StatsigNetwork(
                         if (response.isSuccessful) {
                             return@coroutineScope
                         } else if (!retryCodes.contains(response.code) || currRetry == 0) {
+                            options.customLogger.warning("[Statsig]: Network request failed with status code: ${response.code}")
                             return@coroutineScope
+                        } else if (retryCodes.contains(response.code) && currRetry > 0) {
+                            options.customLogger.info("[Statsig]: Retrying network request. Retry count: $currRetry. Response code: ${response.code}")
                         }
                     }
                 } catch (e: Exception) {

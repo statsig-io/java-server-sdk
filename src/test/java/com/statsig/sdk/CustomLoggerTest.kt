@@ -25,6 +25,6 @@ class CustomLoggerTest {
         assert(warningMessage.size == 1)
         server.shutdown()
         server.checkGate(StatsigUser("user_id"), "test_gate")
-        assert(warningMessage.size == 2)
+        assert(warningMessage.size == 3)
     }
 }
