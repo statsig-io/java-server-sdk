@@ -118,6 +118,12 @@ sealed class StatsigServer {
 
     abstract fun checkGateSync(user: StatsigUser, gateName: String): Boolean
 
+    @JvmSynthetic
+    abstract fun getFeatureGate(user: StatsigUser, gateName: String, option: GetFeatureGateOptions?): APIFeatureGate
+
+    @JvmSynthetic
+    abstract fun getFeatureGate(user: StatsigUser, gateName: String): APIFeatureGate
+
     abstract fun checkGateWithExposureLoggingDisabledAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
 
     abstract fun getConfigAsync(
@@ -318,6 +324,30 @@ private class StatsigServerImpl() :
             }
             return@captureSync result.booleanValue
         }, { return@captureSync false }, configName = gateName)
+    }
+
+    override fun getFeatureGate(user: StatsigUser, gateName: String): APIFeatureGate {
+        if (!isSDKInitialized()) {
+            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED)
+        }
+        return errorBoundary.captureSync("getFeatureGate", {
+            val result = checkGateImpl(user, gateName)
+            logGateExposureImpl(user, gateName, result)
+            return@captureSync APIFeatureGate(gateName, result.booleanValue, result.ruleID, result.secondaryExposures, result.evaluationDetails?.reason)
+        }, { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT) }, configName = gateName)
+    }
+
+    override fun getFeatureGate(user: StatsigUser, gateName: String, option: GetFeatureGateOptions?): APIFeatureGate {
+        if (!isSDKInitialized()) {
+            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED)
+        }
+        return errorBoundary.captureSync("getFeatureGate", {
+            val result = checkGateImpl(user, gateName)
+            if (option?.disableExposureLogging !== true) {
+                logGateExposureImpl(user, gateName, result)
+            }
+            return@captureSync APIFeatureGate(gateName, result.booleanValue, result.ruleID, result.secondaryExposures, result.evaluationDetails?.reason)
+        }, { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT) }, configName = gateName)
     }
 
     override suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean {

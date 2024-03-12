@@ -84,6 +84,10 @@ class StatsigOptions(
     }
 }
 
+data class GetFeatureGateOptions(var disableExposureLogging: Boolean = false) {
+    constructor() : this(false)
+}
+
 data class CheckGateOptions(var disableExposureLogging: Boolean = false) {
     constructor() : this(false)
 }

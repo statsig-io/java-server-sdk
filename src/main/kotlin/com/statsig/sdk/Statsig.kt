@@ -475,6 +475,25 @@ class Statsig {
         }
 
         /**
+         * Get details of a gate, evaluated against a given user.
+         * (Java compatible)
+         *
+         * @param user A StatsigUser object used for evaluation
+         * @param gateName The name of the gate being evaluated
+         * @param option advanced setup for getFeatureGate, for example disable exposure logging
+         *
+         * @return APIFeatureGate feature gate object contains evaluation details
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun getFeatureGate(user: StatsigUser, gateName: String, option: GetFeatureGateOptions? = null): APIFeatureGate {
+            if (!checkInitialized()) {
+                return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED)
+            }
+            return statsigServer.getFeatureGate(user, gateName, option)
+        }
+
+        /**
          * Manually log a gate exposure event to Statsig.
          * (Java compatible)
          *

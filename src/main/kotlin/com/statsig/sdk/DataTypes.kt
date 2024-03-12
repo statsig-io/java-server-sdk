@@ -60,12 +60,13 @@ internal data class APICondition(
     @SerializedName("idType") val idType: String,
 )
 
-internal data class APIFeatureGate(
+data class APIFeatureGate(
     @SerializedName("name") val name: String,
     @SerializedName("value") val value: Boolean,
     @SerializedName("rule_id") val ruleID: String?,
     @SerializedName("secondary_exposures")
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    val reason: EvaluationReason?,
 )
 
 internal data class APIDynamicConfig(

@@ -2,10 +2,11 @@ package com.statsig.sdk;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class PreInitializeTest {
 
@@ -36,6 +37,13 @@ public class PreInitializeTest {
 
         Layer getLayerSyncRes = Statsig.getLayerSync(user, "any_layer", null);
         assertEquals(getLayerSyncRes.getValue().size(), 0);
+
+        APIFeatureGate featureGate = Statsig.getFeatureGate(user, "any_gate");
+        assertEquals(featureGate.getName(), "any_gate");
+        assertFalse(featureGate.getValue());
+        assertNull(featureGate.getRuleID());
+        assertEquals(featureGate.getSecondaryExposures(), new ArrayList<>());
+        assertEquals(featureGate.getReason(), EvaluationReason.UNINITIALIZED);
 
         // Should not throw, should noop
         Statsig.overrideGate("test_gate", false);
