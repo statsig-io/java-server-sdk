@@ -26,6 +26,8 @@ private const val MS_IN_S: Long = 1000
 const val STATSIG_API_URL_BASE: String = "https://statsigapi.net/v1"
 private const val STATSIG_CDN_URL_BASE: String = "https://api.statsigcdn.com/v1"
 const val LOG_EVENT_RETRY_COUNT = 5
+const val LOG_EVENT_FAILURE_TAG = "statsig::log_event_failed"
+
 internal class StatsigNetwork(
     private val sdkKey: String,
     private val options: StatsigOptions,
@@ -257,6 +259,7 @@ internal class StatsigNetwork(
                             return@coroutineScope
                         } else if (!retryCodes.contains(response.code) || currRetry == 0) {
                             options.customLogger.warning("[Statsig]: Network request failed with status code: ${response.code}")
+                            logPostLogFailure(eventsCount)
                             return@coroutineScope
                         } else if (retryCodes.contains(response.code) && currRetry > 0) {
                             options.customLogger.info("[Statsig]: Retrying network request. Retry count: $currRetry. Response code: ${response.code}")
@@ -266,6 +269,10 @@ internal class StatsigNetwork(
                     options.customLogger.warning("[Statsig]: An exception was caught: $e")
                     if (e is JsonParseException) {
                         errorBoundary.logException("retryPostLogs", e)
+                    }
+                    if (currRetry == 0) {
+                        logPostLogFailure(eventsCount)
+                        return@coroutineScope
                     }
                 }
 
@@ -277,5 +284,18 @@ internal class StatsigNetwork(
 
     fun shutdown() {
         statsigHttpClient.dispatcher.executorService.shutdown()
+    }
+
+    private fun logPostLogFailure(eventsCount: String) {
+        errorBoundary.logException(
+            LOG_EVENT_FAILURE_TAG,
+            Exception("Drop log event"),
+            null,
+            extraInfo = """{
+               "eventCount": $eventsCount
+            }
+            """.trimIndent(),
+            bypassDedupe = true,
+        )
     }
 }

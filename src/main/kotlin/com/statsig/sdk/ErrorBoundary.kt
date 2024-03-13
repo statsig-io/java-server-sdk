@@ -59,12 +59,14 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         }
     }
 
-    internal fun logException(tag: String, ex: Throwable, configName: String? = null, extraInfo: String? = null) {
+    internal fun logException(tag: String, ex: Throwable, configName: String? = null, extraInfo: String? = null, bypassDedupe: Boolean = false) {
         try {
-            if (options.localMode || options.disableAllLogging || seen.contains(ex.javaClass.name)) {
+            if (options.localMode || options.disableAllLogging) {
                 return
             }
-
+            if (!bypassDedupe && seen.contains(ex.javaClass.name)) {
+                return
+            }
             seen.add(ex.javaClass.name)
 
             val info = ex.stackTraceToString()
@@ -80,7 +82,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 "statsigMetadata": ${statsigMetadata.asJson()},
                 "configName": "$configName",
                 "setupOptions": $optionsCopy,
-                "extraInfo": $extraInfo
+                "extra": $extraInfo
             }
             """.trimIndent()
             val req =

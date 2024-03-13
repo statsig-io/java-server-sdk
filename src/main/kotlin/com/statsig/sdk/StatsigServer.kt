@@ -196,8 +196,11 @@ sealed class StatsigServer {
     ): CompletableFuture<Layer>
 
     @JvmSynthetic abstract fun overrideLayerAsync(layerName: String, value: Map<String, Any>): CompletableFuture<Unit>
+
     @JvmSynthetic abstract fun removeLayerOverrideAsync(layerName: String): CompletableFuture<Unit>
+
     @JvmSynthetic abstract fun removeConfigOverrideAsync(configName: String): CompletableFuture<Unit>
+
     @JvmSynthetic abstract fun removeGateOverrideAsync(gateName: String): CompletableFuture<Unit>
 
     abstract fun manuallyLogLayerParameterExposureAsync(user: StatsigUser, layerName: String, paramName: String): CompletableFuture<Void>
@@ -216,6 +219,7 @@ sealed class StatsigServer {
 
     @JvmSynthetic
     internal abstract suspend fun flush()
+
     @JvmSynthetic internal abstract fun getCustomLogger(): LoggerInterface
 
     companion object {
