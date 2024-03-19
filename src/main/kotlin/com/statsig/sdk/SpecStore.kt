@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
+import com.statsig.sdk.datastore.LocalFileDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -360,7 +361,11 @@ internal class SpecStore constructor(
         var downloadedConfigs: APIDownloadedConfigs? = null
 
         if (options.dataStore != null) {
-            downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
+            if (options.dataStore is LocalFileDataStore) {
+                downloadedConfigs = this.downloadConfigSpecsToLocal()
+            } else {
+                downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
+            }
             initReason =
                 if (downloadedConfigs == null) EvaluationReason.UNINITIALIZED else EvaluationReason.DATA_ADAPTER
         } else if (options.bootstrapValues != null) {
@@ -388,6 +393,15 @@ internal class SpecStore constructor(
             }
             setDownloadedConfigs(downloadedConfigs)
         }
+    }
+
+    private suspend fun downloadConfigSpecsToLocal(): APIDownloadedConfigs? {
+        val response = this.downloadConfigSpecs()
+
+        val specs: String = gson.toJson(response)
+        val localDataStore = options.dataStore as LocalFileDataStore
+        localDataStore.set(localDataStore.filePath, specs)
+        return response
     }
 
     private suspend fun downloadConfigSpecsFromNetwork(): APIDownloadedConfigs? {

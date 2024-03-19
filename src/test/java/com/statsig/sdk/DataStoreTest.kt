@@ -2,6 +2,7 @@ package com.statsig.sdk
 
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
+import com.statsig.sdk.datastore.IDataStore
 import kotlinx.coroutines.CompletableDeferred
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -12,10 +13,10 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 
-private class TestDataAdapter : IDataStore() {
-    var data =
+class TestDataAdapter : IDataStore() {
+    private var data =
         DataStoreTest::class.java.getResource("/data_adapter.json")?.readText() ?: ""
-    var dataStore = mutableMapOf(
+    private var dataStore = mutableMapOf(
         STORAGE_ADAPTER_KEY to data,
     )
 

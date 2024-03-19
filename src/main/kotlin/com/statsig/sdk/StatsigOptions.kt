@@ -1,5 +1,7 @@
 package com.statsig.sdk
 
+import com.statsig.sdk.datastore.IDataStore
+
 private const val TIER_KEY: String = "tier"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
 private const val CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000

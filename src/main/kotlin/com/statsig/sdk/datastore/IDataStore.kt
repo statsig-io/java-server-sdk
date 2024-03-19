@@ -1,4 +1,4 @@
-package com.statsig.sdk
+package com.statsig.sdk.datastore
 
 abstract class IDataStore {
     abstract fun get(key: String): String?

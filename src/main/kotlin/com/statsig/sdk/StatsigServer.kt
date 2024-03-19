@@ -2,6 +2,7 @@ package com.statsig.sdk
 
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
+import com.statsig.sdk.datastore.LocalFileDataStore
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.sync.Mutex
@@ -222,6 +223,8 @@ sealed class StatsigServer {
 
     @JvmSynthetic internal abstract fun getCustomLogger(): LoggerInterface
 
+    abstract fun localDataStoreSetUp(serverSecret: String)
+
     companion object {
 
         @JvmStatic
@@ -278,6 +281,7 @@ private class StatsigServerImpl() :
                         )
                     }
                     setupAndStartDiagnostics()
+                    localDataStoreSetUp(serverSecret)
                     configEvaluator =
                         Evaluator(network, options, statsigScope, errorBoundary, diagnostics, statsigMetadata, serverSecret)
                     configEvaluator.initialize()
@@ -289,6 +293,15 @@ private class StatsigServerImpl() :
                 endInitDiagnostics(false)
             },
         )
+    }
+
+    override fun localDataStoreSetUp(serverSecret: String) {
+        if (options.dataStore == null || options.dataStore !is LocalFileDataStore) {
+            return
+        }
+
+        val localFileDataStore = options.dataStore as LocalFileDataStore
+        localFileDataStore.filePath = Hashing.djb2(serverSecret)
     }
 
     override fun isInitialized(): Boolean {
