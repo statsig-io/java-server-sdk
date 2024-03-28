@@ -45,7 +45,7 @@ internal data class ClientConfig(
 
 internal class ClientInitializeFormatter(
     private val specStore: SpecStore,
-    private val evalFun: (user: StatsigUser, config: APIConfig?) -> ConfigEvaluation,
+    private val evalFun: (user: StatsigUser, config: APIConfig?, endResult: ConfigEvaluation) -> Unit,
     private val user: StatsigUser,
     private val hash: HashAlgo = HashAlgo.SHA256,
     private val clientSDKKey: String? = null,
@@ -132,7 +132,8 @@ internal class ClientInitializeFormatter(
 
         if (delegate != null && delegate != "") {
             val delegateSpec = specStore.getConfig(delegate)
-            val delegateResult = evalFun(user, delegateSpec)
+            var delegateResult = ConfigEvaluation()
+            evalFun(user, delegateSpec, delegateResult)
             if (delegateSpec != null) {
                 result.allocatedExperimentName = hashName(delegate)
                 result.isUserInExperiment = delegateResult.isExperimentGroup
@@ -154,7 +155,8 @@ internal class ClientInitializeFormatter(
             return null
         }
 
-        val evalResult = evalFun(user, configSpec)
+        val evalResult = ConfigEvaluation()
+        evalFun(user, configSpec, evalResult)
         val hashedName = hashName(configName)
         val result = ClientConfig(
             hashedName,

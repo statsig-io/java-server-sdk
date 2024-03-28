@@ -116,7 +116,6 @@ internal class StatsigNetwork(
         statsigHttpClient.newCall(request).await().use { response ->
             val apiGate = gson.fromJson(response.body?.charStream(), APIFeatureGate::class.java)
             return ConfigEvaluation(
-                unsupported = false,
                 booleanValue = apiGate.value,
                 apiGate.value.toString(),
                 apiGate.ruleID ?: "",
@@ -143,7 +142,6 @@ internal class StatsigNetwork(
         statsigHttpClient.newCall(request).await().use { response ->
             val apiConfig = gson.fromJson(response.body?.charStream(), APIDynamicConfig::class.java)
             return ConfigEvaluation(
-                unsupported = false,
                 booleanValue = false,
                 apiConfig.value,
                 apiConfig.ruleID ?: "",

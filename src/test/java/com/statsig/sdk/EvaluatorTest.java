@@ -34,21 +34,19 @@ public class EvaluatorTest {
         // IP Passes, but ID doesnt pass rollout percentage
         StatsigUser user = new StatsigUser("123");
         user.setIp("1.1.1.1");
-        ConfigEvaluation evaluation = eval.checkGate(user, "test_country_partial");
+        ConfigEvaluation evaluation = new ConfigEvaluation();
+        eval.checkGate(user, "test_country_partial", evaluation);
         assertFalse(evaluation.getBooleanValue());
-        assertFalse(evaluation.getUnsupported());
 
         // IP Passes and ID passes rollout percentage
         user.setUserID("4");
-        evaluation = eval.checkGate(user, "test_country_partial");
+        eval.checkGate(user, "test_country_partial", evaluation);
         assertTrue(evaluation.getBooleanValue());
-        assertFalse(evaluation.getUnsupported());
 
         // IP Does not pass and ID passes rollout percentage
         user.setIp("27.62.93.211");
-        evaluation = eval.checkGate(user, "test_country_partial");
+        eval.checkGate(user, "test_country_partial", evaluation);
         assertFalse(evaluation.getBooleanValue());
-        assertFalse(evaluation.getUnsupported());
     }
 
     private class CaseSensitiveTestCase {

@@ -16,15 +16,16 @@ import java.util.Calendar
 import java.util.Date
 import kotlin.collections.set
 
+internal class UnsupportedException(message: String) : Exception(message)
+
 internal class ConfigEvaluation(
-    val unsupported: Boolean = false,
-    val booleanValue: Boolean = false,
-    val jsonValue: Any? = null,
-    val ruleID: String = "",
-    val groupName: String? = null,
-    val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-    val explicitParameters: Array<String> = arrayOf(),
-    val configDelegate: String? = null,
+    var booleanValue: Boolean = false,
+    var jsonValue: Any? = null,
+    var ruleID: String = Const.EMPTY_STR,
+    var groupName: String? = null,
+    var secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    var explicitParameters: Array<String> = arrayOf(),
+    var configDelegate: String? = null,
     var evaluationDetails: EvaluationDetails? = null,
     var isExperimentGroup: Boolean = false,
 ) {
@@ -106,8 +107,9 @@ internal class Evaluator(
         val config = specStore.getConfig(expName) ?: return false
         for (rule in config.rules) {
             if (rule.id.contains("override", ignoreCase = true)) {
-                val result = evaluateRule(user, rule)
-                if (result.booleanValue) {
+                val endResult = ConfigEvaluation()
+                evaluateRule(user, rule, endResult)
+                if (endResult.booleanValue) {
                     // user is overridden into the experiment
                     return true
                 }
@@ -121,9 +123,10 @@ internal class Evaluator(
         val config = specStore.getConfig(expName) ?: return false
         for (rule in config.rules) {
             if (rule.id.equals("layerAssignment", ignoreCase = true)) {
-                val result = evaluateRule(user, rule)
+                val endResult = ConfigEvaluation()
+                evaluateRule(user, rule, endResult)
                 // user is in an experiment when they FAIL the layerAssignment rule
-                return !result.booleanValue
+                return !endResult.booleanValue
             }
         }
         return false
@@ -153,21 +156,19 @@ internal class Evaluator(
         gateOverrides.remove(gateName)
     }
 
-    fun getConfig(user: StatsigUser, dynamicConfigName: String): ConfigEvaluation {
+    fun getConfig(user: StatsigUser, dynamicConfigName: String, endResult: ConfigEvaluation) {
         if (configOverrides.containsKey(dynamicConfigName)) {
-            return ConfigEvaluation(
-                jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>(),
-                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE),
-            )
+            endResult.jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>()
+            endResult.evaluationDetails = this.createEvaluationDetails((EvaluationReason.LOCAL_OVERRIDE))
+            return
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
-            return ConfigEvaluation(
-                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED),
-            )
+            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            return
         }
 
-        return this.evaluateConfig(user, specStore.getConfig(dynamicConfigName))
+        this.evaluateConfig(user, specStore.getConfig(dynamicConfigName), endResult)
     }
 
     fun getClientInitializeResponse(
@@ -197,85 +198,77 @@ internal class Evaluator(
         return response
     }
 
-    fun getLayer(user: StatsigUser, layerName: String): ConfigEvaluation {
+    fun getLayer(user: StatsigUser, layerName: String, endResult: ConfigEvaluation) {
         if (layerOverrides.containsKey(layerName)) {
             val value = layerOverrides[layerName] ?: mapOf()
-            return ConfigEvaluation(
-                jsonValue = value,
-                evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE),
-            )
+            endResult.jsonValue = value
+            endResult.evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+            return
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
-            return ConfigEvaluation(
-                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED),
-            )
+            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            return
         }
 
-        return this.evaluateConfig(user, specStore.getLayerConfig(layerName))
+        this.evaluateConfig(user, specStore.getLayerConfig(layerName), endResult)
     }
 
     fun getExperimentsInLayer(layerName: String): Array<String> {
         return specStore.getLayer(layerName) ?: emptyArray()
     }
 
-    fun checkGate(user: StatsigUser, gateName: String): ConfigEvaluation {
+    fun checkGate(user: StatsigUser, gateName: String, endResult: ConfigEvaluation) {
         if (gateOverrides.containsKey(gateName)) {
             val value = gateOverrides[gateName] ?: false
-            return ConfigEvaluation(
-                booleanValue = value,
-                jsonValue = value,
-                evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE),
-            )
+            endResult.booleanValue = value
+            endResult.jsonValue = value
+            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+            return
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
-            return ConfigEvaluation(
-                evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED),
-            )
+            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            return
         }
 
         val evalGate = specStore.getGate(gateName)
-        return this.evaluateConfig(user, evalGate)
+        this.evaluateConfig(user, evalGate, endResult)
     }
 
-    private fun evaluateConfig(user: StatsigUser, config: APIConfig?): ConfigEvaluation {
-        val unwrappedConfig =
-            config
-                ?: return ConfigEvaluation(
-                    unsupported = false,
-                    booleanValue = false,
-                    mapOf<String, Any>(),
-                    evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED),
-                )
-        return this.evaluate(user, unwrappedConfig)
+    private fun evaluateConfig(user: StatsigUser, config: APIConfig?, endResult: ConfigEvaluation) {
+        if (config == null) {
+            endResult.booleanValue = false
+            endResult.secondaryExposures = arrayListOf()
+            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED)
+            return
+        }
+
+        this.evaluate(user, config, endResult)
     }
 
-    private fun evaluate(user: StatsigUser, config: APIConfig): ConfigEvaluation {
+    private fun evaluate(user: StatsigUser, config: APIConfig, endResult: ConfigEvaluation) {
         val evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
         if (!config.enabled) {
-            return ConfigEvaluation(
-                unsupported = false,
-                booleanValue = false,
-                config.defaultValue,
-                "disabled",
-                evaluationDetails = evaluationDetails,
-            )
+            endResult.booleanValue = false
+            endResult.jsonValue = config.defaultValue
+            endResult.ruleID = Const.DISABLED
+            endResult.evaluationDetails = evaluationDetails
+            return
         }
-        val secondaryExposures = arrayListOf<Map<String, String>>()
-        for (rule in config.rules) {
-            val result = this.evaluateRule(user, rule)
-            result.evaluationDetails = evaluationDetails
 
-            if (result.unsupported) {
-                result.evaluationDetails?.reason = EvaluationReason.UNSUPPORTED
-                return result
+        for (rule in config.rules) {
+            this.evaluateRule(user, rule, endResult)
+
+            if (endResult.evaluationDetails?.reason == EvaluationReason.UNSUPPORTED) {
+                return
             }
 
-            secondaryExposures.addAll(result.secondaryExposures)
-            if (result.booleanValue) {
-                this.evaluateDelegate(user, rule, secondaryExposures)?.let {
-                    return it
+            endResult.evaluationDetails = evaluationDetails
+            if (endResult.booleanValue) {
+                if (this.evaluateDelegate(user, rule, endResult)) {
+                    // if it's not null
+                    return
                 }
 
                 val pass =
@@ -284,108 +277,87 @@ internal class Evaluator(
                             '.' +
                             (rule.salt ?: rule.id) +
                             '.' +
-                            (getUnitID(user, rule.idType) ?: ""),
+                            (getUnitID(user, rule.idType) ?: Const.EMPTY_STR),
                     )
                         .mod(10000UL) < (rule.passPercentage.times(100.0)).toULong()
 
-                return ConfigEvaluation(
-                    false,
-                    pass,
-                    if (pass) result.jsonValue else config.defaultValue,
-                    result.ruleID,
-                    result.groupName,
-                    secondaryExposures,
-                    evaluationDetails = evaluationDetails,
-                    isExperimentGroup = rule.isExperimentGroup ?: false,
-                )
+                if (!pass) {
+                    endResult.jsonValue = config.defaultValue
+                }
+
+                endResult.booleanValue = pass
+                endResult.evaluationDetails = evaluationDetails
+                endResult.isExperimentGroup = rule.isExperimentGroup ?: false
+                return
             }
         }
-        return ConfigEvaluation(
-            unsupported = false,
-            booleanValue = false,
-            config.defaultValue,
-            "default",
-            null,
-            secondaryExposures,
-            evaluationDetails = evaluationDetails,
-        )
+
+        endResult.booleanValue = false
+        endResult.jsonValue = config.defaultValue
+        endResult.ruleID = Const.DEFAULT
+        endResult.groupName = null
+        endResult.evaluationDetails = evaluationDetails
     }
 
     private fun evaluateDelegate(
         user: StatsigUser,
         rule: APIRule,
-        secondaryExposures: ArrayList<Map<String, String>>,
-    ): ConfigEvaluation? {
-        val configDelegate = rule.configDelegate ?: return null
-        val config = specStore.getConfig(configDelegate) ?: return null
+        endResult: ConfigEvaluation,
+    ): Boolean {
+        val configDelegate = rule.configDelegate ?: return false
+        val config = specStore.getConfig(configDelegate) ?: return false
 
-        val delegatedResult = this.evaluate(user, config)
-        val undelegatedSecondaryExposures = arrayListOf<Map<String, String>>()
-        undelegatedSecondaryExposures.addAll(secondaryExposures)
-        secondaryExposures.addAll(delegatedResult.secondaryExposures)
+        endResult.undelegatedSecondaryExposures = ArrayList(endResult.secondaryExposures)
+        this.evaluate(user, config, endResult)
 
-        val evaluation = ConfigEvaluation(
-            unsupported = delegatedResult.unsupported,
-            booleanValue = delegatedResult.booleanValue,
-            jsonValue = delegatedResult.jsonValue,
-            ruleID = delegatedResult.ruleID,
-            groupName = delegatedResult.groupName,
-            secondaryExposures = secondaryExposures,
-            configDelegate = rule.configDelegate,
-            explicitParameters = config.explicitParameters ?: arrayOf(),
-            evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason()),
-        )
-        evaluation.undelegatedSecondaryExposures = undelegatedSecondaryExposures
-        return evaluation
+        endResult.configDelegate = rule.configDelegate
+        endResult.explicitParameters = config.explicitParameters ?: arrayOf()
+        endResult.evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason())
+        return true
     }
 
-    private fun evaluateRule(user: StatsigUser, rule: APIRule): ConfigEvaluation {
-        val secondaryExposures = arrayListOf<Map<String, String>>()
+    private fun evaluateRule(user: StatsigUser, rule: APIRule, endResult: ConfigEvaluation) {
         var pass = true
         for (condition in rule.conditions) {
-            val result = this.evaluateCondition(user, condition)
-            if (result.unsupported) {
-                return result
+            try {
+                if (!this.evaluateCondition(user, condition, endResult)) {
+                    pass = false
+                }
+            } catch (e: UnsupportedException) {
+                endResult.evaluationDetails = this.createEvaluationDetails(EvaluationReason.UNSUPPORTED)
+                return
             }
-            if (!result.booleanValue) {
-                pass = false
-            }
-            secondaryExposures.addAll(result.secondaryExposures)
         }
 
-        return ConfigEvaluation(
-            unsupported = false,
-            booleanValue = pass,
-            rule.returnValue,
-            rule.id,
-            rule.groupName,
-            secondaryExposures,
-            isExperimentGroup = rule.isExperimentGroup == true,
-        )
+        endResult.booleanValue = pass
+        endResult.jsonValue = rule.returnValue
+        endResult.ruleID = rule.id
+        endResult.groupName = rule.groupName
+        endResult.isExperimentGroup = rule.isExperimentGroup == true
     }
 
     private fun conditionFromString(input: String?): ConfigCondition {
         return when (input) {
-            "PUBLIC", "public" -> ConfigCondition.PUBLIC
-            "FAIL_GATE", "fail_gate" -> ConfigCondition.FAIL_GATE
-            "PASS_GATE", "pass_gate" -> ConfigCondition.PASS_GATE
-            "IP_BASED", "ip_based" -> ConfigCondition.IP_BASED
-            "UA_BASED", "ua_based" -> ConfigCondition.UA_BASED
-            "USER_FIELD", "user_field" -> ConfigCondition.USER_FIELD
-            "CURRENT_TIME", "current_time" -> ConfigCondition.CURRENT_TIME
-            "ENVIRONMENT_FIELD", "environment_field" -> ConfigCondition.ENVIRONMENT_FIELD
-            "USER_BUCKET", "user_bucket" -> ConfigCondition.USER_BUCKET
-            "UNIT_ID", "unit_id" -> ConfigCondition.UNIT_ID
-            else -> ConfigCondition.valueOf((input ?: "").uppercase())
+            Const.PUBLIC -> ConfigCondition.PUBLIC
+            Const.FAIL_GATE -> ConfigCondition.FAIL_GATE
+            Const.PASS_GATE -> ConfigCondition.PASS_GATE
+            Const.IP_BASED -> ConfigCondition.IP_BASED
+            Const.UA_BASED -> ConfigCondition.UA_BASED
+            Const.USER_FIELD -> ConfigCondition.USER_FIELD
+            Const.CURRENT_TIME -> ConfigCondition.CURRENT_TIME
+            Const.ENVIRONMENT_FIELD -> ConfigCondition.ENVIRONMENT_FIELD
+            Const.USER_BUCKET -> ConfigCondition.USER_BUCKET
+            Const.UNIT_ID -> ConfigCondition.UNIT_ID
+            else -> ConfigCondition.valueOf((input ?: Const.EMPTY_STR).uppercase())
         }
     }
 
-    private fun evaluateCondition(user: StatsigUser, condition: APICondition): ConfigEvaluation {
+    private fun evaluateCondition(user: StatsigUser, condition: APICondition, endResult: ConfigEvaluation): Boolean {
         try {
-            var value: Any?
+            var value: Any? = null
             val field: String = Utils.toStringOrEmpty(condition.field)
             val conditionEnum: ConfigCondition? = try {
-                conditionFromString(condition.type)
+                conditionFromString(condition.type.lowercase())
             } catch (e: java.lang.IllegalArgumentException) {
                 errorBoundary.logException("evaluateCondition:condition", e)
                 options.customLogger.warning("[Statsig]: An exception was caught:  $e")
@@ -394,32 +366,20 @@ internal class Evaluator(
 
             when (conditionEnum) {
                 ConfigCondition.PUBLIC ->
-                    return ConfigEvaluation(unsupported = false, booleanValue = true)
+                    return true
 
                 ConfigCondition.FAIL_GATE, ConfigCondition.PASS_GATE -> {
                     val name = Utils.toStringOrEmpty(condition.targetValue)
-                    val result = this.checkGate(user, name)
+                    this.checkGate(user, name, endResult)
                     val newExposure =
                         mapOf(
                             "gate" to name,
-                            "gateValue" to result.booleanValue.toString(),
-                            "ruleID" to result.ruleID,
+                            "gateValue" to endResult.booleanValue.toString(),
+                            "ruleID" to endResult.ruleID,
                         )
-                    val secondaryExposures = arrayListOf<Map<String, String>>()
-                    secondaryExposures.addAll(result.secondaryExposures)
-                    secondaryExposures.add(newExposure)
-                    return ConfigEvaluation(
-                        result.unsupported,
-                        if (conditionEnum == ConfigCondition.PASS_GATE) {
-                            result.booleanValue
-                        } else {
-                            !result.booleanValue
-                        },
-                        result.jsonValue,
-                        "",
-                        null,
-                        secondaryExposures,
-                    )
+                    endResult.secondaryExposures.add(newExposure)
+                    val booleanVal = if (conditionEnum == ConfigCondition.PASS_GATE) endResult.booleanValue else !endResult.booleanValue
+                    return booleanVal
                 }
 
                 ConfigCondition.IP_BASED -> {
@@ -455,7 +415,7 @@ internal class Evaluator(
 
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues?.let { it["salt"] })
-                    val unitID = getUnitID(user, condition.idType) ?: ""
+                    val unitID = getUnitID(user, condition.idType) ?: Const.EMPTY_STR
                     value = computeUserHash("$salt.$unitID").mod(1000UL)
                 }
 
@@ -464,214 +424,148 @@ internal class Evaluator(
                 }
 
                 else -> {
-                    return ConfigEvaluation(unsupported = true)
+                    throw UnsupportedException("Unsupported Condition.")
                 }
             }
 
             when (condition.operator) {
-                "gt" -> {
+                Const.GT -> {
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(unsupported = false, booleanValue = false)
+                        return false
                     }
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        doubleValue > doubleTargetValue,
-                    )
+                    return doubleValue > doubleTargetValue
                 }
 
-                "gte" -> {
+                Const.GTE -> {
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(unsupported = false, booleanValue = false)
+                        return false
                     }
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        doubleValue >= doubleTargetValue,
-                    )
+                    return doubleValue >= doubleTargetValue
                 }
 
-                "lt" -> {
+                Const.LT -> {
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(unsupported = false, booleanValue = false)
+                        return false
                     }
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        doubleValue < doubleTargetValue,
-                    )
+                    return doubleValue < doubleTargetValue
                 }
 
-                "lte" -> {
+                Const.LTE -> {
                     val doubleValue = getValueAsDouble(value)
                     val doubleTargetValue = getValueAsDouble(condition.targetValue)
                     if (doubleValue == null || doubleTargetValue == null) {
-                        return ConfigEvaluation(unsupported = false, booleanValue = false)
+                        return false
                     }
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        doubleValue <= doubleTargetValue,
-                    )
+                    return doubleValue <= doubleTargetValue
                 }
 
-                "version_gt" -> {
-                    return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
-                            versionCompare(v1, v2) > 0
-                        },
-                    )
+                Const.VERSION_GT -> {
+                    return versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
+                        versionCompare(v1, v2) > 0
+                    }
                 }
 
-                "version_gte" -> {
-                    return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
-                            versionCompare(v1, v2) >= 0
-                        },
-                    )
+                Const.VERSION_GTE -> {
+                    return versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
+                        versionCompare(v1, v2) >= 0
+                    }
                 }
 
-                "version_lt" -> {
-                    return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
-                            versionCompare(v1, v2) < 0
-                        },
-                    )
+                Const.VERSION_LT -> {
+                    return versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
+                        versionCompare(v1, v2) < 0
+                    }
                 }
 
-                "version_lte" -> {
-                    return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
-                            versionCompare(v1, v2) <= 0
-                        },
-                    )
+                Const.VERSION_LTE -> {
+                    return versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
+                        versionCompare(v1, v2) <= 0
+                    }
                 }
 
-                "version_eq" -> {
-                    return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
-                            versionCompare(v1, v2) == 0
-                        },
-                    )
+                Const.VERSION_EQ -> {
+                    return versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
+                        versionCompare(v1, v2) == 0
+                    }
                 }
 
-                "version_neq" -> {
-                    return ConfigEvaluation(
-                        false,
-                        versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
-                            versionCompare(v1, v2) != 0
-                        },
-                    )
+                Const.VERSION_NEQ -> {
+                    return versionCompareHelper(value, condition.targetValue) { v1: String, v2: String ->
+                        versionCompare(v1, v2) != 0
+                    }
                 }
 
-                "any" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.equals(b, true)
-                        },
-                    )
+                Const.ANY -> {
+                    return matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.equals(b, true)
+                    }
                 }
 
-                "none" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        !matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.equals(b, true)
-                        },
-                    )
+                Const.NONE -> {
+                    return !matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.equals(b, true)
+                    }
                 }
 
-                "any_case_sensitive" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.equals(b, false)
-                        },
-                    )
+                Const.ANY_CASE_SENSITIVE -> {
+                    return matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.equals(b, false)
+                    }
                 }
 
-                "none_case_sensitive" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        !matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.equals(b, false)
-                        },
-                    )
+                Const.NONE_CASE_SENSITIVE -> {
+                    return !matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.equals(b, false)
+                    }
                 }
 
-                "str_starts_with_any" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.startsWith(b, true)
-                        },
-                    )
+                Const.STR_STARTS_WITH_ANY -> {
+                    return matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.startsWith(b, true)
+                    }
                 }
 
-                "str_ends_with_any" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.endsWith(b, true)
-                        },
-                    )
+                Const.STR_ENDS_WITH_ANY -> {
+                    return matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.endsWith(b, true)
+                    }
                 }
 
-                "str_contains_any" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.contains(b, true)
-                        },
-                    )
+                Const.STR_CONTAINS_ANY -> {
+                    return matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.contains(b, true)
+                    }
                 }
 
-                "str_contains_none" -> {
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        !matchStringInArray(value, condition.targetValue) { a, b ->
-                            a.contains(b, true)
-                        },
-                    )
+                Const.STR_CONTAINS_NONE -> {
+                    return !matchStringInArray(value, condition.targetValue) { a, b ->
+                        a.contains(b, true)
+                    }
                 }
 
-                "str_matches" -> {
-                    val targetValue = getValueAsString(condition.targetValue)
-                        ?: return ConfigEvaluation(
-                            unsupported = false,
-                            booleanValue = false,
-                        )
-
+                Const.STR_MATCHES -> {
+                    val targetValue = getValueAsString(condition.targetValue) ?: return false
                     val strValue =
-                        getValueAsString(value)
-                            ?: return ConfigEvaluation(
-                                unsupported = false,
-                                booleanValue = false,
-                            )
+                        getValueAsString(value) ?: return false
 
-                    return ConfigEvaluation(
-                        unsupported = false,
-                        booleanValue = Regex(targetValue).containsMatchIn(strValue),
-                    )
+                    return Regex(targetValue).containsMatchIn(strValue)
                 }
 
-                "eq" -> {
-                    return ConfigEvaluation(unsupported = false, value == condition.targetValue)
+                Const.EQ -> {
+                    return value == condition.targetValue
                 }
 
-                "neq" -> {
-                    return ConfigEvaluation(unsupported = false, value != condition.targetValue)
+                Const.NEQ -> {
+                    return value != condition.targetValue
                 }
 
-                "before" -> {
+                Const.BEFORE -> {
                     return compareDates(
                         { a: Date, b: Date ->
                             return@compareDates a.before(b)
@@ -681,7 +575,7 @@ internal class Evaluator(
                     )
                 }
 
-                "after" -> {
+                Const.AFTER -> {
                     return compareDates(
                         { a: Date, b: Date ->
                             return@compareDates a.after(b)
@@ -691,7 +585,7 @@ internal class Evaluator(
                     )
                 }
 
-                "on" -> {
+                Const.ON -> {
                     return compareDates(
                         { a: Date, b: Date ->
                             calendarOne.time = a
@@ -706,35 +600,32 @@ internal class Evaluator(
                     )
                 }
 
-                "in_segment_list", "not_in_segment_list" -> {
+                Const.IN_SEGMENT_LIST, Const.NOT_IN_SEGMENT_LIST -> {
                     val idList = specStore.getIDList(Utils.toStringOrEmpty(condition.targetValue))
                     val stringValue = getValueAsString(value)
                     if (idList != null && stringValue != null) {
                         val bytes =
-                            MessageDigest.getInstance("SHA-256")
+                            MessageDigest.getInstance(Const.CML_SHA_256)
                                 .digest(stringValue.toByteArray())
                         val base64 = Base64.getEncoder().encodeToString(bytes)
                         val containsID = idList.contains(base64.substring(0, 8))
-                        return ConfigEvaluation(
-                            unsupported = false,
-                            if (condition.operator == "in_segment_list") {
-                                containsID
-                            } else {
-                                !containsID
-                            },
-                        )
+                        var booleanVal = !containsID
+                        if (condition.operator == "in_segment_list") {
+                            booleanVal = containsID
+                        }
+                        return booleanVal
                     }
-                    return ConfigEvaluation(unsupported = false, false)
+                    return false
                 }
 
                 else -> {
-                    return ConfigEvaluation(unsupported = true)
+                    throw UnsupportedException("Unsupported Condition.")
                 }
             }
         } catch (e: IllegalArgumentException) {
             errorBoundary.logException("evaluateCondition:all", e)
-            return ConfigEvaluation(true)
         }
+        return false
     }
 
     private fun matchStringInArray(
@@ -771,24 +662,18 @@ internal class Evaluator(
         compare: ((a: Date, b: Date) -> Boolean),
         a: Any?,
         b: Any?,
-    ): ConfigEvaluation {
+    ): Boolean {
         if (a == null || b == null) {
-            return ConfigEvaluation(unsupported = false, booleanValue = false)
+            return false
         }
 
         val firstEpoch = getDate(a)
         val secondEpoch = getDate(b)
 
         if (firstEpoch == null || secondEpoch == null) {
-            return ConfigEvaluation(
-                unsupported = false,
-                booleanValue = false,
-            )
+            return false
         }
-        return ConfigEvaluation(
-            unsupported = false,
-            booleanValue = compare(firstEpoch, secondEpoch),
-        )
+        return compare(firstEpoch, secondEpoch)
     }
 
     private fun getEpoch(input: Any?): Long? {
@@ -956,10 +841,10 @@ internal class Evaluator(
     private fun getFromUserAgent(user: StatsigUser, field: String): String? {
         val ua = getFromUser(user, "userAgent")?.toString() ?: return null
         return when (field.lowercase()) {
-            "os_name", "osname" -> osFamilyFromUserAgent(ua)
-            "os_version", "osversion" -> osVersionFromUserAgent(ua)
-            "browser_name", "browsername" -> userAgentFamilyFromUserAgent(ua)
-            "browser_version", "browserversion" -> browserVersionFromUserAgent(ua)
+            Const.OS_NAME, Const.OSNAME -> osFamilyFromUserAgent(ua)
+            Const.OS_VERSION, Const.OSVERSION -> osVersionFromUserAgent(ua)
+            Const.BROWSER_NAME, Const.BROWSERNAME -> userAgentFamilyFromUserAgent(ua)
+            Const.BROWSER_VERSION, Const.BROWSERVERSION -> browserVersionFromUserAgent(ua)
             else -> {
                 null
             }
@@ -974,9 +859,9 @@ internal class Evaluator(
     private fun osVersionFromUserAgent(userAgent: String): String {
         val os = uaParser.parseOS(userAgent)
         return arrayOf(
-            if (os.major.isNullOrBlank()) "0" else os.major,
-            if (os.minor.isNullOrBlank()) "0" else os.minor,
-            if (os.patch.isNullOrBlank()) "0" else os.patch,
+            if (os.major.isNullOrBlank()) Const.ZERO else os.major,
+            if (os.minor.isNullOrBlank()) Const.ZERO else os.minor,
+            if (os.patch.isNullOrBlank()) Const.ZERO else os.patch,
         ).joinToString(".")
     }
 
@@ -996,13 +881,13 @@ internal class Evaluator(
 
     private fun getUserValueForField(user: StatsigUser, field: String): Any? {
         return when (field) {
-            "userid", "user_id" -> user.userID
-            "email" -> user.email
-            "ip", "ipaddress", "ip_address" -> user.ip
-            "useragent", "user_agent" -> user.userAgent
-            "country" -> user.country
-            "locale" -> user.locale
-            "appversion", "app_version" -> user.appVersion
+            Const.USERID, Const.USER_ID -> user.userID
+            Const.EMAIL -> user.email
+            Const.IP, Const.IPADDRESS, Const.IP_ADDRESS -> user.ip
+            Const.USERAGENT, Const.USER_AGENT -> user.userAgent
+            Const.COUNTRY -> user.country
+            Const.LOCALE -> user.locale
+            Const.APPVERSION, Const.APP_VERSION -> user.appVersion
             else -> null
         }
     }
@@ -1010,10 +895,10 @@ internal class Evaluator(
     private fun getFromUser(user: StatsigUser, field: String): Any? {
         var value: Any? = getUserValueForField(user, field) ?: getUserValueForField(user, field.lowercase())
 
-        if ((value == null || value == "") && user.custom != null) {
+        if ((value == null || value == Const.EMPTY_STR) && user.custom != null) {
             value = user.custom?.get(field) ?: user.custom?.get(field.lowercase())
         }
-        if ((value == null || value == "") && user.privateAttributes != null) {
+        if ((value == null || value == Const.EMPTY_STR) && user.privateAttributes != null) {
             value =
                 user.privateAttributes?.get(field)
                     ?: user.privateAttributes?.get(field.lowercase())
@@ -1032,7 +917,7 @@ internal class Evaluator(
             return it
         }
 
-        val md = MessageDigest.getInstance("SHA-256")
+        val md = MessageDigest.getInstance(Const.CML_SHA_256)
         val inputBytes = input.toByteArray()
         val bytes = md.digest(inputBytes)
         val hash = ByteBuffer.wrap(bytes).long.toULong()

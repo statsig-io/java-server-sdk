@@ -30,7 +30,6 @@ class StatsigErrorBoundaryUsage {
             every { anyConstructed<StatsigNetwork>().shutdown() } throws Exception("Test Network Shutdown")
 
             mockkConstructor(ConfigEvaluation::class)
-            every { anyConstructed<ConfigEvaluation>().unsupported } throws Exception("Test Config Eval")
 
             mockkConstructor(StatsigLogger::class)
 
