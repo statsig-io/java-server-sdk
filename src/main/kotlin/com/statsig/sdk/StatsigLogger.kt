@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 import java.util.Collections
 import java.util.concurrent.Executors
 
-const val MAX_EVENTS: Int = 1000
+const val DEFAULT_MAX_EVENTS: Int = 1000
 const val MAX_DEDUPER_SIZE: Int = 10000
 const val FLUSH_TIMER_MS: Long = 60000
 const val CLEAR_DEDUPER_MS: Long = 60 * 1000
@@ -37,6 +37,7 @@ internal class StatsigLogger(
     private val network: StatsigNetwork,
     private val statsigMetadata: StatsigMetadata,
     private val statsigOptions: StatsigOptions,
+    private val sdkConfigs: SDKConfigs,
 ) {
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -56,13 +57,13 @@ internal class StatsigLogger(
     }
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
     internal var diagnostics: Diagnostics? = null
+    private var eventQueueSize: Int? = null
     fun log(event: StatsigEvent) {
         if (statsigOptions.disableAllLogging) {
             return
         }
         events.add(event)
-
-        if (events.size() >= MAX_EVENTS) {
+        if (events.size() >= getEventQueueCap()) {
             coroutineScope.launch { flush() }
         }
     }
@@ -222,6 +223,14 @@ internal class StatsigLogger(
         // Order matters!  Shutdown the executor after posting the final batch
         flush()
         executor.shutdown()
+    }
+
+    private fun getEventQueueCap(): Int {
+        if (eventQueueSize is Int) {
+            return eventQueueSize as Int
+        }
+        eventQueueSize = sdkConfigs.getConfigNumValue("event_queue_size")?.toInt()
+        return eventQueueSize ?: DEFAULT_MAX_EVENTS
     }
 
     private fun isUniqueExposure(user: StatsigUser?, configName: String, ruleID: String, value: String, allocatedExperiment: String): Boolean {

@@ -22,7 +22,7 @@ import java.lang.StringBuilder
 class DiagnosticsTest {
     lateinit var driver: StatsigServer
     private lateinit var eventLogInputCompletable: CompletableDeferred<LogEventInput>
-    private lateinit var logEvents: MutableList<StatsigEvent>
+    private lateinit var logEvents: Array<StatsigEvent>
     private lateinit var server: MockWebServer
     private lateinit var options: StatsigOptions
     private lateinit var gson: Gson
@@ -41,7 +41,7 @@ class DiagnosticsTest {
         server.start(8899)
         gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
         eventLogInputCompletable = CompletableDeferred()
-        logEvents = mutableListOf()
+        logEvents = arrayOf()
     }
 
     @After
@@ -55,8 +55,8 @@ class DiagnosticsTest {
         setupWebServer(downloadConfigSpecsResponse)
         driver.initializeAsync("secret-testcase", options).get()
         driver.shutdown()
-        val events = TestUtil.captureEvents(eventLogInputCompletable, false)
-        val diagnosticsEvent = events.find { it.eventName == "statsig::diagnostics" }
+        logEvents = TestUtil.captureEvents(eventLogInputCompletable, false)
+        val diagnosticsEvent = logEvents.find { it.eventName == "statsig::diagnostics" }
         val markers: List<Marker> = gson.fromJson(diagnosticsEvent!!.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
         Assert.assertEquals(8, markers.size)
         verifyMarker(markers[0], Marker(key = KeyType.OVERALL, action = ActionType.START))
@@ -80,8 +80,8 @@ class DiagnosticsTest {
         driver.getExperiment(user, "sample_experiment")
         driver.getLayer(user, "a_layer")
         driver.shutdown()
-        val events = TestUtil.captureEvents(eventLogInputCompletable, false)
-        val diagnosticsEvent = events.find { it.eventName == "statsig::diagnostics" }
+        logEvents = TestUtil.captureEvents(eventLogInputCompletable, false)
+        val diagnosticsEvent = logEvents.find { it.eventName == "statsig::diagnostics" }
         val markers: List<Marker> = gson.fromJson(diagnosticsEvent!!.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
         assertEquals(8, markers.size)
         verifyMarker(
@@ -178,11 +178,11 @@ class DiagnosticsTest {
         driver.initializeAsync("secret-testcase", options).get()
         driver.checkGate(user, "always_on_gate")
         driver.shutdown()
-        val events = TestUtil.captureEvents(eventLogInputCompletable, false)
-        val diagnosticsEvents = events.filter { it.eventName == "statsig::diagnostics" }
+        logEvents = TestUtil.captureEvents(eventLogInputCompletable, false)
+        val diagnosticsEvents = logEvents.filter { it.eventName == "statsig::diagnostics" }
         // Only log initialize
         assertEquals(1, diagnosticsEvents.size)
-        assertEquals("initialize", events[0]!!.eventMetadata!!["context"])
+        assertEquals("initialize", logEvents[0]!!.eventMetadata!!["context"])
         val diagnostics = getDiagnostics()
         assert(diagnostics.markers[ContextType.CONFIG_SYNC].isNullOrEmpty())
         assert(diagnostics.markers[ContextType.API_CALL].isNullOrEmpty())
@@ -218,6 +218,7 @@ class DiagnosticsTest {
             t.join()
         }
         driver.shutdown()
+        logEvents = TestUtil.captureEvents(eventLogInputCompletable, false)
         val diagnosticsEvents = logEvents.filter { it.eventName == "statsig::diagnostics" && it.eventMetadata?.get("context") == "api_call" }
         val markers = mutableListOf<Marker>()
         diagnosticsEvents.forEach {
@@ -237,13 +238,13 @@ class DiagnosticsTest {
             driver.checkGate(user, "always_on_gate")
         }
         driver.shutdown()
+        logEvents = TestUtil.captureEvents(eventLogInputCompletable, false)
         val diagnosticsEvents = logEvents.filter { it.eventName == "statsig::diagnostics" && it.eventMetadata?.get("context") == "api_call" }
         val markers = mutableListOf<Marker>()
         diagnosticsEvents.forEach {
             val temp: List<Marker> = gson.fromJson(it.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
             markers.addAll(temp)
         }
-        println(markers.size)
         assert(markers.size === 50)
     }
 
@@ -258,7 +259,7 @@ class DiagnosticsTest {
         // Wait for config sync happen
         delay(50)
         // Ensure config sync markers are cleared
-        assert(diagnostics.markers[ContextType.CONFIG_SYNC]!!.size == 0)
+        assert((diagnostics.markers[ContextType.CONFIG_SYNC]?.size ?: 0) == 0)
         driver.checkGate(StatsigUser("testUser"), "always_on_gate")
         driver.checkGate(StatsigUser("testUser"), "always_off_gate")
         driver.getClientInitializeResponse(StatsigUser("testUser"))
@@ -291,11 +292,10 @@ class DiagnosticsTest {
                             .setBody(downLoadConfigResponse)
                     }
                     if ("/v1/log_event" in request.path!!) {
-                        val logBody = request.body.readUtf8()
-                        val input = gson.fromJson(logBody, LogEventInput::class.java)
-                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                        logEvents.addAll(input.events)
-                        return MockResponse().setResponseCode(200)
+                        val response = TestUtil.mockLogEventEndpoint(request, eventLogInputCompletable)
+//                        val input = gson.fromJson(logBody, LogEventInput::class.java)
+//                        logEvents.addAll(eventLogInputCompletable.events)
+                        return response
                     }
                     return MockResponse().setResponseCode(404)
                 }

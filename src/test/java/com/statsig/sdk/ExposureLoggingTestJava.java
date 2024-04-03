@@ -3,20 +3,28 @@ package com.statsig.sdk;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.ToNumberPolicy;
+
+import okhttp3.RequestBody;
+import okhttp3.internal.http.RealResponseBody;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okio.Buffer;
+import okio.GzipSource;
+
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
 
 public class ExposureLoggingTestJava {
     private Gson gson;
@@ -48,9 +56,7 @@ public class ExposureLoggingTestJava {
                     return new MockResponse().setResponseCode(200).setBody(mockResponseBody);
                 }
                 if (recordedRequest.getPath().contains("/v1/log_event")) {
-                    String logBody = recordedRequest.getBody().readUtf8();
-                    eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput.class));
-                    return new MockResponse().setResponseCode(200);
+                    return TestUtilJava.mockLogEventEndpoint(recordedRequest, eventLogInputCompletable);
                 }
                 return new MockResponse().setResponseCode(404);
             }

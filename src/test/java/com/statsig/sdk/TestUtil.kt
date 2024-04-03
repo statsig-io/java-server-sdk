@@ -1,10 +1,16 @@
 package com.statsig.sdk
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.RecordedRequest
+import okio.Buffer
+import java.io.ByteArrayOutputStream
+import java.util.zip.GZIPInputStream
 
 private const val TEST_TIMEOUT = 10L
 
@@ -71,6 +77,28 @@ class TestUtil {
             val privateSpecStoreField = eval.javaClass.getDeclaredField("specStore")
             privateSpecStoreField.isAccessible = true
             return privateSpecStoreField[eval] as SpecStore
+        }
+
+        internal fun mockLogEventEndpoint(request: RecordedRequest, eventLogInputCompletable: CompletableDeferred<LogEventInput>): MockResponse {
+            var logBody = ""
+            if (request.headers["Content-Encoding"] == "gzip") {
+                logBody = decompress(request.body)
+            } else {
+                logBody = request.body.readUtf8()
+            }
+            eventLogInputCompletable.complete(Gson().fromJson(logBody, LogEventInput::class.java))
+            return MockResponse().setResponseCode(200)
+        }
+        private fun decompress(buffer: Buffer): String {
+            val gzipInputStream = GZIPInputStream(buffer.inputStream())
+            val outputStream = ByteArrayOutputStream()
+            val buffer = ByteArray(1024)
+            var length: Int
+            while (gzipInputStream.read(buffer).also { length = it } > 0) {
+                outputStream.write(buffer, 0, length)
+            }
+            gzipInputStream.close()
+            return outputStream.toString("UTF-8")
         }
     }
 }

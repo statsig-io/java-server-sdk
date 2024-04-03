@@ -46,9 +46,7 @@ class ExposureLoggingTest {
                         return MockResponse().setResponseCode(200).setBody(mockResponseBody)
                     }
                     if ("/v1/log_event" in request.path!!) {
-                        val logBody = request.body.readUtf8()
-                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                        return MockResponse().setResponseCode(200)
+                        return TestUtil.mockLogEventEndpoint(request, eventLogInputCompletable)
                     }
                     return MockResponse().setResponseCode(404)
                 }

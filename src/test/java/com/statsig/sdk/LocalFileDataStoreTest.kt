@@ -101,7 +101,7 @@ class LocalFileDataStoreTest {
         // should not trigger network request
         val options = StatsigOptions(
             api = mockServer.url("/v1").toString(),
-            dataStore = TestDataAdapter()
+            dataStore = TestDataAdapter(),
         )
         statsigServer = StatsigServer.create()
         statsigServer.initializeAsync("secret-local", options).get()

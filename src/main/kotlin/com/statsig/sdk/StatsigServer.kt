@@ -249,6 +249,7 @@ private class StatsigServerImpl() :
     private var options: StatsigOptions = StatsigOptions()
     private val mutex = Mutex()
     private val statsigMetadata = StatsigMetadata()
+    private val sdkConfigs = SDKConfigs()
     override var initialized = false
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
@@ -260,8 +261,8 @@ private class StatsigServerImpl() :
         }
         statsigJob = SupervisorJob()
         statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
-        network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary)
-        logger = StatsigLogger(statsigScope, network, statsigMetadata, options)
+        network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary, sdkConfigs)
+        logger = StatsigLogger(statsigScope, network, statsigMetadata, options, sdkConfigs)
         this.options = options
     }
 
@@ -283,7 +284,7 @@ private class StatsigServerImpl() :
                     setupAndStartDiagnostics()
                     localDataStoreSetUp(serverSecret)
                     configEvaluator =
-                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics, statsigMetadata, serverSecret)
+                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics, statsigMetadata, sdkConfigs, serverSecret)
                     configEvaluator.initialize()
                     initialized = true
                     endInitDiagnostics(isSDKInitialized())

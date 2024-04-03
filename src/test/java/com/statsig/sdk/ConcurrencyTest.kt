@@ -8,6 +8,7 @@ import com.statsig.sdk.StatsigE2ETest
 import com.statsig.sdk.StatsigOptions
 import com.statsig.sdk.StatsigServer
 import com.statsig.sdk.StatsigUser
+import com.statsig.sdk.TestUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
@@ -58,10 +59,7 @@ class ConcurrencyTest {
                         return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
                     }
                     if ("/v1/log_event" in request.path!!) {
-                        val logBody = request.body.readUtf8()
-                        val input = gson.fromJson(logBody, LogEventInput::class.java)
-                        flushedEventCount += input.events.size
-                        return MockResponse().setResponseCode(200).setBody("")
+                        return TestUtil.mockLogEventEndpoint(request, eventLogInputCompletable)
                     }
                     if ("/v1/get_id_lists" in request.path!!) {
                         getIDListCount++

@@ -75,12 +75,10 @@ class StatsigE2ETest {
                         return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
                     }
                     if ("/v1/log_event" in request.path!!) {
-                        val logBody = request.body.readUtf8()
                         if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
                             throw Exception("No content type set!")
                         }
-                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                        return MockResponse().setResponseCode(200)
+                        return TestUtil.mockLogEventEndpoint(request, eventLogInputCompletable)
                     }
                     if ("/v1/get_id_lists" in request.path!!) {
                         download_id_list_count++

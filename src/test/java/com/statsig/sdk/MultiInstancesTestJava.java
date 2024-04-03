@@ -38,9 +38,7 @@ public class MultiInstancesTestJava {
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) throws InterruptedException {
                 if (recordedRequest.getPath().contains("/v1/log_event")) {
-                    String logBody = recordedRequest.getBody().readUtf8();
-                    eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput.class));
-                    return new MockResponse().setResponseCode(200);
+                    return TestUtilJava.mockLogEventEndpoint(recordedRequest, eventLogInputCompletable);
                 }
                 return new MockResponse().setResponseCode(404);
             }

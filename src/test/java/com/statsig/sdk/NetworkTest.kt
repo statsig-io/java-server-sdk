@@ -47,7 +47,7 @@ internal class NetworkTest {
 
         options.api = server.url("/v1").toString()
 
-        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, 1))
+        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, SDKConfigs(), 1))
 
         net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)
         val request = server.takeRequest()
@@ -79,7 +79,8 @@ internal class NetworkTest {
             }
         }
         options.api = server.url("/v1").toString()
-        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb))
+
+        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, SDKConfigs()))
         net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)
         println(logEventCount)
         assert(logEventCount === LOG_EVENT_RETRY_COUNT + 1)
@@ -104,7 +105,7 @@ internal class NetworkTest {
             }
         }
         options.api = server.url("/v1").toString()
-        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb))
+        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, SDKConfigs()))
         net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)
         println(logEventCount)
         assert(logEventCount === 1)

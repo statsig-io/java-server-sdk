@@ -7,6 +7,7 @@ import com.statsig.sdk.StatsigEvent
 import com.statsig.sdk.StatsigOptions
 import com.statsig.sdk.StatsigServer
 import com.statsig.sdk.StatsigUser
+import com.statsig.sdk.TestUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -48,12 +49,7 @@ class LayerExposureTest {
                         return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
                     }
                     if ("/v1/log_event" in request.path!!) {
-                        val logBody = request.body.readUtf8()
-                        if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
-                            throw Exception("No content type set!")
-                        }
-                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                        return MockResponse().setResponseCode(200)
+                        return TestUtil.mockLogEventEndpoint(request, eventLogInputCompletable)
                     }
 
                     return MockResponse().setResponseCode(404)

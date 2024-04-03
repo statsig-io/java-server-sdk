@@ -18,6 +18,10 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.BufferedSink
+import okio.GzipSink
+import okio.buffer
+import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -33,6 +37,7 @@ internal class StatsigNetwork(
     private val options: StatsigOptions,
     private val statsigMetadata: StatsigMetadata,
     private val errorBoundary: ErrorBoundary,
+    private val sdkConfig: SDKConfigs,
     private val backoffMultiplier: Int = BACKOFF_MULTIPLIER,
 ) {
     private val retryCodes: Set<Int> = setOf(
@@ -87,6 +92,24 @@ internal class StatsigNetwork(
                         .build()
                 }
                 it.proceed(it.request())
+            },
+        )
+
+        clientBuilder.addInterceptor(
+            Interceptor {
+                val url = it.request().url
+                var request = it.request()
+                if (url.toString().contains("log_event") && !sdkConfig.getFlag("stop_log_event_compression", false)) {
+                    try {
+                        request = request.newBuilder().method(
+                            request.method,
+                            request.body?.let { it1 -> gzip(it1) },
+                        ).addHeader("Content-Encoding", "gzip").build()
+                    } catch (_: Exception) {
+                        // noop: Proceeds with original request
+                    }
+                }
+                it.proceed(request)
             },
         )
 
@@ -295,5 +318,24 @@ internal class StatsigNetwork(
             """.trimIndent(),
             bypassDedupe = true,
         )
+    }
+
+    private fun gzip(body: RequestBody): RequestBody? {
+        return object : RequestBody() {
+            override fun contentType(): MediaType? {
+                return body.contentType()
+            }
+
+            @Throws(IOException::class)
+            override fun writeTo(sink: BufferedSink) {
+                val gzipSink: BufferedSink = GzipSink(sink).buffer()
+                body.writeTo(gzipSink)
+                gzipSink.close()
+            }
+
+            override fun contentLength(): Long {
+                return -1 // We don't know the compressed length in advance
+            }
+        }
     }
 }

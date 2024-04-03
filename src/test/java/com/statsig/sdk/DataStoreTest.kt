@@ -67,9 +67,7 @@ class DataStoreTest {
                         return MockResponse().setResponseCode(200).setBody(downloadConfigSpecsResponse)
                     }
                     if ("/v1/log_event" in request.path!!) {
-                        val logBody = request.body.readUtf8()
-                        eventLogInputCompletable.complete(gson.fromJson(logBody, LogEventInput::class.java))
-                        return MockResponse().setResponseCode(200)
+                        return TestUtil.mockLogEventEndpoint(request, eventLogInputCompletable)
                     }
                     return MockResponse().setResponseCode(404)
                 }

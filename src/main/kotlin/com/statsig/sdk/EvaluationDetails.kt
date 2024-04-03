@@ -25,5 +25,5 @@ enum class EvaluationReason(val reason: String) {
     BOOTSTRAP("Bootstrap"),
     DATA_ADAPTER("DataAdapter"),
     UNSUPPORTED("Unsupported"),
-    DEFAULT("Default")
+    DEFAULT("Default"),
 }

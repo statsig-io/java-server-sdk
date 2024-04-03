@@ -16,6 +16,8 @@ internal data class APIDownloadedConfigs(
     @SerializedName("hashed_sdk_keys_to_app_ids") val hashedSDKKeysToAppIDs: Map<String, String>? = null,
     @SerializedName("hashed_sdk_key_used") val hashedSDKKeyUsed: String? = null,
     @SerializedName("hashed_sdk_keys_to_entities") val hashedSDKKeysToEntities: Map<String, APIEntityNames>? = null,
+    @SerializedName("sdk_flags") val sdkFlags: Map<String, Boolean>? = null,
+    @SerializedName("sdk_configs") val sdkConfigs: Map<String, Any>? = null,
 )
 
 internal data class APIEntityNames(

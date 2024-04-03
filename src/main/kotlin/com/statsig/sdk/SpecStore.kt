@@ -24,6 +24,7 @@ internal class SpecStore constructor(
     private var statsigScope: CoroutineScope,
     private val errorBoundary: ErrorBoundary,
     private val diagnostics: Diagnostics,
+    private val sdkConfigs: SDKConfigs,
     private val serverSecret: String,
 ) {
     private var initTime: Long = 0
@@ -286,6 +287,12 @@ internal class SpecStore constructor(
 
         if (downloadedConfig.diagnostics != null) {
             diagnostics.setSamplingRate(downloadedConfig.diagnostics)
+        }
+        if (downloadedConfig.sdkConfigs != null) {
+            sdkConfigs.setConfigs(downloadedConfig.sdkConfigs)
+        }
+        if (downloadedConfig.sdkFlags != null) {
+            sdkConfigs.setFlags(downloadedConfig.sdkFlags)
         }
         if (options.dataStore == null && !isFromBootstrap) {
             diagnostics.markEnd(KeyType.DOWNLOAD_CONFIG_SPECS, true, StepType.PROCESS)
