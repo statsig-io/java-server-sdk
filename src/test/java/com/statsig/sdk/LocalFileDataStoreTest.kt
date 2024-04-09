@@ -1,5 +1,9 @@
 package com.statsig.sdk
 
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.statsig.sdk.datastore.LocalFileDataStore
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -19,6 +23,7 @@ class LocalFileDataStoreTest {
     private lateinit var mockServer: MockWebServer
     private var didCallDownloadConfig = false
     private val user = StatsigUser("test-user")
+    private val gson = Gson()
 
     @Before
     fun setUp() {
@@ -42,12 +47,12 @@ class LocalFileDataStoreTest {
             }
         }
 
-        localDataStore = LocalFileDataStore()
+        localDataStore = LocalFileDataStore("/tmp/statsig/testfile.json", true)
     }
 
     @After
     fun tearDown() {
-        File(localDataStore.workingDirectory).deleteRecursively() // clean up the folder when finished tests
+        File(localDataStore.filePath).parentFile.deleteRecursively() // clean up the folder when finished tests
         mockServer.shutdown()
     }
 
@@ -61,13 +66,66 @@ class LocalFileDataStoreTest {
 
         statsigServer = StatsigServer.create()
         statsigServer.initializeAsync("test-key", options).get()
-
         val gateRes1 = statsigServer.checkGateSync(user, "always_on_gate")
         Assert.assertTrue(gateRes1)
 
         user.email = "test@statsig.com"
         val gateRes2 = statsigServer.checkGateSync(user, "on_for_statsig_email")
         Assert.assertTrue(gateRes2)
+        statsigServer.shutdown()
+
+        statsigServer = StatsigServer.create()
+        statsigServer.initializeAsync("test-key", options).get()
+        val gateRes3 = statsigServer.checkGateSync(user, "always_on_gate")
+        Assert.assertTrue(gateRes3)
+        statsigServer.shutdown()
+    }
+
+    @Test
+    fun testLocalDataStoreCanDetectChange() {
+        options = StatsigOptions(
+            api = mockServer.url("/v1").toString(),
+            dataStore = localDataStore,
+            disableDiagnostics = true,
+        )
+
+        statsigServer = StatsigServer.create()
+        statsigServer.initializeAsync("secret-local", options).get()
+
+        val adapterKey = localDataStore.dataStoreKey
+
+        val thread = Thread {
+            val newGate = addNewGateToExistingSpecs() // add a new entry into Json file
+
+            var existingContent = JsonParser.parseString(localDataStore.get(adapterKey)).asJsonObject
+            var featureGates = existingContent.getAsJsonArray("feature_gates")
+            featureGates?.add(newGate)
+
+            val newTestUser = StatsigUser("newTestUser")
+            newTestUser.email = "test@uw.edu"
+            val fileOnChangeGateRes = statsigServer.checkGateSync(newTestUser, "add_new_gate")
+            Assert.assertTrue(fileOnChangeGateRes)
+
+            // Then delete this newly added entry to see if deletion can be detected as well
+            existingContent = JsonParser.parseString(localDataStore.get("dummy-key")).asJsonObject
+            featureGates = existingContent.getAsJsonArray("feature_gates")
+            val updatedFeatureGates = featureGates.filter { it.asJsonObject.get("name").asString != "add_new_gate" }
+
+            val updatedFeatureGatesArray = JsonArray()
+            updatedFeatureGates.forEach { updatedFeatureGatesArray.add(it) }
+
+            existingContent.remove("feature_gates") // Remove existing feature gates array
+            existingContent.add("feature_gates", updatedFeatureGatesArray) // Add the updated feature gates array
+
+            val checkGateResOnDeletion = statsigServer.checkGateSync(newTestUser, "add_new_gate")
+            Assert.assertFalse(checkGateResOnDeletion)
+
+            user.email = "test@statsig.com"
+            val gateRes2 = statsigServer.checkGateSync(user, "on_for_statsig_email")
+            Assert.assertTrue(gateRes2)
+        }
+        thread.start()
+        thread.join()
         statsigServer.shutdown()
     }
 
@@ -81,6 +139,7 @@ class LocalFileDataStoreTest {
         statsigServer.initializeAsync("secret-local", options).get()
 
         Assert.assertFalse(didCallDownloadConfig)
+        statsigServer.shutdown()
     }
 
     @Test
@@ -112,5 +171,41 @@ class LocalFileDataStoreTest {
         val dataStoreGateRes = statsigServer.checkGateSync(user, "gate_from_adapter_always_on")
         Assert.assertTrue(dataStoreGateRes)
         statsigServer.shutdown()
+    }
+
+    private fun addNewGateToExistingSpecs(): JsonObject {
+        val newGateJson = """{
+          "name": "add_new_gate",
+          "type": "feature_gate",
+          "salt": "random_salt",
+          "defaultValue": true, // can be false
+          "enabled": true,
+          "rules": [
+            {
+              "name": "7w9rbTSffLT89pxqpyhuqK",
+              "passPercentage": 100.0,
+              "returnValue": true,
+              "id": "random_id",
+              "salt": "e452510f-bd5b-42cb-a71e-00498a7903fc",
+              "conditions": [
+                {
+                  "type": "user_field",
+                  "targetValue": [
+                    "@uw.edu"
+                  ],
+                  "operator": "str_contains_any",
+                  "field": "email",
+                  "additionalValues": {}
+                }
+              ],
+              "groupName": "on for uw emails"
+            }
+          ],
+          "entity": "feature_gate"
+        }
+        """.trimIndent()
+
+        val newGate = gson.fromJson(newGateJson, JsonObject::class.java)
+        return newGate
     }
 }

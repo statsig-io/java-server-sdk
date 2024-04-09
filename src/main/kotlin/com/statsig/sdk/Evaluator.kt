@@ -1,5 +1,7 @@
 package com.statsig.sdk
 
+import com.google.gson.GsonBuilder
+import com.google.gson.ToNumberPolicy
 import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -52,6 +54,7 @@ internal class Evaluator(
     private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var hashLookupTable: MutableMap<String, ULong> = HashMap()
+    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
     private val calendarOne = Calendar.getInstance()
     private val calendarTwo = Calendar.getInstance()

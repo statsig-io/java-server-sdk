@@ -4,7 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
-import com.statsig.sdk.datastore.LocalFileDataStore
+import com.statsig.sdk.datastore.IDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -79,9 +79,13 @@ internal class SpecStore constructor(
     }
 
     private fun spawnBackgroundDownloadConfigSpecs() {
+        val pollMethod = options.dataStore?.let {
+            if (it.shouldPollForUpdates()) ::pollForChangesFromDataStore else ::pollForChanges
+        } ?: ::pollForChanges // Default to ::pollForChanges if options.dataStore is null
+
         backgroundDownloadConfigs =
             statsigScope.launch {
-                pollForChanges().collect {
+                pollMethod().collect {
                     if (it == null) {
                         return@collect
                     }
@@ -131,6 +135,22 @@ internal class SpecStore constructor(
                 val response = downloadConfigSpecs()
                 if (response != null && response.hasUpdates) {
                     emit(response)
+                }
+            }
+        }
+    }
+
+    private fun pollForChangesFromDataStore(): Flow<APIDownloadedConfigs?> {
+        return flow {
+            while (true) {
+                delay(options.rulesetsSyncIntervalMs)
+                options.dataStore?.let { dataStore ->
+                    val adapterKey = dataStore.dataStoreKey
+                    val cacheString = dataStore.get(adapterKey)
+                    val response = parseConfigSpecs(cacheString)
+                    response?.let {
+                        emit(it)
+                    }
                 }
             }
         }
@@ -258,6 +278,9 @@ internal class SpecStore constructor(
         if (!downloadedConfig.hasUpdates) {
             return
         }
+        options.dataStore?.let {
+            downloadConfigSpecsToDataStore(it, downloadedConfig)
+        }
         if (options.dataStore == null && !isFromBootstrap) {
             diagnostics.markStart(KeyType.DOWNLOAD_CONFIG_SPECS, step = StepType.PROCESS)
         }
@@ -368,11 +391,7 @@ internal class SpecStore constructor(
         var downloadedConfigs: APIDownloadedConfigs? = null
 
         if (options.dataStore != null) {
-            if (options.dataStore is LocalFileDataStore) {
-                downloadedConfigs = this.downloadConfigSpecsToLocal()
-            } else {
-                downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
-            }
+            downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
             initReason =
                 if (downloadedConfigs == null) EvaluationReason.UNINITIALIZED else EvaluationReason.DATA_ADAPTER
         } else if (options.bootstrapValues != null) {
@@ -391,6 +410,10 @@ internal class SpecStore constructor(
             downloadedConfigs = this.downloadConfigSpecsFromNetwork()
             if (downloadedConfigs != null) {
                 initReason = EvaluationReason.NETWORK
+
+                options.dataStore?.let {
+                    downloadConfigSpecsToDataStore(it, downloadedConfigs)
+                }
             }
         }
         if (downloadedConfigs != null) {
@@ -398,16 +421,17 @@ internal class SpecStore constructor(
                 // only fire the callback if this was not the result of a bootstrap
                 fireRulesUpdatedCallback(downloadedConfigs)
             }
+
             setDownloadedConfigs(downloadedConfigs)
         }
     }
 
-    private suspend fun downloadConfigSpecsToLocal(): APIDownloadedConfigs? {
-        val response = this.downloadConfigSpecs()
-
+    private fun downloadConfigSpecsToDataStore(dataStore: IDataStore, response: APIDownloadedConfigs): APIDownloadedConfigs {
+        val gson = GsonBuilder().setPrettyPrinting().create()
         val specs: String = gson.toJson(response)
-        val localDataStore = options.dataStore as LocalFileDataStore
-        localDataStore.set(localDataStore.filePath, specs)
+
+        val adapterKey = dataStore.dataStoreKey
+        dataStore.set(adapterKey, specs)
         return response
     }
 
@@ -416,7 +440,7 @@ internal class SpecStore constructor(
     }
 
     private fun getParsedSpecs(values: Array<APIConfig>): Map<String, APIConfig> {
-        var parsed: MutableMap<String, APIConfig> = emptyMap<String, APIConfig>().toMutableMap()
+        val parsed: MutableMap<String, APIConfig> = emptyMap<String, APIConfig>().toMutableMap()
         var specName: String?
         for (value in values) {
             specName = value.name
@@ -438,17 +462,17 @@ internal class SpecStore constructor(
     }
 
     private fun loadConfigSpecsFromStorageAdapter(): APIDownloadedConfigs? {
-        if (options.dataStore == null) {
-            return null
-        }
-        val cacheString = options.dataStore!!.get(STORAGE_ADAPTER_KEY)
+        val dataStore = options.dataStore ?: return null
+
+        val adapterKey = dataStore.dataStoreKey
+        val cacheString = dataStore.get(adapterKey)
 
         val specs = parseConfigSpecs(cacheString)
-        if (specs != null) {
-            if (specs.time < this.lastUpdateTime) {
+        specs?.let {
+            if (it.time < this.lastUpdateTime) {
                 return null
             }
-            this.lastUpdateTime = specs.time
+            this.lastUpdateTime = it.time
         }
         return specs
     }
