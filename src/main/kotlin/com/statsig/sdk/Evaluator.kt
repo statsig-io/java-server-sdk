@@ -243,7 +243,7 @@ internal class Evaluator(
     private fun evaluateConfig(user: StatsigUser, config: APIConfig?, endResult: ConfigEvaluation) {
         if (config == null) {
             endResult.booleanValue = false
-            endResult.secondaryExposures = arrayListOf()
+            endResult.ruleID = Const.EMPTY_STR
             endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED)
             return
         }
