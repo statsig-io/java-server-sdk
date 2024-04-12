@@ -8,20 +8,16 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import okhttp3.Interceptor
-import okhttp3.MediaType
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.BufferedSink
 import okio.GzipSink
 import okio.buffer
 import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -113,8 +109,39 @@ internal class StatsigNetwork(
             },
         )
 
+        options.proxyConfig?.let {
+            setUpProxyAgent(clientBuilder, it)
+        }
+
         statsigHttpClient = clientBuilder.build()
         externalHttpClient = OkHttpClient.Builder().build()
+    }
+
+    private fun setUpProxyAgent(clientBuilder: OkHttpClient.Builder, proxyConfig: ProxyConfig) {
+        if (proxyConfig.proxyHost.isBlank() || proxyConfig.proxyPort !in 1..65535) {
+            options.customLogger.warning("Invalid proxy configuration: Host is blank or port is out of range")
+        }
+
+        val proxyAddress = InetSocketAddress(proxyConfig.proxyHost, proxyConfig.proxyPort)
+        val proxyType = when (proxyConfig.proxySchema) {
+            "http" -> Proxy.Type.HTTP
+            "https" -> Proxy.Type.HTTP
+            "socks" -> Proxy.Type.SOCKS
+            else -> Proxy.Type.HTTP // Default to HTTP if not specified or recognized
+        }
+
+        val proxy = Proxy(proxyType, proxyAddress)
+        clientBuilder.proxy(proxy)
+
+        proxyConfig.proxyAuth?.let { credentials ->
+            val authenticator = Authenticator { _, response ->
+                response.request.newBuilder()
+                    .header("Proxy-Authorization", credentials)
+                    .build()
+            }
+
+            clientBuilder.proxyAuthenticator(authenticator)
+        }
     }
 
     fun setDiagnostics(diagnostics: Diagnostics) {

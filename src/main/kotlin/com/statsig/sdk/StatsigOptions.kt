@@ -34,6 +34,7 @@ interface LoggerInterface {
  * An object of properties for initializing the sdk with advanced options
  * @property api the api endpoint to use for initialization and logging
  * @property initTimeoutMs the amount of time to wait for an initialize() response from the server
+ * @property proxyConfig the proxy config details for creating proxy agent
  * NOTE: gates/configs will still be fetched in the background if this time is exceeded, but the
  * callback to initialize will fire after, at most, the time specified
  */
@@ -49,6 +50,7 @@ class StatsigOptions(
     var dataStore: IDataStore? = null,
     var customLogger: LoggerInterface = defaultLogger,
     var disableAllLogging: Boolean = false,
+    var proxyConfig: ProxyConfig? = null,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(null, initTimeoutMs)
@@ -85,6 +87,13 @@ class StatsigOptions(
         )
     }
 }
+
+data class ProxyConfig @JvmOverloads constructor(
+    var proxyHost: String,
+    var proxyPort: Int,
+    var proxyAuth: String? = null, // Optional: pass in Credentials.basic("username", "password")
+    val proxySchema: String = "https", // default to https
+)
 
 data class GetFeatureGateOptions(var disableExposureLogging: Boolean = false) {
     constructor() : this(false)
