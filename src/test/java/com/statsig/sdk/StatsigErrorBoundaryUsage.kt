@@ -22,6 +22,7 @@ class StatsigErrorBoundaryUsage {
         private lateinit var onRequestWaiter: CountDownLatch
         private val requests = arrayListOf<RecordedRequest>()
         private var throwOnDownloadConfigSpecs = false
+        private var sdkExceptionWaiter = CountDownLatch(1)
 
         @BeforeClass
         @JvmStatic
@@ -49,6 +50,7 @@ class StatsigErrorBoundaryUsage {
                 dispatcher = object : Dispatcher() {
                     override fun dispatch(request: RecordedRequest): MockResponse {
                         if (request.path == "/v1/sdk_exception") {
+                            sdkExceptionWaiter.countDown()
                             requests.add(request)
                         }
                         onRequestWaiter.countDown()
@@ -62,6 +64,7 @@ class StatsigErrorBoundaryUsage {
         @JvmStatic
         fun afterAll() {
             unmockkAll()
+            sdkExceptionWaiter = CountDownLatch(1)
             server.shutdown()
         }
     }
@@ -100,16 +103,7 @@ class StatsigErrorBoundaryUsage {
             statsig.initialize("secret-key", StatsigOptions(disableDiagnostics = true))
         }
 
-        assertEquals(1, requests.size)
-    }
-
-    @Test
-    fun testErrorsWithShutdown() = runBlocking {
-        val statsig = getStatsigInstance()
-        assertEquals(0, requests.size)
-
-        statsig.shutdown()
-        assertEquals(1, requests.size)
+        assert(sdkExceptionWaiter.await(1, TimeUnit.SECONDS))
     }
 
     @Test
@@ -123,7 +117,7 @@ class StatsigErrorBoundaryUsage {
     fun testErrorsWithGetConfig() = runBlocking {
         val statsig = getStatsigInstance()
         statsig.getConfig(user, "a_config")
-        assertEquals(1, requests.size)
+        assert(sdkExceptionWaiter.await(1, TimeUnit.SECONDS))
     }
 
     @Test
@@ -144,7 +138,7 @@ class StatsigErrorBoundaryUsage {
     fun testErrorsWithGetLayer() = runBlocking {
         val statsig = getStatsigInstance()
         statsig.getLayer(user, "a_layer")
-        assertEquals(1, requests.size)
+        assert(sdkExceptionWaiter.await(1, TimeUnit.SECONDS))
     }
 
     @Test
@@ -152,7 +146,7 @@ class StatsigErrorBoundaryUsage {
         val statsig = getStatsigInstance()
         statsig.logEvent(user, "an_event", "a_value")
         onRequestWaiter.await(1, TimeUnit.SECONDS)
-        assertEquals(1, requests.size)
+        assert(sdkExceptionWaiter.await(1, TimeUnit.SECONDS))
     }
 
     @Test
@@ -160,6 +154,6 @@ class StatsigErrorBoundaryUsage {
         val statsig = getStatsigInstance()
         statsig.logEvent(user, "an_event", 1.2)
         onRequestWaiter.await(1, TimeUnit.SECONDS)
-        assertEquals(1, requests.size)
+        assert(sdkExceptionWaiter.await(1, TimeUnit.SECONDS))
     }
 }

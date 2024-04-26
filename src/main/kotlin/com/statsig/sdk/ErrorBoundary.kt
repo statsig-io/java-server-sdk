@@ -1,10 +1,18 @@
 package com.statsig.sdk
 
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.IOException
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -34,6 +42,16 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         })
     }
 
+    fun getUrl(): String {
+        return uri.toString()
+    }
+
+    private fun getNoopExceptionHandler(): CoroutineExceptionHandler {
+        return CoroutineExceptionHandler { _, _ ->
+            // No-op
+        }
+    }
+
     suspend fun <T> capture(tag: String, task: suspend () -> T, recover: suspend () -> T, configName: String? = null): T {
         var markerID: String? = null
         var keyType: KeyType? = null
@@ -61,21 +79,22 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
 
     internal fun logException(tag: String, ex: Throwable, configName: String? = null, extraInfo: String? = null, bypassDedupe: Boolean = false) {
         try {
-            if (options.localMode || options.disableAllLogging) {
-                return
-            }
-            if (!bypassDedupe && seen.contains(ex.javaClass.name)) {
-                return
-            }
-            seen.add(ex.javaClass.name)
+            CoroutineScope(this.getNoopExceptionHandler() + Dispatchers.IO).launch {
+                if (options.localMode || options.disableAllLogging) {
+                    return@launch
+                }
+                if (!bypassDedupe && seen.contains(ex.javaClass.name)) {
+                    return@launch
+                }
+                seen.add(ex.javaClass.name)
 
-            val info = ex.stackTraceToString()
-            var safeInfo = URLEncoder.encode(info, StandardCharsets.UTF_8.toString())
-            if (safeInfo.length > maxInfoLength) {
-                safeInfo = safeInfo.substring(0, maxInfoLength)
-            }
-            val optionsCopy = Gson().toJson(options.getLoggingCopy())
-            val body = """{
+                val info = ex.stackTraceToString()
+                var safeInfo = URLEncoder.encode(info, StandardCharsets.UTF_8.toString())
+                if (safeInfo.length > maxInfoLength) {
+                    safeInfo = safeInfo.substring(0, maxInfoLength)
+                }
+                val optionsCopy = Gson().toJson(options.getLoggingCopy())
+                val body = """{
                 "tag": "$tag",
                 "exception": "${ex.javaClass.name}",
                 "info": "$safeInfo",
@@ -84,15 +103,26 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 "setupOptions": $optionsCopy,
                 "extra": $extraInfo
             }
-            """.trimIndent()
-            val req =
-                Request.Builder()
-                    .url(uri.toString())
-                    .header("STATSIG-API-KEY", apiKey)
-                    .post(body.toRequestBody(MEDIA_TYPE))
-                    .build()
+                """.trimIndent()
+                val req =
+                    Request.Builder()
+                        .url(getUrl())
+                        .header("STATSIG-API-KEY", apiKey)
+                        .post(body.toRequestBody(MEDIA_TYPE))
+                        .build()
 
-            client.newCall(req).execute()
+                client.newCall(req).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        // No-op
+                        println("get a failure")
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        // No-op
+                        println("get a response")
+                    }
+                })
+            }
         } catch (_: Throwable) {
             // no-op
         }

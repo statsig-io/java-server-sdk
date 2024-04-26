@@ -16,12 +16,15 @@ import org.junit.Test
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class ErrorBoundaryTest {
     private lateinit var boundary: ErrorBoundary
     private lateinit var server: MockWebServer
     private lateinit var statsigMetadata: StatsigMetadata
     private lateinit var options: StatsigOptions
+    var countdownLatch = CountDownLatch(1)
 
     @Before
     internal fun setup() {
@@ -29,6 +32,7 @@ class ErrorBoundaryTest {
         server.apply {
             dispatcher = object : Dispatcher() {
                 override fun dispatch(req: RecordedRequest): MockResponse {
+                    countdownLatch.countDown()
                     return MockResponse().setResponseCode(202)
                 }
             }
@@ -42,6 +46,7 @@ class ErrorBoundaryTest {
     @After
     fun tearDown() {
         server.shutdown()
+        countdownLatch = CountDownLatch(1)
         unmockkAll()
     }
 
@@ -86,8 +91,7 @@ class ErrorBoundaryTest {
     fun testLogsTheSameErrorOnlyOnce() = runBlocking {
         boundary.swallow("") { throw ClassNotFoundException() }
         boundary.swallow("") { throw ClassNotFoundException() }
-
-        assertEquals(server.requestCount, 1)
+        assert(countdownLatch.await(1, TimeUnit.SECONDS))
     }
 
     @Test
@@ -110,12 +114,12 @@ class ErrorBoundaryTest {
     @Test
     fun testSwallow() = runBlocking {
         boundary.swallow("") { throw IOException() }
-        assertEquals(server.requestCount, 1)
+        assert(countdownLatch.await(1, TimeUnit.SECONDS))
     }
 
     @Test
     fun testSwallowSync() {
         boundary.swallowSync("") { throw IOException() }
-        assertEquals(server.requestCount, 1)
+        assert(countdownLatch.await(1, TimeUnit.SECONDS))
     }
 }

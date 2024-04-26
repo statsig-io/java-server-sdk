@@ -1083,7 +1083,7 @@ private class StatsigServerImpl() :
     private fun getConfigImpl(
         user: StatsigUser,
         configName: String,
-        endResult: ConfigEvaluation
+        endResult: ConfigEvaluation,
     ) {
         configEvaluator.getConfig(user, configName, endResult)
     }

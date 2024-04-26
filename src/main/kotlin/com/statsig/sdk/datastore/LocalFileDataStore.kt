@@ -21,7 +21,7 @@ import java.io.File
  */
 class LocalFileDataStore @JvmOverloads constructor(
     var filePath: String,
-    var autoUpdate: Boolean = false
+    var autoUpdate: Boolean = false,
 ) : IDataStore() {
     private lateinit var options: StatsigOptions
     override var dataStoreKey: String

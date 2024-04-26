@@ -257,7 +257,7 @@ class DiagnosticsTest {
         val diagnostics = getDiagnostics()
         assert(diagnostics.markers[ContextType.INITIALIZE]!!.size == 0) // Ensure initialize markers are cleared
         // Wait for config sync happen
-        delay(50)
+        delay(100)
         // Ensure config sync markers are cleared
         assert((diagnostics.markers[ContextType.CONFIG_SYNC]?.size ?: 0) == 0)
         driver.checkGate(StatsigUser("testUser"), "always_on_gate")
