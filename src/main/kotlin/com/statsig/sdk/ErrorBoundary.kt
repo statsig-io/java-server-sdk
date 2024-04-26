@@ -114,12 +114,10 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 client.newCall(req).enqueue(object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
                         // No-op
-                        println("get a failure")
                     }
 
                     override fun onResponse(call: Call, response: Response) {
                         // No-op
-                        println("get a response")
                     }
                 })
             }
