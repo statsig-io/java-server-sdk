@@ -1,8 +1,6 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
-import com.google.gson.reflect.TypeToken
 
 internal data class ClientInitializeResponse(
     @SerializedName("feature_gates") var feature_gates: Map<String, ClientConfig>,
@@ -16,10 +14,20 @@ internal data class ClientInitializeResponse(
     @SerializedName("hash_used") var hash_used: String,
     @SerializedName("user_hash") var user_hash: String,
 ) {
+
     fun toMap(): Map<String, Any> {
-        val gson = Gson()
-        val json = gson.toJson(this)
-        return gson.fromJson(json, object : TypeToken<Map<String, Any>>() {}.type)
+        val map = mutableMapOf<String, Any>()
+        map["feature_gates"] = feature_gates.mapValues { (_, config) -> config.toMap() }
+        map["dynamic_configs"] = dynamic_configs.mapValues { (_, config) -> config.toMap() }
+        map["layer_configs"] = layer_configs.mapValues { (_, config) -> config.toMap() }
+        map["sdkParams"] = sdkParams
+        map["has_updates"] = has_updates
+        map["time"] = time
+        map["generator"] = generator
+        map["evaluated_keys"] = evaluated_keys
+        map["hash_used"] = hash_used
+        map["user_hash"] = user_hash
+        return map
     }
 
     fun isEmpty(): Boolean {
@@ -41,7 +49,24 @@ internal data class ClientConfig(
     @SerializedName("explicit_parameters") var explicitParameters: Array<String>? = null,
     @SerializedName("is_in_layer") var isInLayer: Boolean? = null,
     @SerializedName("is_device_based") var isDeviceBased: Boolean? = null,
-)
+) {
+    fun toMap(): Map<String, Any?> {
+        val map = mutableMapOf<String, Any?>()
+        map["name"] = name
+        map["value"] = value
+        map["rule_id"] = ruleID
+        map["secondary_exposures"] = secondaryExposures
+        if (undelegatedSecondaryExposures != null) map["undelegated_secondary_exposures"] = undelegatedSecondaryExposures
+        if (group != null) map["group"] = group
+        if (allocatedExperimentName != null) map["allocated_experiment_name"] = allocatedExperimentName
+        if (isUserInExperiment != null) map["is_user_in_experiment"] = isUserInExperiment
+        if (isExperimentActive != null) map["is_experiment_active"] = isExperimentActive
+        if (explicitParameters != null) map["explicit_parameters"] = explicitParameters
+        if (isInLayer != null) map["is_in_layer"] = isInLayer
+        if (isDeviceBased != null) map["is_device_based"] = isDeviceBased
+        return map
+    }
+}
 
 internal class ClientInitializeFormatter(
     private val specStore: SpecStore,
@@ -158,6 +183,7 @@ internal class ClientInitializeFormatter(
         val evalResult = ConfigEvaluation()
         evalFun(user, configSpec, evalResult)
         val hashedName = hashName(configName)
+
         val result = ClientConfig(
             hashedName,
             "value" to false,
