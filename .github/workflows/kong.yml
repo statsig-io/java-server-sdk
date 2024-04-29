@@ -20,7 +20,7 @@ env:
 
 jobs:
   KONG:
-    timeout-minutes: 10
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - name: Get KONG
@@ -42,3 +42,19 @@ jobs:
 
       - name: Run Tests
         run: npm run kong -- test kotlin -v -r
+
+      - name: Run Measure Base Benchmark Score
+        if: github.ref == 'refs/heads/main'
+        run: npm run kong -- regression_test kotlin -p base -v
+
+      - name: Upload base benchmark score
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v2
+        with:
+          name: kotlin-perf
+          path: /tmp/perf/kotlin_perf_score.txt
+          retention-days: 5
+
+      - name: Run regression test
+        if: github.ref != 'refs/heads/main'
+        run: npm run kong -- regression_test kotlin -p test -v
