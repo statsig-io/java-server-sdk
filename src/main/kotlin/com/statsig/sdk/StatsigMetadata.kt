@@ -6,7 +6,7 @@ import com.google.gson.annotations.SerializedName
 import java.util.Properties
 import java.util.UUID
 
-private const val VERSION = "1.17.1"
+private const val VERSION = "1.17.2"
 
 internal data class StatsigMetadata(@SerializedName("sdkType") var sdkType: String = "java-server", @SerializedName("sessionID") var sessionID: String = UUID.randomUUID().toString(), @SerializedName("languageVersion") var languageVersion: String = System.getProperty("java.version"), @SerializedName("exposureLoggingDisabled") var exposureLoggingDisabled: Boolean? = null) {
     @SerializedName("sdkVersion")
