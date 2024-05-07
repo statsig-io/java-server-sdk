@@ -9,10 +9,10 @@ internal data class ClientInitializeResponse(
     @SerializedName("sdkParams") var sdkParams: Map<String, Any>,
     @SerializedName("has_updates") var has_updates: Boolean,
     @SerializedName("time") var time: Long,
-    @SerializedName("generator") var generator: String,
     @SerializedName("evaluated_keys") var evaluated_keys: Map<String, Any>,
     @SerializedName("hash_used") var hash_used: String,
-    @SerializedName("user_hash") var user_hash: String,
+    @SerializedName("user") var user: StatsigUser,
+    @SerializedName("sdkInfo") var sdkInfo: Map<String, String>,
 ) {
 
     fun toMap(): Map<String, Any> {
@@ -23,10 +23,10 @@ internal data class ClientInitializeResponse(
         map["sdkParams"] = sdkParams
         map["has_updates"] = has_updates
         map["time"] = time
-        map["generator"] = generator
         map["evaluated_keys"] = evaluated_keys
         map["hash_used"] = hash_used
-        map["user_hash"] = user_hash
+        map["user"] = user
+        map["sdkInfo"] = sdkInfo
         return map
     }
 
@@ -111,17 +111,22 @@ internal class ClientInitializeFormatter(
             }
         }
 
+        val metadata = StatsigMetadata()
+
         return ClientInitializeResponse(
             mapFn(gates),
             mapFn(configs),
             mapFn(specStore.getAllLayerConfigs()),
             emptyMap(),
             true,
-            0, // set the time to 0 so this doesn't interfere with polling,
-            "statsig-java-sdk",
+            specStore.getLastUpdateTime(),
             evaluatedKeys,
             this.hash.toString().lowercase(),
-            user.getHashWithoutStableID(),
+            user,
+            mutableMapOf<String, String>().apply {
+                this["sdkType"] = metadata.sdkType
+                this["sdkVersion"] = metadata.sdkVersion
+            }
         )
     }
 
