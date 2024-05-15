@@ -269,6 +269,95 @@ class DiagnosticsTest {
         assert(diagnostics.markers[ContextType.GET_CLIENT_INITIALIZE_RESPONSE]!!.size == 0) // Ensure api call markers are cleared
     }
 
+    @Test
+    fun testIDListDiagnostics() = runBlocking {
+        setupIDLists()
+        driver.initializeAsync("secret-testcase", options).get()
+        driver.shutdown()
+        logEvents = TestUtil.captureEvents(eventLogInputCompletable, false)
+        val diagnosticsEvent = logEvents.find { it.eventName == "statsig::diagnostics" }
+        val markers: List<Marker> = gson.fromJson(diagnosticsEvent!!.eventMetadata!!["markers"], object : TypeToken<List<Marker>>() {}.type)
+        val idListMarkers = markers.filter { it.key == KeyType.GET_ID_LIST }
+        assertEquals(8, idListMarkers.size)
+        val idListMarkers1 = idListMarkers.filter { it.markerID == "1" }
+        val idListMarkers51 = idListMarkers.filter { it.markerID == "51" }
+        assertEquals(4, idListMarkers1.size)
+        assertEquals(4, idListMarkers51.size)
+        verifyMarker(
+            idListMarkers1[0],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.START,
+                step = StepType.NETWORK_REQUEST,
+                markerID = "1",
+            ),
+        )
+        verifyMarker(
+            idListMarkers1[1],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.END,
+                step = StepType.NETWORK_REQUEST,
+                markerID = "1",
+            ),
+        )
+        verifyMarker(
+            idListMarkers1[2],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.START,
+                step = StepType.PROCESS,
+                markerID = "1",
+            ),
+        )
+        verifyMarker(
+            idListMarkers1[3],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.END,
+                step = StepType.PROCESS,
+                markerID = "1",
+            ),
+        )
+        verifyMarker(
+            idListMarkers51[0],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.START,
+                step = StepType.NETWORK_REQUEST,
+                markerID = "51",
+            ),
+        )
+        verifyMarker(
+            idListMarkers51[1],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.END,
+                step = StepType.NETWORK_REQUEST,
+                markerID = "51",
+            ),
+        )
+        verifyMarker(
+            idListMarkers51[2],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.START,
+                step = StepType.PROCESS,
+                markerID = "51",
+            ),
+        )
+        verifyMarker(
+            idListMarkers51[3],
+            Marker(
+                key = KeyType.GET_ID_LIST,
+                action = ActionType.END,
+                step = StepType.PROCESS,
+                markerID = "51",
+            ),
+        )
+        println(idListMarkers)
+    }
+
     private fun getLogger(): StatsigLogger {
         val loggerField = driver.javaClass.getDeclaredField("logger")
         loggerField.isAccessible = true
@@ -279,6 +368,52 @@ class DiagnosticsTest {
         val diagnosticsField = driver.javaClass.getDeclaredField("diagnostics")
         diagnosticsField.isAccessible = true
         return diagnosticsField[driver] as Diagnostics
+    }
+
+    private fun setupIDLists() {
+        server.apply {
+            dispatcher = object : Dispatcher() {
+                @Throws(InterruptedException::class)
+                override fun dispatch(request: RecordedRequest): MockResponse {
+                    if ("/v1/get_id_lists" in request.path!!) {
+                        if (request.getHeader("Content-Type") != "application/json; charset=utf-8") {
+                            throw Exception("No content type set!")
+                        }
+                        var list = buildMap<String, Any> {
+                            for (i in 1..100) {
+                                put(
+                                    "list_$i",
+                                    mapOf(
+                                        "name" to "list_$i",
+                                        "size" to 6,
+                                        "creationTime" to 1,
+                                        "url" to server.url("/v1/list_$i").toString(),
+                                        "fileID" to "file_id_$i",
+                                    )
+                                )
+                            }
+                        }
+                        return MockResponse().setResponseCode(200).setBody(gson.toJson(list))
+                    }
+                    if ("/v1/log_event" in request.path!!) {
+                        val response = TestUtil.mockLogEventEndpoint(request, eventLogInputCompletable)
+                        return response
+                    }
+                    if ("/v1/list_" in request.path!!) {
+                        val range = request.headers["range"]
+                        val startIndex = range!!.substring(6, range.length - 1).toIntOrNull()
+
+                        var content: String = "+1\r+2\r"
+                        return MockResponse().setResponseCode(200).setBody(content.substring(startIndex ?: 0))
+                    }
+                    return MockResponse().setResponseCode(404)
+                }
+            }
+            options = StatsigOptions().apply {
+                api = server.url("/v1").toString()
+            }
+            driver = StatsigServer.create()
+        }
     }
 
     private fun setupWebServer(downLoadConfigResponse: String) {

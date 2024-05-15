@@ -30,6 +30,7 @@ internal class SpecStore constructor(
     private var initTime: Long = 0
     private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
     private var lastUpdateTime: Long = 0
+    private var downloadIDListCallCount: Long = 0
     var isInitialized: Boolean = false
     var backgroundDownloadConfigs: Job? = null
     var backgroundDownloadIDLists: Job? = null
@@ -199,9 +200,10 @@ internal class SpecStore constructor(
                     continue
                 }
 
+                val curCount = ++downloadIDListCallCount
                 tasks.add(
                     statsigScope.launch {
-                        downloadIDList(localList)
+                        downloadIDList(localList, curCount)
                     },
                 )
             }
@@ -226,20 +228,23 @@ internal class SpecStore constructor(
         }
     }
 
-    private suspend fun downloadIDList(list: IDList) {
+    private suspend fun downloadIDList(list: IDList, callCount: Long) {
         if (list.url == null) {
             return
         }
         var response: Response? = null
+        val shouldLog = callCount % 50 == 1L
+        val maybeDiagnostics = if (shouldLog) { diagnostics } else { null }
+        val markerID = callCount.toString()
         try {
-            diagnostics.markStart(KeyType.GET_ID_LIST, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
+            maybeDiagnostics?.markStart(KeyType.GET_ID_LIST, StepType.NETWORK_REQUEST, additionalMarker = Marker(markerID = markerID))
             response = network.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
-            diagnostics.markEnd(KeyType.GET_ID_LIST, response?.isSuccessful === true, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url, statusCode = response?.code, sdkRegion = response?.headers?.get("x-statsig-region")))
+            maybeDiagnostics?.markEnd(KeyType.GET_ID_LIST, response?.isSuccessful === true, StepType.NETWORK_REQUEST, additionalMarker = Marker(markerID = markerID, statusCode = response?.code, sdkRegion = response?.headers?.get("x-statsig-region")))
 
             if (response?.isSuccessful !== true) {
                 return
             }
-            diagnostics.markStart(KeyType.GET_ID_LIST, StepType.PROCESS, additionalMarker = Marker(url = list.url))
+            maybeDiagnostics?.markStart(KeyType.GET_ID_LIST, StepType.PROCESS, additionalMarker = Marker(markerID = markerID))
             val contentLength = response.headers["content-length"]?.toIntOrNull()
             var content = response.body?.string()
             if (content == null || content.length <= 1) {
@@ -264,11 +269,11 @@ internal class SpecStore constructor(
                 }
             }
             list.size = list.size + contentLength
-            diagnostics.markEnd(KeyType.GET_ID_LIST, true, StepType.PROCESS, additionalMarker = Marker(url = list.url))
+            maybeDiagnostics?.markEnd(KeyType.GET_ID_LIST, true, StepType.PROCESS, additionalMarker = Marker(markerID = markerID))
         } catch (e: Exception) {
             errorBoundary.logException("downloadIDList", e)
             options.customLogger.warning("[Statsig]: An exception was caught:  $e")
-            diagnostics.markEnd(KeyType.GET_ID_LIST, false, StepType.NETWORK_REQUEST, additionalMarker = Marker(url = list.url))
+            maybeDiagnostics?.markEnd(KeyType.GET_ID_LIST, false, StepType.NETWORK_REQUEST, additionalMarker = Marker(markerID = markerID))
         } finally {
             response?.close()
         }
