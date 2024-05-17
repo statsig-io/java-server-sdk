@@ -34,7 +34,7 @@ public class ServerSDKConsistencyTest {
     private String postRequestRulesetsTest(String api) throws Exception {
         URL url = new URL(api + "/rulesets_e2e_test");
         URLConnection con = url.openConnection();
-        HttpURLConnection http = (HttpURLConnection)con;
+        HttpURLConnection http = (HttpURLConnection) con;
         http.setRequestMethod("POST");
         http.setDoOutput(true);
 
@@ -45,12 +45,12 @@ public class ServerSDKConsistencyTest {
         http.setRequestProperty("STATSIG-API-KEY", secret);
         http.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         http.connect();
-        try(OutputStream os = http.getOutputStream()) {
+        try (OutputStream os = http.getOutputStream()) {
             os.write(out);
         }
-        try(InputStream in = http.getInputStream()) {
+        try (InputStream in = http.getInputStream()) {
             String result = new BufferedReader(new InputStreamReader(in))
-                .lines().collect(Collectors.joining("\n"));
+                    .lines().collect(Collectors.joining("\n"));
             return result;
         }
     }
@@ -65,11 +65,11 @@ public class ServerSDKConsistencyTest {
 
         Evaluator evaluator = TestUtilJava.getEvaluatorFromStatsigServer(driver);
 
-        for (APITestDataSet d: data) {
+        for (APITestDataSet d : data) {
             StatsigUser user = d.getUser();
+            ClientInitializeResponse sdkResults = evaluator.getClientInitializeResponse(user, HashAlgo.NONE, null);
             for (Map.Entry<String, APIFeatureGate> entry : d.getGates().entrySet()) {
-                ConfigEvaluation sdkResult = new ConfigEvaluation();
-                evaluator.checkGate(user, entry.getKey(), sdkResult);
+                ClientConfig sdkResult = sdkResults.getFeature_gates().get(entry.getKey());
                 APIFeatureGate serverResult = entry.getValue();
 
                 assertEquals("Rule ID mismatch for gate " + entry.getKey(), serverResult.getRuleID(),
@@ -77,18 +77,17 @@ public class ServerSDKConsistencyTest {
                 assertEquals("Secondary exposure mismatch for gate " + entry.getKey(),
                         gson.toJson(serverResult.getSecondaryExposures()), gson.toJson(sdkResult.getSecondaryExposures()));
                 assertEquals("Value mismatch for gate " + entry.getKey() + " for user" + user.toString(), serverResult.getValue(),
-                    sdkResult.getBooleanValue());
+                        sdkResult.getValue());
 
                 Future<Boolean> sdkValue = driver.checkGateAsync(user, entry.getKey());
                 assertEquals("Server driver value mismatch for gate " + entry.getKey(), serverResult.getValue(), sdkValue.get());
             }
 
             for (Map.Entry<String, APIDynamicConfig> entry : d.getConfigs().entrySet()) {
-                ConfigEvaluation sdkResult = new ConfigEvaluation();
-                evaluator.getConfig(user, entry.getKey(), sdkResult);
+                ClientConfig sdkResult = sdkResults.getDynamic_configs().get(entry.getKey());
                 APIDynamicConfig serverResult = entry.getValue();
                 assertEquals("Value mismatch for config " + entry.getKey() + " for user" + user.toString(),
-                        gson.toJson(serverResult.getValue()), gson.toJson(sdkResult.getJsonValue()));
+                        gson.toJson(serverResult.getValue()), gson.toJson(sdkResult.getValue()));
                 assertEquals("Rule ID mismatch for config " + entry.getKey(), serverResult.getRuleID(),
                         sdkResult.getRuleID());
                 assertEquals("Secondary exposure mismatch for config " + entry.getKey(),
@@ -100,11 +99,10 @@ public class ServerSDKConsistencyTest {
             }
 
             for (Map.Entry<String, APIDynamicConfig> entry : d.getLayers().entrySet()) {
-                ConfigEvaluation sdkResult = new ConfigEvaluation();
-                evaluator.getLayer(user, entry.getKey(), sdkResult);
+                ClientConfig sdkResult = sdkResults.getLayer_configs().get(entry.getKey());
                 APIDynamicConfig serverResult = entry.getValue();
                 assertEquals("Value mismatch for layer " + entry.getKey() + " for user" + user.toString(),
-                        gson.toJson(serverResult.getValue()), gson.toJson(sdkResult.getJsonValue()));
+                        gson.toJson(serverResult.getValue()), gson.toJson(sdkResult.getValue()));
                 assertEquals("Rule ID mismatch for layer " + entry.getKey(), serverResult.getRuleID(),
                         sdkResult.getRuleID());
                 assertEquals("Secondary exposure mismatch for layer " + entry.getKey(),
@@ -144,5 +142,4 @@ public class ServerSDKConsistencyTest {
     public void testStaging() throws Exception {
         testConsistency("https://staging.statsigapi.net/v1");
     }
-
 }
