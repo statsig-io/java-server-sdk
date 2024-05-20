@@ -499,6 +499,10 @@ internal class SpecStore constructor(
         var response: Response? = null
         try {
             response = this.network.downloadConfigSpecs(this.lastUpdateTime, this.options.initTimeoutMs) ?: return null
+            if (!response.isSuccessful) {
+                options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
+                return null
+            }
             val configs = gson.fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
             if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
                 return null
