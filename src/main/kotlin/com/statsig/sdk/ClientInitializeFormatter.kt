@@ -233,7 +233,8 @@ internal class ClientInitializeFormatter(
         val res: ArrayList<Map<String, String>> = ArrayList()
         var seen = emptySet<String>()
         exposures.forEach {
-            if (it["gate"]!!.startsWith("segment:")) return@forEach
+            val gate = it["gate"]
+            if (gate != null && gate.startsWith("segment:")) return@forEach
             val key = "${it["gate"]}|${it["gateValue"]}|${it["ruleID"]}"
             if (seen.contains(key)) return@forEach
             seen = seen.plus(key)
