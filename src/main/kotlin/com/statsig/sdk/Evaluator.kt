@@ -63,7 +63,16 @@ internal class Evaluator(
 
     init {
         CountryLookup.initialize()
-        specStore = SpecStore(this.network, this.options, statsigMetadata, statsigScope, errorBoundary, diagnostics, sdkConfigs, serverSecret)
+        specStore = SpecStore(
+            this.network,
+            this.options,
+            statsigMetadata,
+            statsigScope,
+            errorBoundary,
+            diagnostics,
+            sdkConfigs,
+            serverSecret
+        )
         network.setDiagnostics(diagnostics)
         statsigScope.launch {
             uaParser // This will cause the 'lazy' load to occur on a BG thread
@@ -202,6 +211,20 @@ internal class Evaluator(
         return response
     }
 
+    private fun cleanExposures(exposures: ArrayList<Map<String, String>>): ArrayList<Map<String, String>> {
+        val res: ArrayList<Map<String, String>> = ArrayList()
+        var seen = emptySet<String>()
+        exposures.forEach {
+            val gate = it["gate"]
+            if (gate != null && gate.startsWith("segment:")) return@forEach
+            val key = "${it["gate"]}|${it["gateValue"]}|${it["ruleID"]}"
+            if (seen.contains(key)) return@forEach
+            seen = seen.plus(key)
+            res.add(it)
+        }
+        return res
+    }
+
     fun getLayer(user: StatsigUser, layerName: String, endResult: ConfigEvaluation) {
         if (layerOverrides.containsKey(layerName)) {
             val value = layerOverrides[layerName] ?: mapOf()
@@ -222,7 +245,8 @@ internal class Evaluator(
         return specStore.getLayer(layerName) ?: emptyArray()
     }
 
-    fun checkGate(user: StatsigUser, gateName: String, endResult: ConfigEvaluation) {
+    @JvmOverloads
+    fun checkGate(user: StatsigUser, gateName: String, endResult: ConfigEvaluation, isDelegate: Boolean = false) {
         if (gateOverrides.containsKey(gateName)) {
             val value = gateOverrides[gateName] ?: false
             endResult.booleanValue = value
@@ -237,10 +261,15 @@ internal class Evaluator(
         }
 
         val evalGate = specStore.getGate(gateName)
-        this.evaluateConfig(user, evalGate, endResult)
+        this.evaluateConfig(user, evalGate, endResult, isDelegate)
     }
 
-    private fun evaluateConfig(user: StatsigUser, config: APIConfig?, endResult: ConfigEvaluation) {
+    private fun evaluateConfig(
+        user: StatsigUser,
+        config: APIConfig?,
+        endResult: ConfigEvaluation,
+        isDelegate: Boolean = false
+    ) {
         if (config == null) {
             endResult.booleanValue = false
             endResult.ruleID = Const.EMPTY_STR
@@ -249,6 +278,10 @@ internal class Evaluator(
         }
 
         this.evaluate(user, config, endResult)
+        if (!isDelegate) {
+            endResult.secondaryExposures = cleanExposures(endResult.secondaryExposures)
+            endResult.undelegatedSecondaryExposures = cleanExposures(endResult.undelegatedSecondaryExposures)
+        }
     }
 
     private fun evaluate(user: StatsigUser, config: APIConfig, endResult: ConfigEvaluation) {
@@ -374,7 +407,7 @@ internal class Evaluator(
 
                 ConfigCondition.FAIL_GATE, ConfigCondition.PASS_GATE -> {
                     val name = Utils.toStringOrEmpty(condition.targetValue)
-                    this.checkGate(user, name, endResult)
+                    this.checkGate(user, name, endResult, true)
                     val newExposure =
                         mapOf(
                             "gate" to name,

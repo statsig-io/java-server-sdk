@@ -146,7 +146,7 @@ internal class ClientInitializeFormatter(
 
         result.isInLayer = true
         result.explicitParameters = configSpec.explicitParameters ?: emptyArray()
-        result.secondaryExposures = cleanExposures(evalResult.secondaryExposures)
+        result.secondaryExposures = evalResult.secondaryExposures
 
         val layerName = specStore.getLayerNameForExperiment(configName) ?: return
         val layer = specStore.getLayerConfig(layerName) ?: return
@@ -170,11 +170,11 @@ internal class ClientInitializeFormatter(
                 result.isUserInExperiment = delegateResult.isExperimentGroup
                 result.isExperimentActive = delegateSpec.isActive
                 result.explicitParameters = delegateSpec.explicitParameters ?: emptyArray()
-                result.secondaryExposures = cleanExposures(delegateResult.secondaryExposures)
+                result.secondaryExposures = delegateResult.secondaryExposures
             }
         }
 
-        result.undelegatedSecondaryExposures = cleanExposures(evalResult.undelegatedSecondaryExposures)
+        result.undelegatedSecondaryExposures = evalResult.undelegatedSecondaryExposures
     }
 
     private fun configToResponse(configName: String, configSpec: APIConfig): ClientConfig? {
@@ -194,7 +194,7 @@ internal class ClientInitializeFormatter(
             hashedName,
             "value" to false,
             evalResult.ruleID,
-            cleanExposures(evalResult.secondaryExposures),
+            evalResult.secondaryExposures,
         )
         val category = configSpec.type
         val entityType = configSpec.entity
@@ -227,20 +227,6 @@ internal class ClientInitializeFormatter(
             HashAlgo.DJB2 -> Hashing.djb2(name)
             else -> Hashing.sha256(name)
         }
-    }
-
-    private fun cleanExposures(exposures: ArrayList<Map<String, String>>): ArrayList<Map<String, String>> {
-        val res: ArrayList<Map<String, String>> = ArrayList()
-        var seen = emptySet<String>()
-        exposures.forEach {
-            val gate = it["gate"]
-            if (gate != null && gate.startsWith("segment:")) return@forEach
-            val key = "${it["gate"]}|${it["gateValue"]}|${it["ruleID"]}"
-            if (seen.contains(key)) return@forEach
-            seen = seen.plus(key)
-            res.add(it)
-        }
-        return res
     }
 
     private fun configSpecIsForThisTargetApp(configSpec: APIConfig): Boolean {
