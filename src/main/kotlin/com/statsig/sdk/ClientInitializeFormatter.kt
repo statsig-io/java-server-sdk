@@ -79,11 +79,14 @@ internal class ClientInitializeFormatter(
 
     fun getFormattedResponse(): ClientInitializeResponse {
         val evaluatedKeys = mutableMapOf<String, Any>()
-        if (user.userID != null) {
-            evaluatedKeys["userID"] = user.userID!!
+        user.userID?.let { userId ->
+            evaluatedKeys["userID"] = userId
         }
-        if (user.customIDs != null && user.customIDs!!.keys.isNotEmpty()) {
-            evaluatedKeys["customIDs"] = user.customIDs!!
+
+        user.customIDs?.let { customIds ->
+            if (customIds.keys.isNotEmpty()) {
+                evaluatedKeys["customIDs"] = customIds
+            }
         }
 
         fun filterNulls(arr: List<ClientConfig?>): Map<String, ClientConfig> {

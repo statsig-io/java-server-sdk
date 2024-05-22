@@ -39,11 +39,11 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         val marker = Marker(key = key, action = ActionType.START, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
         when (key) {
             KeyType.GET_ID_LIST -> {
-                marker.markerID = additionalMarker?.markerID!!
+                marker.markerID = additionalMarker?.markerID
             }
             KeyType.GET_ID_LIST_SOURCES -> {
                 if (step == StepType.PROCESS) {
-                    marker.idListCount = additionalMarker?.idListCount!!
+                    marker.idListCount = additionalMarker?.idListCount
                 }
             }
         }
@@ -75,11 +75,11 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
             }
             KeyType.GET_ID_LIST -> {
                 if (step == StepType.NETWORK_REQUEST) {
-                    marker.markerID = additionalMarker?.markerID!!
+                    marker.markerID = additionalMarker?.markerID
                     marker.sdkRegion = additionalMarker?.sdkRegion
                     marker.statusCode = additionalMarker?.statusCode
                 } else if (step == StepType.PROCESS) {
-                    marker.markerID = additionalMarker?.markerID!!
+                    marker.markerID = additionalMarker?.markerID
                 }
             }
             KeyType.GET_ID_LIST_SOURCES -> {

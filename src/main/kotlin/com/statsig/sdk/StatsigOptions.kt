@@ -62,11 +62,12 @@ class StatsigOptions(
     }
 
     fun setEnvironmentParameter(key: String, value: String) {
-        if (environment == null) {
+        val currentEnvironment = environment
+        if (currentEnvironment == null) {
             environment = mutableMapOf(key to value)
-            return
+        } else {
+            currentEnvironment[key] = value
         }
-        environment!![key] = value
     }
 
     fun getEnvironment(): MutableMap<String, String>? {

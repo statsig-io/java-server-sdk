@@ -86,12 +86,14 @@ data class StatsigUser private constructor(
         appVersion?.let { map.put("appVersion", it) }
         statsigEnvironment?.let { map.put("statsigEnvironment", it.toSortedMap()) }
         val sortedCustomIDs = TreeMap<String, String>()
-        if (customIDs != null) {
-            for (key in customIDs!!.keys) {
-                if (key == "stableID") {
-                    continue
-                }
-                sortedCustomIDs.put(key, customIDs!![key]!!)
+        val customIDCopy = HashMap(customIDs)
+        for (key in customIDCopy.keys) {
+            if (key == "stableID") {
+                continue
+            }
+            val idValue = customIDCopy[key]
+            if (idValue != null) {
+                sortedCustomIDs[key] = idValue
             }
         }
         map.put("customIDs", sortedCustomIDs)
