@@ -67,7 +67,7 @@ class ExceptionHandlerTest {
         })
         daemon.isDaemon = true
         daemon.start()
-        assert(driver.initialized)
+        assert(driver.initialized.get())
     }
 
     @Test
@@ -78,9 +78,9 @@ class ExceptionHandlerTest {
         })
         nonDaemon.start()
         // For exception throw in other thread, we don't handle
-        assert(driver.initialized)
+        assert(driver.initialized.get())
         driver.shutdown()
-        assert(!driver.initialized)
+        assert(!driver.initialized.get())
     }
 
     @Test
@@ -92,6 +92,6 @@ class ExceptionHandlerTest {
             throw java.lang.Exception("throw exception")
         }
         t.start()
-        assert(!driver.initialized)
+        assert(!driver.initialized.get())
     }
 }

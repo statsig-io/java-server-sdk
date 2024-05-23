@@ -8,10 +8,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.Collections.emptyMap
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 
 sealed class StatsigServer {
     internal abstract var errorBoundary: ErrorBoundary
-    abstract var initialized: Boolean
+    abstract var initialized: AtomicBoolean
 
     @JvmSynthetic abstract fun setup(
         serverSecret: String,
@@ -247,7 +248,7 @@ private class StatsigServerImpl() :
     private val mutex = Mutex()
     private val statsigMetadata = StatsigMetadata()
     private val sdkConfigs = SDKConfigs()
-    override var initialized = false
+    override var initialized = AtomicBoolean(false)
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
         Thread.setDefaultUncaughtExceptionHandler(MainThreadExceptionHandler(this, Thread.currentThread()))
@@ -264,8 +265,10 @@ private class StatsigServerImpl() :
     }
 
     override suspend fun initialize(serverSecret: String, options: StatsigOptions) {
-        setup(serverSecret, options)
-        initializeImpl(serverSecret, options)
+        if (!initialized.getAndSet(true)) {
+            setup(serverSecret, options)
+            initializeImpl(serverSecret, options)
+        }
     }
 
     private suspend fun initializeImpl(serverSecret: String, options: StatsigOptions) {
@@ -285,7 +288,6 @@ private class StatsigServerImpl() :
                     if (options.dataStore != null) {
                         dataStoreSetUp()
                     }
-                    initialized = true
                     endInitDiagnostics(isSDKInitialized())
                 }
             },
@@ -300,7 +302,7 @@ private class StatsigServerImpl() :
     }
 
     override fun isInitialized(): Boolean {
-        return initialized
+        return initialized.get()
     }
 
     override suspend fun checkGate(user: StatsigUser, gateName: String): Boolean {
@@ -740,7 +742,7 @@ private class StatsigServerImpl() :
             configEvaluator.shutdown()
             statsigJob.cancelAndJoin()
             statsigScope.cancel()
-            initialized = false
+            initialized.set(false)
         }
     }
 
@@ -785,7 +787,9 @@ private class StatsigServerImpl() :
     }
 
     override fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<Void?> {
-        setup(serverSecret, options)
+        if (!initialized.getAndSet(true)) {
+            setup(serverSecret, options)
+        }
         return statsigScope.future {
             initializeImpl(serverSecret, options)
             null

@@ -436,8 +436,8 @@ class Statsig {
                     ) { // Secondary check in case another thread already created the default server
                         statsigServer = StatsigServer.create()
                     }
+                    return statsigServer.initializeAsync(serverSecret, options)
                 }
-                return statsigServer.initializeAsync(serverSecret, options)
             }
             return CompletableFuture.completedFuture(null)
         }
@@ -723,7 +723,7 @@ class Statsig {
 
         @JvmStatic
         fun isInitialized(): Boolean {
-            return ::statsigServer.isInitialized && statsigServer.initialized
+            return ::statsigServer.isInitialized && statsigServer.initialized.get()
         }
 
         private fun checkInitialized(): Boolean {
