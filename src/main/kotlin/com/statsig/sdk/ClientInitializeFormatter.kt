@@ -11,7 +11,7 @@ internal data class ClientInitializeResponse(
     @SerializedName("time") var time: Long,
     @SerializedName("evaluated_keys") var evaluated_keys: Map<String, Any>,
     @SerializedName("hash_used") var hash_used: String,
-    @SerializedName("user") var user: StatsigUser,
+    @SerializedName("user") var user: Map<String, Any?>,
     @SerializedName("sdkInfo") var sdkInfo: Map<String, String>,
 ) {
 
@@ -25,7 +25,7 @@ internal data class ClientInitializeResponse(
         map["time"] = time
         map["evaluated_keys"] = evaluated_keys
         map["hash_used"] = hash_used
-        map["user"] = user
+        map["user"] = user.toMap()
         map["sdkInfo"] = sdkInfo
         return map
     }
@@ -126,7 +126,7 @@ internal class ClientInitializeFormatter(
             specStore.getLastUpdateTime(),
             evaluatedKeys,
             this.hash.toString().lowercase(),
-            user,
+            user.toMap(),
             mutableMapOf<String, String>().apply {
                 this["sdkType"] = metadata.sdkType
                 this["sdkVersion"] = metadata.sdkVersion

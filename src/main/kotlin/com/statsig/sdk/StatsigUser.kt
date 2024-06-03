@@ -151,4 +151,20 @@ data class StatsigUser private constructor(
 
         return sb.toString()
     }
+
+    fun toMap(): Map<String, Any?> {
+        return mapOf(
+            "userID" to userID,
+            "userAgent" to userAgent,
+            "appVersion" to appVersion,
+            "country" to country,
+            "custom" to custom,
+            "customIDs" to customIDs,
+            "email" to email,
+            "ip" to ip,
+            "locale" to locale,
+            "statsigEnvironment" to statsigEnvironment,
+            "privateAttributes" to privateAttributes,
+        )
+    }
 }
