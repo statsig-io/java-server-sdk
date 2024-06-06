@@ -744,6 +744,7 @@ private class StatsigServerImpl() :
             statsigScope.cancel()
             initialized.set(false)
         }
+        errorBoundary.shutdown()
     }
 
     override fun overrideGate(gateName: String, gateValue: Boolean) {

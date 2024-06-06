@@ -301,8 +301,10 @@ internal class StatsigNetwork(
             var currRetry = retries
             while (true) {
                 ensureActive() // Quick check to ensure the coroutine isn't cancelled
+                var response: Response? = null
                 try {
-                    statsigHttpClient.newCall(request).await().use { response ->
+                    response = statsigHttpClient.newCall(request).await()
+                    response.use {
                         if (response.isSuccessful) {
                             return@coroutineScope
                         } else if (!retryCodes.contains(response.code) || currRetry == 0) {
@@ -322,6 +324,8 @@ internal class StatsigNetwork(
                         logPostLogFailure(eventsCount)
                         return@coroutineScope
                     }
+                } finally {
+                    response?.close()
                 }
 
                 val count = retries - --currRetry
@@ -332,6 +336,8 @@ internal class StatsigNetwork(
 
     fun shutdown() {
         statsigHttpClient.dispatcher.executorService.shutdown()
+        statsigHttpClient.connectionPool.evictAll()
+        statsigHttpClient.cache?.close()
     }
 
     private fun logPostLogFailure(eventsCount: String) {

@@ -46,6 +46,17 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         return uri.toString()
     }
 
+    fun shutdown() {
+        // Properly close the OkHttpClient to release resources
+        try {
+            client.dispatcher.executorService.shutdown()
+            client.connectionPool.evictAll()
+            client.cache?.close()
+        } catch (e: Exception) {
+            // No-op
+        }
+    }
+
     private fun getNoopExceptionHandler(): CoroutineExceptionHandler {
         return CoroutineExceptionHandler { _, _ ->
             // No-op
@@ -118,6 +129,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
 
                     override fun onResponse(call: Call, response: Response) {
                         // No-op
+                        response.close() // Ensure response is closed to free resources
                     }
                 })
             }
