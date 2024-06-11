@@ -283,9 +283,6 @@ internal class SpecStore constructor(
         if (!downloadedConfig.hasUpdates) {
             return
         }
-        options.dataStore?.let {
-            downloadConfigSpecsToDataStore(it, downloadedConfig)
-        }
         if (options.dataStore == null && !isFromBootstrap) {
             diagnostics.markStart(KeyType.DOWNLOAD_CONFIG_SPECS, step = StepType.PROCESS)
         }
