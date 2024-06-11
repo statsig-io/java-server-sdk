@@ -1,6 +1,6 @@
 package com.statsig.sdk
 
-internal class EvaluationDetails(
+class EvaluationDetails(
     var configSyncTime: Long,
     var initTime: Long,
     var reason: EvaluationReason,

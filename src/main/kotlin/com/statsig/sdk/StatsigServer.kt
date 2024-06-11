@@ -342,26 +342,26 @@ private class StatsigServerImpl() :
 
     override fun getFeatureGate(user: StatsigUser, gateName: String): APIFeatureGate {
         if (!isSDKInitialized()) {
-            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED)
+            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED, null)
         }
         return errorBoundary.captureSync("getFeatureGate", {
             val result = checkGateImpl(user, gateName)
             logGateExposureImpl(user, gateName, result)
-            return@captureSync APIFeatureGate(gateName, result.booleanValue, result.ruleID, result.secondaryExposures, result.evaluationDetails?.reason)
-        }, { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT) }, configName = gateName)
+            return@captureSync APIFeatureGate(gateName, result.booleanValue, result.ruleID, result.secondaryExposures, result.evaluationDetails?.reason, result.evaluationDetails)
+        }, { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null) }, configName = gateName)
     }
 
     override fun getFeatureGate(user: StatsigUser, gateName: String, option: GetFeatureGateOptions?): APIFeatureGate {
         if (!isSDKInitialized()) {
-            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED)
+            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED, null)
         }
         return errorBoundary.captureSync("getFeatureGate", {
             val result = checkGateImpl(user, gateName)
             if (option?.disableExposureLogging !== true) {
                 logGateExposureImpl(user, gateName, result)
             }
-            return@captureSync APIFeatureGate(gateName, result.booleanValue, result.ruleID, result.secondaryExposures, result.evaluationDetails?.reason)
-        }, { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT) }, configName = gateName)
+            return@captureSync APIFeatureGate(gateName, result.booleanValue, result.ruleID, result.secondaryExposures, result.evaluationDetails?.reason, result.evaluationDetails)
+        }, { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null) }, configName = gateName)
     }
 
     override suspend fun checkGateWithExposureLoggingDisabled(user: StatsigUser, gateName: String): Boolean {
@@ -1007,6 +1007,7 @@ private class StatsigServerImpl() :
                 value as Map<String, Any>,
                 endResult.secondaryExposures,
                 endResult.configDelegate,
+                endResult.evaluationDetails,
             ) exposureFun@{ layer, paramName ->
                 val metadata = createLayerExposureMetadata(layer, paramName, endResult)
                 if (disableExposure) {
@@ -1107,6 +1108,7 @@ private class StatsigServerImpl() :
             result.ruleID,
             result.groupName,
             result.secondaryExposures,
+            result.evaluationDetails,
         )
     }
 

@@ -488,7 +488,7 @@ class Statsig {
         @JvmOverloads
         fun getFeatureGate(user: StatsigUser, gateName: String, option: GetFeatureGateOptions? = null): APIFeatureGate {
             if (!checkInitialized()) {
-                return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED)
+                return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED, null)
             }
             return statsigServer.getFeatureGate(user, gateName, option)
         }

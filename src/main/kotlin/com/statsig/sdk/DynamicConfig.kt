@@ -11,6 +11,7 @@ class DynamicConfig(
     val ruleID: String? = null,
     val groupName: String? = null,
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    val evaluationDetails: EvaluationDetails? = null,
 ) {
     companion object {
         fun empty(name: String = ""): DynamicConfig {
