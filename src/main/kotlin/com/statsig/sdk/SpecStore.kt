@@ -63,10 +63,12 @@ internal class SpecStore constructor(
 
     private fun spawnBackgroundThreadsIfNeeded() {
         if (this.backgroundDownloadIDLists?.isActive !== true) {
+            this.backgroundDownloadIDLists?.cancel()
             this.spawnBackgroundDownloadIDLists()
         }
 
         if (this.backgroundDownloadConfigs?.isActive !== true) {
+            this.backgroundDownloadConfigs?.cancel()
             this.spawnBackgroundDownloadConfigSpecs()
         }
     }
