@@ -71,7 +71,7 @@ internal class Evaluator(
             errorBoundary,
             diagnostics,
             sdkConfigs,
-            serverSecret
+            serverSecret,
         )
         network.setDiagnostics(diagnostics)
         statsigScope.launch {
@@ -268,7 +268,7 @@ internal class Evaluator(
         user: StatsigUser,
         config: APIConfig?,
         endResult: ConfigEvaluation,
-        isDelegate: Boolean = false
+        isDelegate: Boolean = false,
     ) {
         if (config == null) {
             endResult.booleanValue = false

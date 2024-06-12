@@ -51,6 +51,7 @@ class StatsigOptions(
     var customLogger: LoggerInterface = defaultLogger,
     var disableAllLogging: Boolean = false,
     var proxyConfig: ProxyConfig? = null,
+    var fallbackToStatsigAPI: Boolean = false,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(null, initTimeoutMs)

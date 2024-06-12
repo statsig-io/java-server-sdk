@@ -233,11 +233,41 @@ internal class StatsigNetwork(
     }
 
     suspend fun downloadConfigSpecs(sinceTime: Long, timeoutMs: Long): Response? {
-        return get(
+        var response = get(
             "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
             emptyMap(),
             timeoutMs,
         )
+        if (response?.isSuccessful != true && options.fallbackToStatsigAPI && apiForDownloadConfigSpecs != STATSIG_CDN_URL_BASE) {
+            // Fallback only when fallbackToStatsigAPI is set to be true, and previous dcs is not hitting Default url
+            response = downloadConfigSpecsFromStatsigAPI(sinceTime, timeoutMs)
+        }
+        return response
+    }
+
+    suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long, timeoutMs: Long): Response? {
+        return get(
+            "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
+            emptyMap(),
+            timeoutMs,
+        )
+    }
+
+    suspend fun downloadIDLists(): Response? {
+        var response = post(
+            "$api/get_id_lists",
+            mapOf("statsigMetadata" to statsigMetadata),
+            emptyMap(),
+            this.options.initTimeoutMs,
+        )
+        if (response?.isSuccessful != true && options.fallbackToStatsigAPI && api != STATSIG_API_URL_BASE) {
+            response = downloadIDListsFromStatsigAPI()
+        }
+        return response
+    }
+
+    suspend fun downloadIDListsFromStatsigAPI(): Response? {
+        return post("$STATSIG_API_URL_BASE/get_id_lists", mapOf("statsigMetadata" to statsigMetadata), emptyMap(), this.options.initTimeoutMs)
     }
 
     suspend fun getExternal(

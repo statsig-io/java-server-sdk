@@ -162,17 +162,11 @@ internal class SpecStore constructor(
     private suspend fun syncIdListsFromNetwork() {
         var response: Response? = null
         try {
-            val api = options.api ?: STATSIG_API_URL_BASE
-            response = network.post(
-                "$api/get_id_lists",
-                mapOf("statsigMetadata" to statsigMetadata),
-                emptyMap(),
-                this.options.initTimeoutMs,
-            ) ?: return
-            if (!response.isSuccessful) {
+            response = network.downloadIDLists()
+            val body = response?.body
+            if (body == null || response?.isSuccessful != true) {
                 return
             }
-            val body = response.body ?: return
             val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
             diagnostics.markStart(KeyType.GET_ID_LIST_SOURCES, StepType.PROCESS, additionalMarker = Marker(idListCount = jsonResponse.size))
             val tasks = mutableListOf<Job>()

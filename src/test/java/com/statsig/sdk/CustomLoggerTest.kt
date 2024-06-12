@@ -32,6 +32,7 @@ class CustomLoggerTest {
         server.checkGate(StatsigUser("user_id"), "test_gate")
         assert(warningMessage.size == 3)
     }
+
     @Test
     fun testDownloadConfigSpecsLogger() = runBlocking {
         val handler = MockWebServer()
@@ -47,8 +48,8 @@ class CustomLoggerTest {
             "server-secret",
             StatsigOptions(
                 api = handler.url("/v1").toString(),
-                customLogger = fakeLogger
-            )
+                customLogger = fakeLogger,
+            ),
         )
         assert(warningMessage.size == 1)
         assertEquals(warningMessage[0], "[Statsig]: Failed to download config specification, HTTP Response 404 received from server")

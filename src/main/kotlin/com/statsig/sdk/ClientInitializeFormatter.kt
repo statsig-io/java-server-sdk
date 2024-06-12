@@ -56,8 +56,10 @@ internal data class ClientConfig(
         map["value"] = value
         map["rule_id"] = ruleID
         map["secondary_exposures"] = secondaryExposures
-        if (undelegatedSecondaryExposures != null) map["undelegated_secondary_exposures"] =
-            undelegatedSecondaryExposures
+        if (undelegatedSecondaryExposures != null) {
+            map["undelegated_secondary_exposures"] =
+                undelegatedSecondaryExposures
+        }
         if (group != null) map["group"] = group
         if (allocatedExperimentName != null) map["allocated_experiment_name"] = allocatedExperimentName
         if (isUserInExperiment != null) map["is_user_in_experiment"] = isUserInExperiment
@@ -130,7 +132,7 @@ internal class ClientInitializeFormatter(
             mutableMapOf<String, String>().apply {
                 this["sdkType"] = metadata.sdkType
                 this["sdkVersion"] = metadata.sdkVersion
-            }
+            },
         )
     }
 

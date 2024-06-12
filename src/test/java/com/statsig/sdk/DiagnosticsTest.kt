@@ -389,7 +389,7 @@ class DiagnosticsTest {
                                         "creationTime" to 1,
                                         "url" to server.url("/v1/list_$i").toString(),
                                         "fileID" to "file_id_$i",
-                                    )
+                                    ),
                                 )
                             }
                         }
