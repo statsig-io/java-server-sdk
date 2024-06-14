@@ -3,7 +3,9 @@ package com.statsig.sdk
 import io.mockk.coVerifySequence
 import io.mockk.spyk
 import io.mockk.unmockkAll
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -60,8 +62,9 @@ internal class NetworkTest {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun testLogEventRetry() = runBlocking {
+    fun testLogEventRetry() = runTest {
         server.apply {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
