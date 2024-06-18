@@ -365,9 +365,14 @@ internal class StatsigNetwork(
     }
 
     fun shutdown() {
+        statsigHttpClient.dispatcher.cancelAll()
         statsigHttpClient.dispatcher.executorService.shutdown()
         statsigHttpClient.connectionPool.evictAll()
         statsigHttpClient.cache?.close()
+        externalHttpClient.dispatcher.cancelAll()
+        externalHttpClient.dispatcher.executorService.shutdown()
+        externalHttpClient.connectionPool.evictAll()
+        externalHttpClient.cache?.close()
     }
 
     private fun logPostLogFailure(eventsCount: String) {
