@@ -85,6 +85,7 @@ internal class Evaluator(
 
     fun shutdown() {
         specStore.shutdown()
+        CountryLookup.cleanup()
     }
 
     private fun createEvaluationDetails(reason: EvaluationReason): EvaluationDetails {

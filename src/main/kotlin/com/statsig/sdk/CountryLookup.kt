@@ -29,6 +29,15 @@ class CountryLookup {
             }
         }
 
+        fun cleanup() {
+            synchronized(lock) {
+                this.countryCodes.clear()
+                this.ipRanges.clear()
+                this.countryTable.clear()
+                initialized = false
+            }
+        }
+
         @JvmStatic
         fun lookupIPString(ipAddressString: String): String? {
             initialize()
