@@ -2,7 +2,6 @@ package com.statsig.sdk
 
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import ua_parser.Parser

@@ -34,7 +34,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.github.ua-parser:uap-java:1.6.1")
-    implementation("com.statsig:ip3country:0.1.5")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 }
 
