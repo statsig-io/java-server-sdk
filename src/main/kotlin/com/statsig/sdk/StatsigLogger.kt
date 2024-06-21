@@ -236,7 +236,7 @@ internal class StatsigLogger(
     private fun isUniqueExposure(user: StatsigUser?, configName: String, ruleID: String, value: String, allocatedExperiment: String): Boolean {
         if (user == null) return true
         if (deduper.size >= MAX_DEDUPER_SIZE) {
-            deduper = Collections.synchronizedSet(mutableSetOf())
+            deduper.clear()
             return true
         }
         val customIDKeys = "${user.customIDs?.keys?.joinToString()}:${user.customIDs?.values?.joinToString()}"

@@ -217,14 +217,15 @@ internal class Evaluator(
 
     private fun cleanExposures(exposures: ArrayList<Map<String, String>>): ArrayList<Map<String, String>> {
         val res: ArrayList<Map<String, String>> = ArrayList()
-        var seen = emptySet<String>()
-        exposures.forEach {
-            val gate = it["gate"]
+        val seen = mutableSetOf<String>()
+        exposures.forEach { map ->
+            val gate = map["gate"]
             if (gate != null && gate.startsWith("segment:")) return@forEach
-            val key = "${it["gate"]}|${it["gateValue"]}|${it["ruleID"]}"
-            if (seen.contains(key)) return@forEach
-            seen = seen.plus(key)
-            res.add(it)
+            val key = "${map["gate"]}|${map["gateValue"]}|${map["ruleID"]}"
+            if (!seen.contains(key)) {
+                seen.add(key)
+                res.add(map)
+            }
         }
         return res
     }
