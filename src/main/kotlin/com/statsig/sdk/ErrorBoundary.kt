@@ -1,10 +1,7 @@
 package com.statsig.sdk
 
 import com.google.gson.Gson
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -25,6 +22,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         OkHttpClient()
     }
     internal var diagnostics: Diagnostics? = null
+    private val coroutineScope = CoroutineScope(this.getNoopExceptionHandler() + Dispatchers.IO)
 
     private companion object {
         val MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
@@ -51,6 +49,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
     fun shutdown() {
         // Properly close the OkHttpClient to release resources
         try {
+            coroutineScope.cancel()
             client.dispatcher.executorService.shutdown()
             client.connectionPool.evictAll()
             client.cache?.close()
@@ -92,7 +91,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
 
     internal fun logException(tag: String, ex: Throwable, configName: String? = null, extraInfo: String? = null, bypassDedupe: Boolean = false) {
         try {
-            CoroutineScope(this.getNoopExceptionHandler() + Dispatchers.IO).launch {
+            coroutineScope.launch {
                 if (options.localMode || options.disableAllLogging) {
                     return@launch
                 }
