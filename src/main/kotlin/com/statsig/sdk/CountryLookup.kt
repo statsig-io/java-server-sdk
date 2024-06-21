@@ -20,8 +20,10 @@ class CountryLookup {
                     return
                 }
 
-                val classLoader = CountryLookup::class.java.classLoader
-                val resourceAsStream = classLoader.getResourceAsStream(IP_TABLE_FILE)
+                // optimistically set initialized to true - otherwise we could reinitialize every check
+                initialized = true
+
+                val resourceAsStream = CountryLookup::class.java.classLoader.getResourceAsStream(IP_TABLE_FILE)
                 resourceAsStream?.use { inputStream ->
                     val bytes = inputStream.readBytes()
                     initializeWithBytes(bytes)
