@@ -2,6 +2,7 @@ package com.statsig.sdk
 
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
+import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import ua_parser.Parser
@@ -87,9 +88,6 @@ internal class Evaluator(
 
     fun shutdown() {
         specStore.shutdown()
-        if (!options.disableIPResolution) {
-            CountryLookup.cleanup()
-        }
     }
 
     private fun createEvaluationDetails(reason: EvaluationReason): EvaluationDetails {
