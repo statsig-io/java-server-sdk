@@ -61,7 +61,9 @@ internal class Evaluator(
     var isInitialized: Boolean = false
 
     init {
-        CountryLookup.initialize()
+        if (!options.disableIPResolution) {
+            CountryLookup.initialize()
+        }
         specStore = SpecStore(
             this.network,
             this.options,
@@ -85,7 +87,9 @@ internal class Evaluator(
 
     fun shutdown() {
         specStore.shutdown()
-        CountryLookup.cleanup()
+        if (!options.disableIPResolution) {
+            CountryLookup.cleanup()
+        }
     }
 
     private fun createEvaluationDetails(reason: EvaluationReason): EvaluationDetails {
@@ -421,7 +425,7 @@ internal class Evaluator(
 
                 ConfigCondition.IP_BASED -> {
                     value = getFromUser(user, field)
-                    if (value == null) {
+                    if (value == null && !options.disableIPResolution) {
                         val ipString = getFromUser(user, "ip")?.toString()
                         value = if (ipString == null) {
                             null

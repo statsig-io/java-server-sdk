@@ -52,6 +52,7 @@ class StatsigOptions(
     var disableAllLogging: Boolean = false,
     var proxyConfig: ProxyConfig? = null,
     var fallbackToStatsigAPI: Boolean = false,
+    var disableIPResolution: Boolean = false,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(null, initTimeoutMs)
