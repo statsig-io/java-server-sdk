@@ -21,7 +21,9 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
     internal var uri = URI("https://statsigapi.net/v1/sdk_exception")
     private val seen = HashSet<String>()
     private val maxInfoLength = 3000
-    private val client = OkHttpClient()
+    private val client: OkHttpClient by lazy {
+        OkHttpClient()
+    }
     internal var diagnostics: Diagnostics? = null
 
     private companion object {
