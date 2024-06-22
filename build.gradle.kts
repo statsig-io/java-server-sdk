@@ -15,13 +15,8 @@ group = "com.statsig"
 version = project.properties["VERSION_NAME"]!!
 
 repositories {
-    mavenCentral() {
-        credentials {
-            username = System.getenv("OSSRH_TOKEN")
-            password = System.getenv("OSSRH_TOKEN_PASSWORD")
-        }
-    }
-    maven { setUrl("https://jitpack.io")
+    mavenCentral()
+    maven { setUrl("https://jitpack.io") }
 }
 
 configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
@@ -47,7 +42,6 @@ val sourcesJar by tasks.registering(Jar::class) {
     archiveClassifier.set("sources")
     from(sourceSets.main.get().allSource)
 }
-
 
 publishing {
     publications {
