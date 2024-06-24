@@ -52,7 +52,7 @@ internal class StatsigLogger(
     private val clearDeduperTimer = coroutineScope.launch {
         while (coroutineScope.isActive) {
             delay(CLEAR_DEDUPER_MS)
-            deduper = Collections.synchronizedSet(mutableSetOf())
+            deduper.clear()
         }
     }
     private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
@@ -241,8 +241,7 @@ internal class StatsigLogger(
         }
         val customIDKeys = "${user.customIDs?.keys?.joinToString()}:${user.customIDs?.values?.joinToString()}"
         val dedupeKey = "${user.userID}:$customIDKeys:$configName:$ruleID:$value:$allocatedExperiment"
-        val isUnique = !deduper.contains(dedupeKey)
         deduper.add(dedupeKey)
-        return isUnique
+        return deduper.add(dedupeKey)
     }
 }
