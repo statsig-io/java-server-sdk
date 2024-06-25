@@ -241,7 +241,6 @@ internal class StatsigLogger(
         }
         val customIDKeys = "${user.customIDs?.keys?.joinToString()}:${user.customIDs?.values?.joinToString()}"
         val dedupeKey = "${user.userID}:$customIDKeys:$configName:$ruleID:$value:$allocatedExperiment"
-        deduper.add(dedupeKey)
         return deduper.add(dedupeKey)
     }
 }
