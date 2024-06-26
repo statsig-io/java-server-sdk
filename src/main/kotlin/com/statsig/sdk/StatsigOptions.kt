@@ -34,6 +34,8 @@ interface LoggerInterface {
  * An object of properties for initializing the sdk with advanced options
  * @property api the api endpoint to use for initialization and logging
  * @property initTimeoutMs the amount of time to wait for an initialize() response from the server
+ * @property apiForDownloadConfigSpecs the api endpoint to use for initialization and logging
+ * @property api the api endpoint to use for initialization and logging
  * @property proxyConfig the proxy config details for creating proxy agent
  * NOTE: gates/configs will still be fetched in the background if this time is exceeded, but the
  * callback to initialize will fire after, at most, the time specified
@@ -41,6 +43,8 @@ interface LoggerInterface {
 class StatsigOptions(
     var api: String? = null,
     var initTimeoutMs: Long = DEFAULT_INIT_TIME_OUT_MS,
+    var apiForDownloadConfigSpecs: String? = null,
+    var apiForGetIdlists: String? = null,
     var bootstrapValues: String? = null,
     var rulesUpdatedCallback: RulesUpdatedCallback? = null,
     var localMode: Boolean = false,
@@ -55,7 +59,7 @@ class StatsigOptions(
     var disableIPResolution: Boolean = false,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
-    constructor(initTimeoutMs: Long) : this(null, initTimeoutMs)
+    constructor(initTimeoutMs: Long) : this(STATSIG_API_URL_BASE, initTimeoutMs)
 
     private var environment: MutableMap<String, String>? = null
 

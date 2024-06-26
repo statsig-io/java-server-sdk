@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 private const val BACKOFF_MULTIPLIER: Int = 10
 private const val MS_IN_S: Long = 1000
 const val STATSIG_API_URL_BASE: String = "https://statsigapi.net/v1"
-private const val STATSIG_CDN_URL_BASE: String = "https://api.statsigcdn.com/v1"
+const val STATSIG_CDN_URL_BASE: String = "https://api.statsigcdn.com/v1"
 const val LOG_EVENT_RETRY_COUNT = 5
 const val LOG_EVENT_FAILURE_TAG = "statsig::log_event_failed"
 
@@ -53,7 +53,8 @@ internal class StatsigNetwork(
     private val serverSessionID = UUID.randomUUID().toString()
     private var diagnostics: Diagnostics? = null
     private val api = options.api ?: STATSIG_API_URL_BASE
-    private val apiForDownloadConfigSpecs = options.api ?: STATSIG_CDN_URL_BASE
+    private val apiForDownloadConfigSpecs = (options.apiForDownloadConfigSpecs ?: options.api) ?: STATSIG_CDN_URL_BASE
+    private val apiForGetIDLists = (options.apiForGetIdlists ?: options.api) ?: STATSIG_API_URL_BASE
     private var eventsCount: String = ""
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
@@ -255,7 +256,7 @@ internal class StatsigNetwork(
 
     suspend fun downloadIDLists(): Response? {
         var response = post(
-            "$api/get_id_lists",
+            "$apiForGetIDLists/get_id_lists",
             mapOf("statsigMetadata" to statsigMetadata),
             emptyMap(),
             this.options.initTimeoutMs,
