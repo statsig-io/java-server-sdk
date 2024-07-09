@@ -366,7 +366,6 @@ internal class StatsigNetwork(
     }
 
     fun shutdown() {
-        waitUntilAllRequestsAreFinished(statsigHttpClient.dispatcher)
         statsigHttpClient.dispatcher.cancelAll()
         statsigHttpClient.dispatcher.executorService.shutdown()
         statsigHttpClient.connectionPool.evictAll()
@@ -375,14 +374,6 @@ internal class StatsigNetwork(
         externalHttpClient.dispatcher.executorService.shutdown()
         externalHttpClient.connectionPool.evictAll()
         externalHttpClient.cache?.close()
-    }
-
-    private fun waitUntilAllRequestsAreFinished(dispatcher: okhttp3.Dispatcher) {
-        try {
-            dispatcher.executorService.awaitTermination(1, TimeUnit.SECONDS)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-        }
     }
 
     private fun logPostLogFailure(eventsCount: String) {

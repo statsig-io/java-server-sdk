@@ -456,7 +456,7 @@ class StatsigE2ETest {
         var i = 0
         var value = action()
         while (i < 100 && value != expected) {
-            Thread.sleep(1001)
+            Thread.sleep(400)
             i++
             value = action()
         }
