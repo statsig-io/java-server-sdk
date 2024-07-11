@@ -5,9 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonParseException
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -320,6 +318,7 @@ internal class StatsigNetwork(
         if (events.isEmpty()) {
             return
         }
+
         val bodyJson = gson.toJson(mapOf("events" to events, "statsigMetadata" to statsigMetadata))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
         eventsCount = events.size.toString()
@@ -328,6 +327,7 @@ internal class StatsigNetwork(
             .url("$api/log_event")
             .post(requestBody)
             .build()
+
         coroutineScope { // Creates a coroutine scope to be used within this suspend function
             var currRetry = retries
             while (true) {
@@ -366,14 +366,24 @@ internal class StatsigNetwork(
     }
 
     fun shutdown() {
-        statsigHttpClient.dispatcher.cancelAll()
-        statsigHttpClient.dispatcher.executorService.shutdown()
-        statsigHttpClient.connectionPool.evictAll()
-        statsigHttpClient.cache?.close()
         externalHttpClient.dispatcher.cancelAll()
         externalHttpClient.dispatcher.executorService.shutdown()
         externalHttpClient.connectionPool.evictAll()
         externalHttpClient.cache?.close()
+
+        waitUntilAllRequestsAreFinished(statsigHttpClient.dispatcher)
+        statsigHttpClient.dispatcher.cancelAll()
+        statsigHttpClient.dispatcher.executorService.shutdown()
+        statsigHttpClient.connectionPool.evictAll()
+        statsigHttpClient.cache?.close()
+    }
+
+    private fun waitUntilAllRequestsAreFinished(dispatcher: okhttp3.Dispatcher) {
+        try {
+            dispatcher.executorService.awaitTermination(1, TimeUnit.SECONDS)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     private fun logPostLogFailure(eventsCount: String) {

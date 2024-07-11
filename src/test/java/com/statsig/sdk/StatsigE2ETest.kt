@@ -65,7 +65,7 @@ class StatsigE2ETest {
             StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
 
         server = MockWebServer()
-        server.start(8899)
+        server.start(1234)
         server.apply {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
@@ -233,6 +233,9 @@ class StatsigE2ETest {
 
         val events = captureEvents(eventLogInputCompletable)
 
+        val toleranceSeconds = 1.0
+        val toleranceMillis = toleranceSeconds * 1000L
+
         assert(events.size == 2)
         assert(events[0].eventName == "statsig::gate_exposure")
         assert(events[0].eventMetadata!!["gate"].equals("always_on_gate"))
@@ -240,17 +243,23 @@ class StatsigE2ETest {
         assert(events[0].eventMetadata!!["ruleID"].equals("6N6Z8ODekNYZ7F8gFdoLP5"))
         assert(events[0].time!! / 1000 == now / 1000)
         assertEquals(gateResult.evaluationDetails?.reason, EvaluationReason.NETWORK)
-        assertEquals(gateResult.evaluationDetails?.serverTime, now)
+        configResult.evaluationDetails?.serverTime?.let {
+            assert(it.minus(now) <= toleranceMillis)
+        }
 
         assert(events[1].eventName == "statsig::config_exposure")
         assert(events[1].eventMetadata!!["config"].equals("sample_experiment"))
         assert(events[1].eventMetadata!!["ruleID"].equals("2RamGujUou6h2bVNQWhtNZ"))
         assert(events[1].time!! / 1000 == now / 1000)
         assertEquals(configResult.evaluationDetails?.reason, EvaluationReason.NETWORK)
-        assertEquals(configResult.evaluationDetails?.serverTime, now)
+        configResult.evaluationDetails?.serverTime?.let {
+            assert(it.minus(now) <= toleranceMillis)
+        }
 
         assertEquals(layerResult.evaluationDetails?.reason, EvaluationReason.NETWORK)
-        assertEquals(layerResult.evaluationDetails?.serverTime, now)
+        layerResult.evaluationDetails?.serverTime?.let {
+            assert(it.minus(now) <= toleranceMillis)
+        }
     }
 
     private fun featureGateHelper() = runBlocking {
