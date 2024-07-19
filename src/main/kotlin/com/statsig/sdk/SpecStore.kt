@@ -82,9 +82,13 @@ internal class SpecStore constructor(
     }
 
     private fun spawnBackgroundDownloadConfigSpecs() {
-        val pollMethod = options.dataStore?.let {
-            if (it.shouldPollForUpdates()) ::pollForChangesFromDataStore else ::pollForChanges
-        } ?: ::pollForChanges // Default to ::pollForChanges if options.dataStore is null
+        val (pollMethod, source) = options.dataStore?.let {
+            if (it.shouldPollForUpdates()) {
+                Pair(::pollForChangesFromDataStore, "DATA_ADAPTER")
+            } else {
+                Pair(::pollForChanges, "NETWORK")
+            }
+        } ?: Pair(::pollForChanges, "NETWORK") // Default to ::pollForChanges if options.dataStore is null
 
         backgroundDownloadConfigs =
             statsigScope.launch {
@@ -92,8 +96,13 @@ internal class SpecStore constructor(
                     if (it == null) {
                         return@collect
                     }
-                    setDownloadedConfigs(it)
-                    if (it.hasUpdates) {
+                    val updated = setDownloadedConfigs(it)
+                    if (updated) {
+                        initReason = if (source == "DATA_ADAPTER") {
+                            EvaluationReason.DATA_ADAPTER
+                        } else {
+                            EvaluationReason.NETWORK
+                        }
                         fireRulesUpdatedCallback(it)
                     }
                     diagnostics.clearContext(ContextType.CONFIG_SYNC)
@@ -275,9 +284,12 @@ internal class SpecStore constructor(
         }
     }
 
-    fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false) {
+    fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false): Boolean {
         if (!downloadedConfig.hasUpdates) {
-            return
+            return false
+        }
+        if (downloadedConfig.time < this.lastUpdateTime) {
+            return false
         }
         if (options.dataStore == null && !isFromBootstrap) {
             diagnostics.markStart(KeyType.DOWNLOAD_CONFIG_SPECS, step = StepType.PROCESS)
@@ -318,6 +330,7 @@ internal class SpecStore constructor(
         if (options.dataStore == null && !isFromBootstrap) {
             diagnostics.markEnd(KeyType.DOWNLOAD_CONFIG_SPECS, true, StepType.PROCESS)
         }
+        return true
     }
 
     fun getGate(name: String): APIConfig? {
@@ -390,8 +403,13 @@ internal class SpecStore constructor(
 
         if (options.dataStore != null) {
             downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
-            initReason =
-                if (downloadedConfigs == null) EvaluationReason.UNINITIALIZED else EvaluationReason.DATA_ADAPTER
+            if (downloadedConfigs != null) {
+                val updated = setDownloadedConfigs(downloadedConfigs)
+                if (updated) {
+                    initReason = EvaluationReason.DATA_ADAPTER
+                    return
+                }
+            }
         } else if (options.bootstrapValues != null) {
             diagnostics.markStart(KeyType.BOOTSTRAP, step = StepType.PROCESS)
             downloadedConfigs = this.bootstrapConfigSpecs()
@@ -407,20 +425,20 @@ internal class SpecStore constructor(
         if (initReason == EvaluationReason.UNINITIALIZED) {
             downloadedConfigs = this.downloadConfigSpecsFromNetwork()
             if (downloadedConfigs != null) {
-                initReason = EvaluationReason.NETWORK
+                val updated = setDownloadedConfigs(downloadedConfigs)
+                if (updated) {
+                    initReason = EvaluationReason.NETWORK
 
-                options.dataStore?.let {
-                    downloadConfigSpecsToDataStore(it, downloadedConfigs)
+                    options.dataStore?.let {
+                        downloadConfigSpecsToDataStore(it, downloadedConfigs)
+                    }
+
+                    if (options.bootstrapValues == null) {
+                        // only fire the callback if this was not the result of a bootstrap
+                        fireRulesUpdatedCallback(downloadedConfigs)
+                    }
                 }
             }
-        }
-        if (downloadedConfigs != null) {
-            if (options.bootstrapValues == null) {
-                // only fire the callback if this was not the result of a bootstrap
-                fireRulesUpdatedCallback(downloadedConfigs)
-            }
-
-            setDownloadedConfigs(downloadedConfigs)
         }
     }
 
@@ -470,7 +488,6 @@ internal class SpecStore constructor(
             if (it.time < this.lastUpdateTime) {
                 return null
             }
-            this.lastUpdateTime = it.time
         }
         return specs
     }
@@ -499,9 +516,6 @@ internal class SpecStore constructor(
             val configs = gson.fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
             if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
                 return null
-            }
-            if (configs.hasUpdates) {
-                this.lastUpdateTime = configs.time
             }
             return configs
         } catch (e: Exception) {

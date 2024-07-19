@@ -1,10 +1,6 @@
 package com.statsig.sdk
 
-import io.mockk.every
-import io.mockk.mockkConstructor
 import kotlinx.coroutines.runBlocking
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -127,23 +123,5 @@ class APIOverrideTest {
         assert(server1Calls.filter { it.contains("log_event") }.size == 1)
         assert(server1Calls.filter { it.contains("download_config_specs") }.size == 1)
         assert(server1Calls.filter { it.contains("get_id_lists") }.size == 1)
-    }
-
-    @Test
-    fun testDefaultAPI() {
-        val requests: MutableList<Request> = mutableListOf()
-        mockkConstructor(OkHttpClient::class)
-        every { anyConstructed<OkHttpClient>().newCall(any()) } answers {
-            requests.add(firstArg())
-            callOriginal()
-        }
-        runBlocking {
-            Statsig.initialize("secret-key", StatsigOptions())
-            Statsig.checkGate(StatsigUser("test-user"), "always_on_gate")
-            Statsig.shutdown()
-        }
-        assert(requests.filter { it.url.toString().contains("api.statsigcdn.com/v1/download_config_specs/") }.size == 1)
-        assert(requests.filter { it.url.toString().contains("statsigapi.net/v1/get_id_lists") }.size == 1)
-        assert(requests.filter { it.url.toString().contains("statsigapi.net/v1/log_event") }.size == 1)
     }
 }

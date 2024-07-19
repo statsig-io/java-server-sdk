@@ -1,5 +1,6 @@
 {
   "has_updates": true,
+  "time": 10,
   "feature_gates": [],
   "dynamic_configs": [
     {
