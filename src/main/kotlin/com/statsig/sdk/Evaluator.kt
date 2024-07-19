@@ -26,12 +26,20 @@ internal class ConfigEvaluation(
     var ruleID: String = Const.EMPTY_STR,
     var groupName: String? = null,
     var secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
+    var undelegatedSecondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     var explicitParameters: Array<String> = arrayOf(),
     var configDelegate: String? = null,
     var evaluationDetails: EvaluationDetails? = null,
     var isExperimentGroup: Boolean = false,
 ) {
-    var undelegatedSecondaryExposures: ArrayList<Map<String, String>> = secondaryExposures
+    internal var isDelegate: Boolean = false
+
+    fun addSecondaryExposure(exposure: Map<String, String>) {
+        secondaryExposures.add(exposure)
+        if (!isDelegate) {
+            undelegatedSecondaryExposures.add(exposure)
+        }
+    }
 }
 
 internal class Evaluator(
@@ -44,7 +52,7 @@ internal class Evaluator(
     private val sdkConfigs: SDKConfigs,
     private val serverSecret: String,
 ) {
-    private var specStore: SpecStore
+    internal var specStore: SpecStore
     private val uaParser: Parser by lazy {
         synchronized(this) {
             Parser()
@@ -122,9 +130,9 @@ internal class Evaluator(
         val config = specStore.getConfig(expName) ?: return false
         for (rule in config.rules) {
             if (rule.id.contains("override", ignoreCase = true)) {
-                val endResult = ConfigEvaluation()
-                evaluateRule(user, rule, endResult)
-                if (endResult.booleanValue) {
+                val context = EvaluationContext(user)
+                evaluateRule(context, rule)
+                if (context.evaluation.booleanValue) {
                     // user is overridden into the experiment
                     return true
                 }
@@ -138,10 +146,10 @@ internal class Evaluator(
         val config = specStore.getConfig(expName) ?: return false
         for (rule in config.rules) {
             if (rule.id.equals("layerAssignment", ignoreCase = true)) {
-                val endResult = ConfigEvaluation()
-                evaluateRule(user, rule, endResult)
+                val context = EvaluationContext(user)
+                evaluateRule(context, rule)
                 // user is in an experiment when they FAIL the layerAssignment rule
-                return !endResult.booleanValue
+                return !context.evaluation.booleanValue
             }
         }
         return false
@@ -171,19 +179,19 @@ internal class Evaluator(
         gateOverrides.remove(gateName)
     }
 
-    fun getConfig(user: StatsigUser, dynamicConfigName: String, endResult: ConfigEvaluation) {
+    fun getConfig(ctx: EvaluationContext, dynamicConfigName: String) {
         if (configOverrides.containsKey(dynamicConfigName)) {
-            endResult.jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>()
-            endResult.evaluationDetails = this.createEvaluationDetails((EvaluationReason.LOCAL_OVERRIDE))
+            ctx.evaluation.jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>()
+            ctx.evaluation.evaluationDetails = this.createEvaluationDetails((EvaluationReason.LOCAL_OVERRIDE))
             return
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
-            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
             return
         }
 
-        this.evaluateConfig(user, specStore.getConfig(dynamicConfigName), endResult)
+        this.evaluateConfig(ctx, specStore.getConfig(dynamicConfigName))
     }
 
     fun getClientInitializeResponse(
@@ -191,12 +199,11 @@ internal class Evaluator(
         hash: HashAlgo = HashAlgo.SHA256,
         clientSDKKey: String? = null,
     ): ClientInitializeResponse {
+        var context = EvaluationContext(user, clientSDKKey = clientSDKKey, hash = hash)
         val response = ClientInitializeFormatter(
             this.specStore,
             this::evaluateConfig,
-            user,
-            hash,
-            clientSDKKey,
+            context,
         ).getFormattedResponse()
         if (response == null || response.isEmpty()) {
             val extraInfo = """{
@@ -228,20 +235,20 @@ internal class Evaluator(
         return res
     }
 
-    fun getLayer(user: StatsigUser, layerName: String, endResult: ConfigEvaluation) {
+    fun getLayer(ctx: EvaluationContext, layerName: String) {
         if (layerOverrides.containsKey(layerName)) {
             val value = layerOverrides[layerName] ?: mapOf()
-            endResult.jsonValue = value
-            endResult.evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+            ctx.evaluation.jsonValue = value
+            ctx.evaluation.evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
             return
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
-            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
             return
         }
 
-        this.evaluateConfig(user, specStore.getLayerConfig(layerName), endResult)
+        this.evaluateConfig(ctx, specStore.getLayerConfig(layerName))
     }
 
     fun getExperimentsInLayer(layerName: String): Array<String> {
@@ -249,64 +256,62 @@ internal class Evaluator(
     }
 
     @JvmOverloads
-    fun checkGate(user: StatsigUser, gateName: String, endResult: ConfigEvaluation, isDelegate: Boolean = false) {
+    fun checkGate(ctx: EvaluationContext, gateName: String) {
         if (gateOverrides.containsKey(gateName)) {
             val value = gateOverrides[gateName] ?: false
-            endResult.booleanValue = value
-            endResult.jsonValue = value
-            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
+            ctx.evaluation.booleanValue = value
+            ctx.evaluation.jsonValue = value
+            ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
             return
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
-            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
             return
         }
 
         val evalGate = specStore.getGate(gateName)
-        this.evaluateConfig(user, evalGate, endResult, isDelegate)
+        this.evaluateConfig(ctx, evalGate)
     }
 
     private fun evaluateConfig(
-        user: StatsigUser,
+        ctx: EvaluationContext,
         config: APIConfig?,
-        endResult: ConfigEvaluation,
-        isDelegate: Boolean = false,
     ) {
         if (config == null) {
-            endResult.booleanValue = false
-            endResult.ruleID = Const.EMPTY_STR
-            endResult.evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED)
+            ctx.evaluation.booleanValue = false
+            ctx.evaluation.ruleID = Const.EMPTY_STR
+            ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED)
             return
         }
 
-        this.evaluate(user, config, endResult)
-        if (!isDelegate) {
-            endResult.secondaryExposures = cleanExposures(endResult.secondaryExposures)
-            endResult.undelegatedSecondaryExposures = cleanExposures(endResult.undelegatedSecondaryExposures)
+        this.evaluate(ctx, config)
+        if (!ctx.isNested) {
+            ctx.evaluation.secondaryExposures = cleanExposures(ctx.evaluation.secondaryExposures)
+            ctx.evaluation.undelegatedSecondaryExposures = cleanExposures(ctx.evaluation.undelegatedSecondaryExposures)
         }
     }
 
-    private fun evaluate(user: StatsigUser, config: APIConfig, endResult: ConfigEvaluation) {
+    private fun evaluate(ctx: EvaluationContext, config: APIConfig) {
         val evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
         if (!config.enabled) {
-            endResult.booleanValue = false
-            endResult.jsonValue = config.defaultValue
-            endResult.ruleID = Const.DISABLED
-            endResult.evaluationDetails = evaluationDetails
+            ctx.evaluation.booleanValue = false
+            ctx.evaluation.jsonValue = config.defaultValue
+            ctx.evaluation.ruleID = Const.DISABLED
+            ctx.evaluation.evaluationDetails = evaluationDetails
             return
         }
 
         for (rule in config.rules) {
-            this.evaluateRule(user, rule, endResult)
+            this.evaluateRule(ctx, rule)
 
-            if (endResult.evaluationDetails?.reason == EvaluationReason.UNSUPPORTED) {
+            if (ctx.evaluation.evaluationDetails?.reason == EvaluationReason.UNSUPPORTED) {
                 return
             }
 
-            endResult.evaluationDetails = evaluationDetails
-            if (endResult.booleanValue) {
-                if (this.evaluateDelegate(user, rule, endResult)) {
+            ctx.evaluation.evaluationDetails = evaluationDetails
+            if (ctx.evaluation.booleanValue) {
+                if (this.evaluateDelegate(ctx, rule)) {
                     // if it's not null
                     return
                 }
@@ -317,63 +322,61 @@ internal class Evaluator(
                             '.' +
                             (rule.salt ?: rule.id) +
                             '.' +
-                            (getUnitID(user, rule.idType) ?: Const.EMPTY_STR),
+                            (getUnitID(ctx.user, rule.idType) ?: Const.EMPTY_STR),
                     )
                         .mod(10000UL) < (rule.passPercentage.times(100.0)).toULong()
 
                 if (!pass) {
-                    endResult.jsonValue = config.defaultValue
+                    ctx.evaluation.jsonValue = config.defaultValue
                 }
 
-                endResult.booleanValue = pass
-                endResult.evaluationDetails = evaluationDetails
-                endResult.isExperimentGroup = rule.isExperimentGroup ?: false
+                ctx.evaluation.booleanValue = pass
+                ctx.evaluation.evaluationDetails = evaluationDetails
+                ctx.evaluation.isExperimentGroup = rule.isExperimentGroup ?: false
                 return
             }
         }
 
-        endResult.booleanValue = false
-        endResult.jsonValue = config.defaultValue
-        endResult.ruleID = Const.DEFAULT
-        endResult.groupName = null
-        endResult.evaluationDetails = evaluationDetails
+        ctx.evaluation.booleanValue = false
+        ctx.evaluation.jsonValue = config.defaultValue
+        ctx.evaluation.ruleID = Const.DEFAULT
+        ctx.evaluation.groupName = null
+        ctx.evaluation.evaluationDetails = evaluationDetails
     }
 
     private fun evaluateDelegate(
-        user: StatsigUser,
+        ctx: EvaluationContext,
         rule: APIRule,
-        endResult: ConfigEvaluation,
     ): Boolean {
         val configDelegate = rule.configDelegate ?: return false
         val config = specStore.getConfig(configDelegate) ?: return false
 
-        endResult.undelegatedSecondaryExposures = ArrayList(endResult.secondaryExposures)
-        this.evaluate(user, config, endResult)
+        this.evaluate(ctx.asDelegate(), config)
 
-        endResult.configDelegate = rule.configDelegate
-        endResult.explicitParameters = config.explicitParameters ?: arrayOf()
-        endResult.evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason())
+        ctx.evaluation.configDelegate = rule.configDelegate
+        ctx.evaluation.explicitParameters = config.explicitParameters ?: arrayOf()
+        ctx.evaluation.evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason())
         return true
     }
 
-    private fun evaluateRule(user: StatsigUser, rule: APIRule, endResult: ConfigEvaluation) {
+    private fun evaluateRule(ctx: EvaluationContext, rule: APIRule) {
         var pass = true
         for (condition in rule.conditions) {
             try {
-                if (!this.evaluateCondition(user, condition, endResult)) {
+                if (!this.evaluateCondition(ctx, condition)) {
                     pass = false
                 }
             } catch (e: UnsupportedException) {
-                endResult.evaluationDetails = this.createEvaluationDetails(EvaluationReason.UNSUPPORTED)
+                ctx.evaluation.evaluationDetails = this.createEvaluationDetails(EvaluationReason.UNSUPPORTED)
                 return
             }
         }
 
-        endResult.booleanValue = pass
-        endResult.jsonValue = rule.returnValue
-        endResult.ruleID = rule.id
-        endResult.groupName = rule.groupName
-        endResult.isExperimentGroup = rule.isExperimentGroup == true
+        ctx.evaluation.booleanValue = pass
+        ctx.evaluation.jsonValue = rule.returnValue
+        ctx.evaluation.ruleID = rule.id
+        ctx.evaluation.groupName = rule.groupName
+        ctx.evaluation.isExperimentGroup = rule.isExperimentGroup == true
     }
 
     private fun conditionFromString(input: String?): ConfigCondition {
@@ -388,11 +391,12 @@ internal class Evaluator(
             Const.ENVIRONMENT_FIELD -> ConfigCondition.ENVIRONMENT_FIELD
             Const.USER_BUCKET -> ConfigCondition.USER_BUCKET
             Const.UNIT_ID -> ConfigCondition.UNIT_ID
+            Const.TARGET_APP -> ConfigCondition.TARGET_APP
             else -> ConfigCondition.valueOf((input ?: Const.EMPTY_STR).uppercase())
         }
     }
 
-    private fun evaluateCondition(user: StatsigUser, condition: APICondition, endResult: ConfigEvaluation): Boolean {
+    private fun evaluateCondition(ctx: EvaluationContext, condition: APICondition): Boolean {
         try {
             var value: Any? = null
             val field: String = Utils.toStringOrEmpty(condition.field)
@@ -410,22 +414,23 @@ internal class Evaluator(
 
                 ConfigCondition.FAIL_GATE, ConfigCondition.PASS_GATE -> {
                     val name = Utils.toStringOrEmpty(condition.targetValue)
-                    this.checkGate(user, name, endResult, true)
+                    this.checkGate(ctx.asNested(), name)
                     val newExposure =
                         mapOf(
                             "gate" to name,
-                            "gateValue" to endResult.booleanValue.toString(),
-                            "ruleID" to endResult.ruleID,
+                            "gateValue" to ctx.evaluation.booleanValue.toString(),
+                            "ruleID" to ctx.evaluation.ruleID,
                         )
-                    endResult.secondaryExposures.add(newExposure)
-                    val booleanVal = if (conditionEnum == ConfigCondition.PASS_GATE) endResult.booleanValue else !endResult.booleanValue
+                    ctx.evaluation.addSecondaryExposure(newExposure)
+                    val booleanVal =
+                        if (conditionEnum == ConfigCondition.PASS_GATE) ctx.evaluation.booleanValue else !ctx.evaluation.booleanValue
                     return booleanVal
                 }
 
                 ConfigCondition.IP_BASED -> {
-                    value = getFromUser(user, field)
+                    value = getFromUser(ctx.user, field)
                     if (value == null && !options.disableIPResolution) {
-                        val ipString = getFromUser(user, "ip")?.toString()
+                        val ipString = getFromUser(ctx.user, "ip")?.toString()
                         value = if (ipString == null) {
                             null
                         } else {
@@ -435,14 +440,14 @@ internal class Evaluator(
                 }
 
                 ConfigCondition.UA_BASED -> {
-                    value = getFromUser(user, field)
+                    value = getFromUser(ctx.user, field)
                     if (value == null) {
-                        value = getFromUserAgent(user, field)
+                        value = getFromUserAgent(ctx.user, field)
                     }
                 }
 
                 ConfigCondition.USER_FIELD -> {
-                    value = getFromUser(user, field)
+                    value = getFromUser(ctx.user, field)
                 }
 
                 ConfigCondition.CURRENT_TIME -> {
@@ -450,17 +455,26 @@ internal class Evaluator(
                 }
 
                 ConfigCondition.ENVIRONMENT_FIELD -> {
-                    value = getFromEnvironment(user, field)
+                    value = getFromEnvironment(ctx.user, field)
                 }
 
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues?.let { it["salt"] })
-                    val unitID = getUnitID(user, condition.idType) ?: Const.EMPTY_STR
+                    val unitID = getUnitID(ctx.user, condition.idType) ?: Const.EMPTY_STR
                     value = computeUserHash("$salt.$unitID").mod(1000UL)
                 }
 
                 ConfigCondition.UNIT_ID -> {
-                    value = getUnitID(user, condition.idType)
+                    value = getUnitID(ctx.user, condition.idType)
+                }
+
+                ConfigCondition.TARGET_APP -> {
+                    val clientSDKKey = ctx.clientSDKKey
+                    if (clientSDKKey != null) {
+                        value = specStore.getAppIDFromKey(clientSDKKey)
+                    } else {
+                        value = specStore.getPrimaryTargetAppID()
+                    }
                 }
 
                 else -> {
@@ -990,4 +1004,5 @@ internal enum class ConfigCondition {
     ENVIRONMENT_FIELD,
     USER_BUCKET,
     UNIT_ID,
+    TARGET_APP,
 }

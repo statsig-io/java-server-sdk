@@ -73,11 +73,12 @@ internal data class ClientConfig(
 
 internal class ClientInitializeFormatter(
     private val specStore: SpecStore,
-    private val evalFun: (user: StatsigUser, config: APIConfig?, endResult: ConfigEvaluation) -> Unit,
-    private val user: StatsigUser,
-    private val hash: HashAlgo = HashAlgo.SHA256,
-    private val clientSDKKey: String? = null,
+    private val evalFun: (ctx: EvaluationContext, config: APIConfig?) -> Unit,
+    private val context: EvaluationContext,
 ) {
+    private val user: StatsigUser = context.user
+    private val clientSDKKey: String? = context.clientSDKKey
+    private val hash: HashAlgo = context.hash
 
     fun getFormattedResponse(): ClientInitializeResponse {
         val evaluatedKeys = mutableMapOf<String, Any>()
@@ -168,14 +169,14 @@ internal class ClientInitializeFormatter(
 
         if (delegate != null && delegate != "") {
             val delegateSpec = specStore.getConfig(delegate)
-            var delegateResult = ConfigEvaluation()
-            evalFun(user, delegateSpec, delegateResult)
+            var delegateContext = context.asNewEvaluation()
+            evalFun(delegateContext, delegateSpec)
             if (delegateSpec != null) {
                 result.allocatedExperimentName = hashName(delegate)
-                result.isUserInExperiment = delegateResult.isExperimentGroup
+                result.isUserInExperiment = delegateContext.evaluation.isExperimentGroup
                 result.isExperimentActive = delegateSpec.isActive
                 result.explicitParameters = delegateSpec.explicitParameters ?: emptyArray()
-                result.secondaryExposures = delegateResult.secondaryExposures
+                result.secondaryExposures = delegateContext.evaluation.secondaryExposures
             }
         }
 
@@ -191,35 +192,35 @@ internal class ClientInitializeFormatter(
             return null
         }
 
-        val evalResult = ConfigEvaluation()
-        evalFun(user, configSpec, evalResult)
+        val evalContext = context.asNewEvaluation()
+        evalFun(evalContext, configSpec)
         val hashedName = hashName(configName)
 
         val result = ClientConfig(
             hashedName,
             "value" to false,
-            evalResult.ruleID,
-            evalResult.secondaryExposures,
+            evalContext.evaluation.ruleID,
+            evalContext.evaluation.secondaryExposures,
         )
         val category = configSpec.type
         val entityType = configSpec.entity
         if (category == "feature_gate") {
-            result.value = evalResult.booleanValue
+            result.value = evalContext.evaluation.booleanValue
             return result
         } else if (category == "dynamic_config") {
-            result.value = evalResult.jsonValue ?: emptyMap<Any, Any>()
-            result.group = evalResult.ruleID
+            result.value = evalContext.evaluation.jsonValue ?: emptyMap<Any, Any>()
+            result.group = evalContext.evaluation.ruleID
             result.isDeviceBased = configSpec.idType.lowercase() == "stableid"
 
             if (entityType == "experiment") {
                 populateExperimentFields(
                     configName,
                     configSpec,
-                    evalResult,
+                    evalContext.evaluation,
                     result,
                 )
             } else if (entityType == "layer") {
-                populateLayerFields(configSpec, evalResult, result)
+                populateLayerFields(configSpec, evalContext.evaluation, result)
             }
             return result
         }

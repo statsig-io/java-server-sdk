@@ -67,7 +67,7 @@ class TestUtil {
         }
 
         private fun getEvaluatorFromStatsigServer(driver: StatsigServer): Evaluator {
-            val privateEvaluatorField = driver.javaClass.getDeclaredField("configEvaluator")
+            val privateEvaluatorField = driver.javaClass.getDeclaredField("evaluator")
             privateEvaluatorField.isAccessible = true
             return privateEvaluatorField[driver] as Evaluator
         }

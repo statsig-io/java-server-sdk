@@ -42,6 +42,7 @@ internal class SpecStore constructor(
     private var sdkKeysToAppIDs: Map<String, String> = HashMap()
     private var hashedSDKKeysToAppIDs: Map<String, String> = HashMap()
     private var hashedSDKKeysToEntities: Map<String, APIEntityNames> = HashMap()
+    private var primaryTargetAppID: String? = null
 
     private var layerConfigs: Map<String, APIConfig> = emptyMap()
     private var experimentToLayer: Map<String, String> = emptyMap()
@@ -317,6 +318,7 @@ internal class SpecStore constructor(
         this.sdkKeysToAppIDs = downloadedConfig.sdkKeysToAppIDs ?: mapOf()
         this.hashedSDKKeysToAppIDs = downloadedConfig.hashedSDKKeysToAppIDs ?: mapOf()
         this.hashedSDKKeysToEntities = downloadedConfig.hashedSDKKeysToEntities ?: mapOf()
+        this.primaryTargetAppID = downloadedConfig.primaryTargetAppID
 
         if (downloadedConfig.diagnostics != null) {
             diagnostics.setSamplingRate(downloadedConfig.diagnostics)
@@ -396,6 +398,10 @@ internal class SpecStore constructor(
 
     fun getEntitiesFromKey(clientSDKKey: String): APIEntityNames? {
         return this.hashedSDKKeysToEntities[Hashing.djb2(clientSDKKey)]
+    }
+
+    fun getPrimaryTargetAppID(): String? {
+        return this.primaryTargetAppID
     }
 
     private suspend fun initializeSpecs() {

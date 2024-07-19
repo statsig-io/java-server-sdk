@@ -65,4 +65,5 @@ object Const {
     const val ENVIRONMENT_FIELD: String = "environment_field"
     const val USER_BUCKET: String = "user_bucket"
     const val UNIT_ID: String = "unit_id"
+    const val TARGET_APP: String = "target_app"
 }

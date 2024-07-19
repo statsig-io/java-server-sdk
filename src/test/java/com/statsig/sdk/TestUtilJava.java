@@ -13,7 +13,7 @@ import okio.Buffer;
 
 public class TestUtilJava {
     static public Evaluator getEvaluatorFromStatsigServer(StatsigServer driver) throws NoSuchFieldException, IllegalAccessException {
-        Field privateEvaluatorField = driver.getClass().getDeclaredField("configEvaluator");
+        Field privateEvaluatorField = driver.getClass().getDeclaredField("evaluator");
         privateEvaluatorField.setAccessible(true);
         return (Evaluator) privateEvaluatorField.get(driver);
     }
