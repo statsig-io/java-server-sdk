@@ -176,11 +176,26 @@ internal class ClientInitializeFormatter(
                 result.isUserInExperiment = delegateContext.evaluation.isExperimentGroup
                 result.isExperimentActive = delegateSpec.isActive
                 result.explicitParameters = delegateSpec.explicitParameters ?: emptyArray()
-                result.secondaryExposures = delegateContext.evaluation.secondaryExposures
+                result.secondaryExposures = hashExposures(delegateContext.evaluation.secondaryExposures)
             }
         }
 
-        result.undelegatedSecondaryExposures = evalResult.undelegatedSecondaryExposures
+        result.undelegatedSecondaryExposures = hashExposures(evalResult.undelegatedSecondaryExposures)
+    }
+
+    private fun hashExposures(exposures: ArrayList<Map<String, String>>): ArrayList<Map<String, String>> {
+        val hashedExposures = ArrayList<Map<String, String>>()
+
+        for (exposure in exposures) {
+            val hashedExposure = mapOf(
+                "gate" to hashName(exposure["gate"] ?: ""),
+                "gateValue" to (exposure["gateValue"] ?: ""),
+                "ruleID" to (exposure["ruleID"] ?: "")
+            )
+            hashedExposures.add(hashedExposure)
+        }
+
+        return hashedExposures
     }
 
     private fun configToResponse(configName: String, configSpec: APIConfig): ClientConfig? {
@@ -195,6 +210,9 @@ internal class ClientInitializeFormatter(
         val evalContext = context.asNewEvaluation()
         evalFun(evalContext, configSpec)
         val hashedName = hashName(configName)
+
+        val hashedExposures = hashExposures(evalContext.evaluation.secondaryExposures)
+        evalContext.evaluation.secondaryExposures = hashedExposures
 
         val result = ClientConfig(
             hashedName,
