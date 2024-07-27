@@ -5,19 +5,14 @@ import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
 import com.statsig.sdk.datastore.IDataStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
 import okhttp3.Response
-import kotlin.collections.HashMap
 
 const val STORAGE_ADAPTER_KEY = "statsig.cache"
 
-internal class SpecStore constructor(
+internal class SpecStore(
     private var network: StatsigNetwork,
     private var options: StatsigOptions,
     private var statsigMetadata: StatsigMetadata,
@@ -62,227 +57,12 @@ internal class SpecStore constructor(
         this.isInitialized = true
     }
 
-    private fun spawnBackgroundThreadsIfNeeded() {
-        if (this.backgroundDownloadIDLists?.isActive !== true) {
-            this.backgroundDownloadIDLists?.cancel()
-            this.spawnBackgroundDownloadIDLists()
-        }
-
-        if (this.backgroundDownloadConfigs?.isActive !== true) {
-            this.backgroundDownloadConfigs?.cancel()
-            this.spawnBackgroundDownloadConfigSpecs()
-        }
-    }
-
     fun shutdown() {
         if (this.options.localMode) {
             return
         }
         this.backgroundDownloadIDLists?.cancel()
         this.backgroundDownloadConfigs?.cancel()
-    }
-
-    private fun spawnBackgroundDownloadConfigSpecs() {
-        val (pollMethod, source) = options.dataStore?.let {
-            if (it.shouldPollForUpdates()) {
-                Pair(::pollForChangesFromDataStore, "DATA_ADAPTER")
-            } else {
-                Pair(::pollForChanges, "NETWORK")
-            }
-        } ?: Pair(::pollForChanges, "NETWORK") // Default to ::pollForChanges if options.dataStore is null
-
-        backgroundDownloadConfigs =
-            statsigScope.launch {
-                pollMethod().collect {
-                    if (it == null) {
-                        return@collect
-                    }
-                    val updated = setDownloadedConfigs(it)
-                    if (updated) {
-                        initReason = if (source == "DATA_ADAPTER") {
-                            EvaluationReason.DATA_ADAPTER
-                        } else {
-                            EvaluationReason.NETWORK
-                        }
-                        fireRulesUpdatedCallback(it)
-                    }
-                    diagnostics.clearContext(ContextType.CONFIG_SYNC)
-                }
-            }
-    }
-
-    private fun spawnBackgroundDownloadIDLists() {
-        backgroundDownloadIDLists = statsigScope.launch {
-            while (true) {
-                delay(options.idListsSyncIntervalMs)
-                syncIdListsFromNetwork()
-                diagnostics.clearContext(ContextType.CONFIG_SYNC)
-            }
-        }
-    }
-
-    private fun fireRulesUpdatedCallback(configSpecs: APIDownloadedConfigs) {
-        if (options.rulesUpdatedCallback == null) {
-            return
-        }
-
-        var configString = ""
-        try {
-            configString = gson.toJson(configSpecs)
-        } catch (e: Exception) {
-            errorBoundary.logException("fireRulesUpdatedCallback", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
-        }
-
-        if (configString.isEmpty()) {
-            return
-        }
-
-        options.rulesUpdatedCallback?.accept(configString)
-    }
-
-    private fun pollForChanges(): Flow<APIDownloadedConfigs?> {
-        return flow {
-            while (true) {
-                delay(options.rulesetsSyncIntervalMs)
-                val response = downloadConfigSpecs()
-                if (response != null && response.hasUpdates) {
-                    emit(response)
-                }
-            }
-        }
-    }
-
-    private fun pollForChangesFromDataStore(): Flow<APIDownloadedConfigs?> {
-        return flow {
-            while (true) {
-                delay(options.rulesetsSyncIntervalMs)
-                options.dataStore?.let { dataStore ->
-                    val adapterKey = dataStore.dataStoreKey
-                    val cacheString = dataStore.get(adapterKey)
-                    val response = parseConfigSpecs(cacheString)
-                    response?.let {
-                        emit(it)
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun syncIdListsFromNetwork() {
-        var response: Response? = null
-        try {
-            response = network.downloadIDLists()
-            val body = response?.body
-            if (body == null || response?.isSuccessful != true) {
-                return
-            }
-            val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
-            diagnostics.markStart(KeyType.GET_ID_LIST_SOURCES, StepType.PROCESS, additionalMarker = Marker(idListCount = jsonResponse.size))
-            val tasks = mutableListOf<Job>()
-
-            for ((name, serverList) in jsonResponse) {
-                var localList = idLists[name]
-                if (localList == null) {
-                    localList = IDList(name = name)
-                    idLists[name] = localList
-                }
-                if (serverList.url == null || serverList.fileID == null || serverList.creationTime < localList.creationTime) {
-                    continue
-                }
-
-                // check if fileID has changed, and it is indeed a newer file. If so, reset the list
-                if (serverList.fileID != localList.fileID && serverList.creationTime >= localList.creationTime) {
-                    localList = IDList(
-                        name = name,
-                        url = serverList.url,
-                        fileID = serverList.fileID,
-                        size = 0,
-                        creationTime = serverList.creationTime,
-                    )
-                    idLists[name] = localList
-                }
-                if (serverList.size <= localList.size) {
-                    continue
-                }
-
-                val curCount = ++downloadIDListCallCount
-                tasks.add(
-                    statsigScope.launch {
-                        downloadIDList(localList, curCount)
-                    },
-                )
-            }
-
-            tasks.joinAll()
-            diagnostics.markEnd(KeyType.GET_ID_LIST_SOURCES, true, StepType.PROCESS)
-
-            // remove deleted id lists
-            val deletedLists = mutableListOf<String>()
-            for (name in idLists.keys) {
-                if (!jsonResponse.containsKey(name)) {
-                    deletedLists.add(name)
-                }
-            }
-            for (name in deletedLists) {
-                idLists.remove(name)
-            }
-        } catch (e: Exception) {
-            throw e
-        } finally {
-            response?.close()
-        }
-    }
-
-    private suspend fun downloadIDList(list: IDList, callCount: Long) {
-        if (list.url == null) {
-            return
-        }
-        var response: Response? = null
-        val shouldLog = callCount % 50 == 1L
-        val maybeDiagnostics = if (shouldLog) { diagnostics } else { null }
-        val markerID = callCount.toString()
-        try {
-            maybeDiagnostics?.markStart(KeyType.GET_ID_LIST, StepType.NETWORK_REQUEST, additionalMarker = Marker(markerID = markerID))
-            response = network.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
-            maybeDiagnostics?.markEnd(KeyType.GET_ID_LIST, response?.isSuccessful === true, StepType.NETWORK_REQUEST, additionalMarker = Marker(markerID = markerID, statusCode = response?.code, sdkRegion = response?.headers?.get("x-statsig-region")))
-
-            if (response?.isSuccessful !== true) {
-                return
-            }
-            maybeDiagnostics?.markStart(KeyType.GET_ID_LIST, StepType.PROCESS, additionalMarker = Marker(markerID = markerID))
-            val contentLength = response.headers["content-length"]?.toIntOrNull()
-            var content = response.body?.string()
-            if (content == null || content.length <= 1) {
-                return
-            }
-            val firstChar = content[0]
-            if (contentLength == null || (firstChar != '-' && firstChar != '+')) {
-                idLists.remove(list.name)
-                return
-            }
-            val lines = content.lines()
-            for (line in lines) {
-                if (line.length <= 1) {
-                    continue
-                }
-                val op = line[0]
-                val id = line.drop(1)
-                if (op == '+') {
-                    list.add(id)
-                } else if (op == '-') {
-                    list.remove(id)
-                }
-            }
-            list.size = list.size + contentLength
-            maybeDiagnostics?.markEnd(KeyType.GET_ID_LIST, true, StepType.PROCESS, additionalMarker = Marker(markerID = markerID))
-        } catch (e: Exception) {
-            errorBoundary.logException("downloadIDList", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
-            maybeDiagnostics?.markEnd(KeyType.GET_ID_LIST, false, StepType.NETWORK_REQUEST, additionalMarker = Marker(markerID = markerID))
-        } finally {
-            response?.close()
-        }
     }
 
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false): Boolean {
@@ -382,9 +162,11 @@ internal class SpecStore constructor(
     fun getInitTime(): Long {
         return this.initTime
     }
+
     fun getEvaluationReason(): EvaluationReason {
         return this.initReason
     }
+
     fun getLastUpdateTime(): Long {
         return this.lastUpdateTime
     }
@@ -402,6 +184,256 @@ internal class SpecStore constructor(
 
     fun getPrimaryTargetAppID(): String? {
         return this.primaryTargetAppID
+    }
+
+    private fun spawnBackgroundThreadsIfNeeded() {
+        if (this.backgroundDownloadIDLists?.isActive !== true) {
+            this.backgroundDownloadIDLists?.cancel()
+            this.spawnBackgroundDownloadIDLists()
+        }
+
+        if (this.backgroundDownloadConfigs?.isActive !== true) {
+            this.backgroundDownloadConfigs?.cancel()
+            this.spawnBackgroundDownloadConfigSpecs()
+        }
+    }
+
+    private fun spawnBackgroundDownloadConfigSpecs() {
+        val (pollMethod, source) = options.dataStore?.let {
+            if (it.shouldPollForUpdates()) {
+                Pair(::pollForChangesFromDataStore, "DATA_ADAPTER")
+            } else {
+                Pair(::pollForChanges, "NETWORK")
+            }
+        } ?: Pair(::pollForChanges, "NETWORK") // Default to ::pollForChanges if options.dataStore is null
+
+        backgroundDownloadConfigs =
+            statsigScope.launch {
+                pollMethod().collect {
+                    if (it == null) {
+                        return@collect
+                    }
+                    val updated = setDownloadedConfigs(it)
+                    if (updated) {
+                        initReason = if (source == "DATA_ADAPTER") {
+                            EvaluationReason.DATA_ADAPTER
+                        } else {
+                            EvaluationReason.NETWORK
+                        }
+                        fireRulesUpdatedCallback(it)
+                    }
+                    diagnostics.clearContext(ContextType.CONFIG_SYNC)
+                }
+            }
+    }
+
+    private fun spawnBackgroundDownloadIDLists() {
+        backgroundDownloadIDLists = statsigScope.launch {
+            while (true) {
+                delay(options.idListsSyncIntervalMs)
+                syncIdListsFromNetwork()
+                diagnostics.clearContext(ContextType.CONFIG_SYNC)
+            }
+        }
+    }
+
+    private fun pollForChanges(): Flow<APIDownloadedConfigs?> {
+        return flow {
+            while (true) {
+                delay(options.rulesetsSyncIntervalMs)
+                val response = downloadConfigSpecs()
+                if (response != null && response.hasUpdates) {
+                    emit(response)
+                }
+            }
+        }
+    }
+
+    private fun pollForChangesFromDataStore(): Flow<APIDownloadedConfigs?> {
+        return flow {
+            while (true) {
+                delay(options.rulesetsSyncIntervalMs)
+                options.dataStore?.let { dataStore ->
+                    val adapterKey = dataStore.dataStoreKey
+                    val cacheString = dataStore.get(adapterKey)
+                    val response = parseConfigSpecs(cacheString)
+                    response?.let {
+                        emit(it)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun fireRulesUpdatedCallback(configSpecs: APIDownloadedConfigs) {
+        if (options.rulesUpdatedCallback == null) {
+            return
+        }
+
+        var configString = ""
+        try {
+            configString = gson.toJson(configSpecs)
+        } catch (e: Exception) {
+            errorBoundary.logException("fireRulesUpdatedCallback", e)
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+        }
+
+        if (configString.isEmpty()) {
+            return
+        }
+
+        options.rulesUpdatedCallback?.accept(configString)
+    }
+
+    private suspend fun syncIdListsFromNetwork() {
+        var response: Response? = null
+        try {
+            response = network.downloadIDLists()
+            val body = response?.body
+            if (body == null || response?.isSuccessful != true) {
+                return
+            }
+            val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
+            diagnostics.markStart(
+                KeyType.GET_ID_LIST_SOURCES,
+                StepType.PROCESS,
+                additionalMarker = Marker(idListCount = jsonResponse.size)
+            )
+            val tasks = mutableListOf<Job>()
+
+            for ((name, serverList) in jsonResponse) {
+                var localList = idLists[name]
+                if (localList == null) {
+                    localList = IDList(name = name)
+                    idLists[name] = localList
+                }
+                if (serverList.url == null || serverList.fileID == null || serverList.creationTime < localList.creationTime) {
+                    continue
+                }
+
+                // check if fileID has changed, and it is indeed a newer file. If so, reset the list
+                if (serverList.fileID != localList.fileID && serverList.creationTime >= localList.creationTime) {
+                    localList = IDList(
+                        name = name,
+                        url = serverList.url,
+                        fileID = serverList.fileID,
+                        size = 0,
+                        creationTime = serverList.creationTime,
+                    )
+                    idLists[name] = localList
+                }
+                if (serverList.size <= localList.size) {
+                    continue
+                }
+
+                val curCount = ++downloadIDListCallCount
+                tasks.add(
+                    statsigScope.launch {
+                        downloadIDList(localList, curCount)
+                    },
+                )
+            }
+
+            tasks.joinAll()
+            diagnostics.markEnd(KeyType.GET_ID_LIST_SOURCES, true, StepType.PROCESS)
+
+            // remove deleted id lists
+            val deletedLists = mutableListOf<String>()
+            for (name in idLists.keys) {
+                if (!jsonResponse.containsKey(name)) {
+                    deletedLists.add(name)
+                }
+            }
+            for (name in deletedLists) {
+                idLists.remove(name)
+            }
+        } catch (e: Exception) {
+            throw e
+        } finally {
+            response?.close()
+        }
+    }
+
+    private suspend fun downloadIDList(list: IDList, callCount: Long) {
+        if (list.url == null) {
+            return
+        }
+        var response: Response? = null
+        val shouldLog = callCount % 50 == 1L
+        val maybeDiagnostics = if (shouldLog) {
+            diagnostics
+        } else {
+            null
+        }
+        val markerID = callCount.toString()
+        try {
+            maybeDiagnostics?.markStart(
+                KeyType.GET_ID_LIST,
+                StepType.NETWORK_REQUEST,
+                additionalMarker = Marker(markerID = markerID)
+            )
+            response = network.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
+            maybeDiagnostics?.markEnd(
+                KeyType.GET_ID_LIST,
+                response?.isSuccessful === true,
+                StepType.NETWORK_REQUEST,
+                additionalMarker = Marker(
+                    markerID = markerID,
+                    statusCode = response?.code,
+                    sdkRegion = response?.headers?.get("x-statsig-region")
+                )
+            )
+
+            if (response?.isSuccessful !== true) {
+                return
+            }
+            maybeDiagnostics?.markStart(
+                KeyType.GET_ID_LIST,
+                StepType.PROCESS,
+                additionalMarker = Marker(markerID = markerID)
+            )
+            val contentLength = response.headers["content-length"]?.toIntOrNull()
+            var content = response.body?.string()
+            if (content == null || content.length <= 1) {
+                return
+            }
+            val firstChar = content[0]
+            if (contentLength == null || (firstChar != '-' && firstChar != '+')) {
+                idLists.remove(list.name)
+                return
+            }
+            val lines = content.lines()
+            for (line in lines) {
+                if (line.length <= 1) {
+                    continue
+                }
+                val op = line[0]
+                val id = line.drop(1)
+                if (op == '+') {
+                    list.add(id)
+                } else if (op == '-') {
+                    list.remove(id)
+                }
+            }
+            list.size = list.size + contentLength
+            maybeDiagnostics?.markEnd(
+                KeyType.GET_ID_LIST,
+                true,
+                StepType.PROCESS,
+                additionalMarker = Marker(markerID = markerID)
+            )
+        } catch (e: Exception) {
+            errorBoundary.logException("downloadIDList", e)
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            maybeDiagnostics?.markEnd(
+                KeyType.GET_ID_LIST,
+                false,
+                StepType.NETWORK_REQUEST,
+                additionalMarker = Marker(markerID = markerID)
+            )
+        } finally {
+            response?.close()
+        }
     }
 
     private suspend fun initializeSpecs() {
@@ -448,7 +480,10 @@ internal class SpecStore constructor(
         }
     }
 
-    private fun downloadConfigSpecsToDataStore(dataStore: IDataStore, response: APIDownloadedConfigs): APIDownloadedConfigs {
+    private fun downloadConfigSpecsToDataStore(
+        dataStore: IDataStore,
+        response: APIDownloadedConfigs
+    ): APIDownloadedConfigs {
         val gson = GsonBuilder().setPrettyPrinting().create()
         val specs: String = gson.toJson(response)
 
