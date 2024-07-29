@@ -2,7 +2,6 @@ package com.statsig.sdk
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
 import com.statsig.sdk.datastore.IDataStore
 import kotlinx.coroutines.*
@@ -42,7 +41,7 @@ internal class SpecStore(
     private var layerConfigs: Map<String, APIConfig> = emptyMap()
     private var experimentToLayer: Map<String, String> = emptyMap()
 
-    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+    private val gson = Utils.getGson()
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     suspend fun initialize() {

@@ -1,7 +1,5 @@
 package com.statsig.sdk
 
-import com.google.gson.GsonBuilder
-import com.google.gson.ToNumberPolicy
 import com.google.gson.annotations.SerializedName
 import java.util.Properties
 import java.util.UUID
@@ -20,7 +18,7 @@ internal data class StatsigMetadata(@SerializedName("sdkType") var sdkType: Stri
         VERSION
     }
     fun asJson(): String {
-        val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+        val gson = Utils.getGson()
         return gson.toJson(this)
     }
 }

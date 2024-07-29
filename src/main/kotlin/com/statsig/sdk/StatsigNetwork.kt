@@ -1,9 +1,7 @@
 package com.statsig.sdk
 
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.google.gson.JsonParseException
-import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
 import okhttp3.*
@@ -47,7 +45,7 @@ internal class StatsigNetwork(
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val statsigHttpClient: OkHttpClient
     private val externalHttpClient: OkHttpClient
-    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+    private val gson = Utils.getGson()
     private val serverSessionID = UUID.randomUUID().toString()
     private var diagnostics: Diagnostics? = null
     private val api = options.api ?: STATSIG_API_URL_BASE

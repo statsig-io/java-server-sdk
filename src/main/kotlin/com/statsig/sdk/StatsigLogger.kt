@@ -1,7 +1,5 @@
 package com.statsig.sdk
 
-import com.google.gson.GsonBuilder
-import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -55,7 +53,7 @@ internal class StatsigLogger(
             deduper.clear()
         }
     }
-    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+    private val gson = Utils.getGson()
     internal var diagnostics: Diagnostics? = null
     private var eventQueueSize: Int? = null
     fun log(event: StatsigEvent) {

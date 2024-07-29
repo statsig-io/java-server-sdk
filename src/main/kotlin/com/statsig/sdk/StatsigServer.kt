@@ -1,7 +1,5 @@
 package com.statsig.sdk
 
-import com.google.gson.GsonBuilder
-import com.google.gson.ToNumberPolicy
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.sync.Mutex
@@ -234,7 +232,7 @@ sealed class StatsigServer {
 private class StatsigServerImpl() :
     StatsigServer() {
 
-    private val gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+    private val gson = Utils.getGson()
 
     override lateinit var errorBoundary: ErrorBoundary
     private lateinit var coroutineExceptionHandler: CoroutineExceptionHandler
