@@ -20,7 +20,7 @@ env:
 
 jobs:
   KONG:
-    timeout-minutes: 15
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - name: Get KONG
