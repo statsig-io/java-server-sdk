@@ -129,7 +129,7 @@ internal class ClientInitializeFormatter(
             specStore.getLastUpdateTime(),
             evaluatedKeys,
             this.hash.toString().lowercase(),
-            user.toMap(),
+            user.toMapForLogging(),
             mutableMapOf<String, String>().apply {
                 this["sdkType"] = metadata.sdkType
                 this["sdkVersion"] = metadata.sdkVersion
