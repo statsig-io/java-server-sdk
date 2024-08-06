@@ -1,5 +1,6 @@
 package com.statsig.sdk
 
+import com.statsig.sdk.network.StatsigTransport
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
@@ -27,18 +28,19 @@ class StatsigErrorBoundaryUsage {
         @BeforeClass
         @JvmStatic
         internal fun beforeAll() {
-            mockkConstructor(StatsigNetwork::class)
-            every { anyConstructed<StatsigNetwork>().shutdown() } throws Exception("Test Network Shutdown")
+            mockkConstructor(StatsigTransport::class)
+            every { anyConstructed<StatsigTransport>().shutdown() } throws Exception("Test Network Shutdown")
 
             mockkConstructor(ConfigEvaluation::class)
 
             mockkConstructor(StatsigLogger::class)
 
             mockkConstructor(SpecStore::class)
+            mockkConstructor(SpecUpdater::class)
             every { anyConstructed<SpecStore>().getLayerConfig(any()) } throws Exception("Test Evaluator LayerConfig")
             every { anyConstructed<SpecStore>().getLayer(any()) } throws Exception("Test Evaluator Layers")
             every { anyConstructed<StatsigLogger>().log(match { it.eventName != "statsig::diagnostics" }) } throws Exception("Test Logger Log")
-            coEvery { anyConstructed<SpecStore>().downloadConfigSpecs() } coAnswers {
+            coEvery { anyConstructed<SpecUpdater>().updateConfigSpecs() } coAnswers {
                 if (throwOnDownloadConfigSpecs) {
                     throw Exception("Bad Config Specs")
                 }

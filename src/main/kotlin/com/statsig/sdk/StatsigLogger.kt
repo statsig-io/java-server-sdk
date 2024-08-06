@@ -1,5 +1,6 @@
 package com.statsig.sdk
 
+import com.statsig.sdk.network.StatsigTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -32,7 +33,7 @@ internal fun safeAddEvaluationToEvent(evaluationDetails: EvaluationDetails?, met
 
 internal class StatsigLogger(
     private val coroutineScope: CoroutineScope,
-    private val network: StatsigNetwork,
+    private val transport: StatsigTransport,
     private val statsigMetadata: StatsigMetadata,
     private val statsigOptions: StatsigOptions,
     private val sdkConfigs: SDKConfigs,
@@ -211,7 +212,7 @@ internal class StatsigLogger(
             }
 
             val flushEvents = events.reset()
-            network.postLogs(flushEvents, statsigMetadata)
+            transport.postLogs(flushEvents)
         }
     }
 

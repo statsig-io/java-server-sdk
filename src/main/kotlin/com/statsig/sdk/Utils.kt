@@ -1,15 +1,15 @@
 package com.statsig.sdk
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import java.util.SortedMap
-import java.util.TreeMap
+import java.util.*
 
 internal class Utils {
     companion object {
         fun getTimeInMillis(): Long {
             return System.currentTimeMillis()
         }
-        fun getGson() = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
+        fun getGson(): Gson = GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
         fun toStringOrEmpty(value: Any?): String {
             return value?.toString() ?: ""
         }

@@ -1,5 +1,6 @@
 package com.statsig.sdk
 
+import com.statsig.sdk.network.StatsigTransport
 import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -41,7 +42,7 @@ internal class ConfigEvaluation(
 }
 
 internal class Evaluator(
-    private var network: StatsigNetwork,
+    private var transport: StatsigTransport,
     private var options: StatsigOptions,
     private val statsigScope: CoroutineScope,
     private val errorBoundary: ErrorBoundary,
@@ -72,7 +73,7 @@ internal class Evaluator(
             CountryLookup.initialize()
         }
         specStore = SpecStore(
-            this.network,
+            this.transport,
             this.options,
             statsigMetadata,
             statsigScope,
@@ -81,7 +82,7 @@ internal class Evaluator(
             sdkConfigs,
             serverSecret,
         )
-        network.setDiagnostics(diagnostics)
+        transport.setDiagnostics(diagnostics)
         statsigScope.launch {
             uaParser // This will cause the 'lazy' load to occur on a BG thread
         }

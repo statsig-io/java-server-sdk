@@ -1,4 +1,5 @@
 
+import com.google.protobuf.gradle.*
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -9,6 +10,7 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
     id("maven-publish")
     id("com.vanniktech.maven.publish") version "0.22.0"
+    id("com.google.protobuf") version "0.9.4"
 }
 
 group = "com.statsig"
@@ -22,13 +24,18 @@ repositories {
 configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
     verbose.set(true)
     disabledRules.set(setOf("no-wildcard-imports"))
+    filter {
+        exclude("**/generated/**")
+    }
 }
 
 dependencies {
+    protobuf(files("api-interface-definitions/protos/"))
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
     testImplementation("io.mockk:mockk:1.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+    testImplementation("io.grpc:grpc-testing:1.54.0")
     implementation("com.google.code.gson:gson:2.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
@@ -36,6 +43,12 @@ dependencies {
     implementation("com.github.ua-parser:uap-java:1.6.1")
     implementation("com.statsig:ip3country:0.1.5")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+    implementation("io.grpc:grpc-netty-shaded:1.54.0")
+    implementation("javax.annotation:javax.annotation-api:1.3.1")
+    implementation("io.grpc:grpc-kotlin-stub:1.3.1")
+    implementation("io.grpc:grpc-protobuf:1.54.0")
+    implementation("com.google.protobuf:protobuf-kotlin:3.24.4")
+    implementation("com.google.protobuf:protobuf-java:3.24.4")
 }
 
 val sourcesJar by tasks.registering(Jar::class) {
@@ -81,4 +94,43 @@ tasks.withType<KotlinCompile>() {
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.3"
+    }
+    plugins {
+        id("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.62.2"
+        }
+        id("grpckt") {
+            artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.1:jdk8@jar"
+        }
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.plugins {
+                create("grpc")
+                create("grpckt")
+            }
+            task.builtins {
+                create("kotlin")
+            }
+            task.doLast {
+                val outputPath = task.outputs.files.getAsPath()
+                copy {
+                    from("$outputPath/grpc")
+                    from("$outputPath/java")
+                    into("$projectDir/src/main/java")
+                }
+                copy {
+                    from("$outputPath/grpckt")
+                    from("$outputPath/kotlin")
+                    into("$projectDir/src/main/kotlin")
+                }
+                delete("$outputPath")
+            }
+        }
+    }
 }

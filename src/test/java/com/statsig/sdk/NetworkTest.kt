@@ -1,9 +1,13 @@
 package com.statsig.sdk
 
-import io.mockk.coVerifySequence
+import com.statsig.sdk.network.HTTPWorker
+import com.statsig.sdk.network.LOG_EVENT_RETRY_COUNT
+import com.statsig.sdk.network.StatsigTransport
 import io.mockk.spyk
 import io.mockk.unmockkAll
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.Dispatcher
@@ -49,17 +53,15 @@ internal class NetworkTest {
 
         options.api = server.url("/v1").toString()
 
-        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, SDKConfigs(), 1))
+        val network = StatsigTransport("secret-123", options, metadata, CoroutineScope(Job()), eb, SDKConfigs(), 1)
+        val logEventsWorker = spyk(network.logEventsWorker as HTTPWorker)
+        network.logEventsWorker = logEventsWorker
+        val net = spyk(network)
 
-        net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)
+        net.postLogs(listOf(StatsigEvent("TestEvent")))
         val request = server.takeRequest()
-        assertEquals("POST /v1/log_event HTTP/1.1", request.requestLine)
         server.takeRequest()
-
-        coVerifySequence {
-            net.postLogs(any(), any())
-            net.retryPostLogs(any(), any(), any(), any())
-        }
+        assertEquals("POST /v1/log_event HTTP/1.1", request.requestLine)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -83,8 +85,8 @@ internal class NetworkTest {
         }
         options.api = server.url("/v1").toString()
 
-        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, SDKConfigs()))
-        net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)
+        val net = spyk(StatsigTransport("secret-123", options, metadata, CoroutineScope(Job()), eb, SDKConfigs()))
+        net.postLogs(listOf(StatsigEvent("TestEvent")))
         println(logEventCount)
         assert(logEventCount === LOG_EVENT_RETRY_COUNT + 1)
     }
@@ -108,8 +110,8 @@ internal class NetworkTest {
             }
         }
         options.api = server.url("/v1").toString()
-        val net = spyk(StatsigNetwork("secret-123", options, metadata, eb, SDKConfigs()))
-        net.postLogs(listOf(StatsigEvent("TestEvent")), metadata)
+        val net = spyk(StatsigTransport("secret-123", options, metadata, CoroutineScope(Job()), eb, SDKConfigs()))
+        net.postLogs(listOf(StatsigEvent("TestEvent")))
         println(logEventCount)
         assert(logEventCount === 1)
     }

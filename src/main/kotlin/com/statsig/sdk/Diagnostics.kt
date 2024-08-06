@@ -1,11 +1,12 @@
 package com.statsig.sdk
 
 import okhttp3.Response
-import java.util.Collections
+import java.util.*
 
 const val NANO_IN_MS = 1_000_000.0
 const val MAX_SAMPLING_RATE = 10_000
 const val MAX_MARKERS = 50
+
 internal class Diagnostics(private var isDisabled: Boolean, private var logger: StatsigLogger) {
     var diagnosticsContext: ContextType = ContextType.INITIALIZE
     private val samplingRates: MutableMap<String, Int> = mutableMapOf(
@@ -31,12 +32,23 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         }
     }
 
-    fun markStart(key: KeyType, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null): String? {
+    fun markStart(
+        key: KeyType,
+        step: StepType? = null,
+        context: ContextType? = null,
+        additionalMarker: Marker? = null,
+    ): String? {
         val contextType = context ?: diagnosticsContext
         if (contextType == ContextType.API_CALL && isDisabled) {
             return null
         }
-        val marker = Marker(key = key, action = ActionType.START, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
+        val marker = Marker(
+            key = key,
+            action = ActionType.START,
+            networkProtocol = additionalMarker?.networkProtocol,
+            timestamp = System.nanoTime() / NANO_IN_MS,
+            step = step,
+        )
         when (key) {
             KeyType.GET_ID_LIST -> {
                 marker.markerID = additionalMarker?.markerID
@@ -60,12 +72,26 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         return marker.markerID
     }
 
-    fun markEnd(key: KeyType, success: Boolean, step: StepType? = null, context: ContextType? = null, additionalMarker: Marker? = null) {
+    fun markEnd(
+        key: KeyType,
+        success: Boolean,
+        step: StepType? = null,
+        context: ContextType? = null,
+        additionalMarker: Marker? = null,
+    ) {
         val contextType = context ?: diagnosticsContext
         if (contextType == ContextType.API_CALL && isDisabled) {
             return
         }
-        val marker = Marker(key = key, action = ActionType.END, success = success, timestamp = System.nanoTime() / NANO_IN_MS, step = step)
+        val marker = Marker(
+            key = key,
+            action = ActionType.END,
+            networkProtocol = additionalMarker?.networkProtocol,
+            success = success,
+            error = additionalMarker?.error,
+            timestamp = System.nanoTime() / NANO_IN_MS,
+            step = step,
+        )
         when (key) {
             KeyType.DOWNLOAD_CONFIG_SPECS -> {
                 if (step == StepType.NETWORK_REQUEST) {
@@ -135,18 +161,37 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
         logger.logDiagnostics(context, markersToLog)
     }
 
-    fun startNetworkRequestDiagnostics(key: KeyType?) {
+    fun startNetworkRequestDiagnostics(key: KeyType?, networkProtocol: NetworkProtocol) {
         if (key == null) {
             return
         }
-        this.markStart(key, step = StepType.NETWORK_REQUEST)
+        this.markStart(
+            key,
+            step = StepType.NETWORK_REQUEST,
+            additionalMarker = Marker(networkProtocol = networkProtocol),
+        )
     }
 
-    fun endNetworkRequestDiagnostics(key: KeyType?, success: Boolean, response: Response?) {
+    fun endNetworkRequestDiagnostics(
+        key: KeyType?,
+        networkProtocol: NetworkProtocol,
+        success: Boolean,
+        error: String?,
+        response: Response?,
+    ) {
         if (key == null) {
             return
         }
-        val marker = if (response != null) Marker(sdkRegion = response.headers["x-statsig-region"], statusCode = response.code) else null
+        val marker = if (response != null) {
+            Marker(
+                sdkRegion = response.headers["x-statsig-region"],
+                statusCode = response.code,
+            )
+        } else {
+            Marker()
+        }
+        marker.networkProtocol = networkProtocol
+        marker.error = error
         this.markEnd(key, success, StepType.NETWORK_REQUEST, additionalMarker = marker)
     }
 

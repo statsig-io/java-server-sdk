@@ -4,15 +4,14 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.statsig.sdk.datastore.IDataStore
+import com.statsig.sdk.network.StatsigTransport
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import okhttp3.Response
 
 const val STORAGE_ADAPTER_KEY = "statsig.cache"
 
 internal class SpecStore(
-    private var network: StatsigNetwork,
+    private var transport: StatsigTransport,
     private var options: StatsigOptions,
     private var statsigMetadata: StatsigMetadata,
     private var statsigScope: CoroutineScope,
@@ -23,11 +22,8 @@ internal class SpecStore(
 ) {
     private var initTime: Long = 0
     private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
-    private var lastUpdateTime: Long = 0
     private var downloadIDListCallCount: Long = 0
     var isInitialized: Boolean = false
-    var backgroundDownloadConfigs: Job? = null
-    var backgroundDownloadIDLists: Job? = null
 
     private var dynamicConfigs: Map<String, APIConfig> = emptyMap()
     private var gates: Map<String, APIConfig> = emptyMap()
@@ -41,17 +37,25 @@ internal class SpecStore(
     private var layerConfigs: Map<String, APIConfig> = emptyMap()
     private var experimentToLayer: Map<String, String> = emptyMap()
 
+    private var specUpdater = SpecUpdater(transport, options, statsigMetadata, statsigScope, errorBoundary, diagnostics, sdkConfigs, serverSecret)
+    init {
+        specUpdater.registerIDListsListener(::processDownloadedIDLists)
+        specUpdater.registerConfigSpecListener(::processDownloadedConfigs)
+    }
+
     private val gson = Utils.getGson()
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     suspend fun initialize() {
         if (!options.localMode) {
+            specUpdater.initialize()
+
             this.initializeSpecs()
-            this.initTime = if (lastUpdateTime == 0L) -1 else lastUpdateTime
+            this.initTime = if (specUpdater.lastUpdateTime == 0L) -1 else specUpdater.lastUpdateTime
 
-            this.spawnBackgroundThreadsIfNeeded()
+            this.syncIdListsFromNetwork(specUpdater.updateIDLists())
 
-            this.syncIdListsFromNetwork()
+            specUpdater.startListening()
         }
         this.isInitialized = true
     }
@@ -60,15 +64,14 @@ internal class SpecStore(
         if (this.options.localMode) {
             return
         }
-        this.backgroundDownloadIDLists?.cancel()
-        this.backgroundDownloadConfigs?.cancel()
+        this.specUpdater.shutdown()
     }
 
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false): Boolean {
         if (!downloadedConfig.hasUpdates) {
             return false
         }
-        if (downloadedConfig.time < this.lastUpdateTime) {
+        if (downloadedConfig.time < specUpdater.lastUpdateTime) {
             return false
         }
         if (options.dataStore == null && !isFromBootstrap) {
@@ -93,7 +96,7 @@ internal class SpecStore(
         this.dynamicConfigs = newDynamicConfigs
         this.layerConfigs = newLayerConfigs
         this.experimentToLayer = newExperimentToLayer
-        this.lastUpdateTime = downloadedConfig.time
+        specUpdater.lastUpdateTime = downloadedConfig.time
         this.sdkKeysToAppIDs = downloadedConfig.sdkKeysToAppIDs ?: mapOf()
         this.hashedSDKKeysToAppIDs = downloadedConfig.hashedSDKKeysToAppIDs ?: mapOf()
         this.hashedSDKKeysToEntities = downloadedConfig.hashedSDKKeysToEntities ?: mapOf()
@@ -167,7 +170,7 @@ internal class SpecStore(
     }
 
     fun getLastUpdateTime(): Long {
-        return this.lastUpdateTime
+        return specUpdater.lastUpdateTime
     }
 
     fun getAppIDFromKey(clientSDKKey: String): String? {
@@ -183,85 +186,6 @@ internal class SpecStore(
 
     fun getPrimaryTargetAppID(): String? {
         return this.primaryTargetAppID
-    }
-
-    private fun spawnBackgroundThreadsIfNeeded() {
-        if (this.backgroundDownloadIDLists?.isActive !== true) {
-            this.backgroundDownloadIDLists?.cancel()
-            this.spawnBackgroundDownloadIDLists()
-        }
-
-        if (this.backgroundDownloadConfigs?.isActive !== true) {
-            this.backgroundDownloadConfigs?.cancel()
-            this.spawnBackgroundDownloadConfigSpecs()
-        }
-    }
-
-    private fun spawnBackgroundDownloadConfigSpecs() {
-        val (pollMethod, source) = options.dataStore?.let {
-            if (it.shouldPollForUpdates()) {
-                Pair(::pollForChangesFromDataStore, "DATA_ADAPTER")
-            } else {
-                Pair(::pollForChanges, "NETWORK")
-            }
-        } ?: Pair(::pollForChanges, "NETWORK") // Default to ::pollForChanges if options.dataStore is null
-
-        backgroundDownloadConfigs =
-            statsigScope.launch {
-                pollMethod().collect {
-                    if (it == null) {
-                        return@collect
-                    }
-                    val updated = setDownloadedConfigs(it)
-                    if (updated) {
-                        initReason = if (source == "DATA_ADAPTER") {
-                            EvaluationReason.DATA_ADAPTER
-                        } else {
-                            EvaluationReason.NETWORK
-                        }
-                        fireRulesUpdatedCallback(it)
-                    }
-                    diagnostics.clearContext(ContextType.CONFIG_SYNC)
-                }
-            }
-    }
-
-    private fun spawnBackgroundDownloadIDLists() {
-        backgroundDownloadIDLists = statsigScope.launch {
-            while (true) {
-                delay(options.idListsSyncIntervalMs)
-                syncIdListsFromNetwork()
-                diagnostics.clearContext(ContextType.CONFIG_SYNC)
-            }
-        }
-    }
-
-    private fun pollForChanges(): Flow<APIDownloadedConfigs?> {
-        return flow {
-            while (true) {
-                delay(options.rulesetsSyncIntervalMs)
-                val response = downloadConfigSpecs()
-                if (response != null && response.hasUpdates) {
-                    emit(response)
-                }
-            }
-        }
-    }
-
-    private fun pollForChangesFromDataStore(): Flow<APIDownloadedConfigs?> {
-        return flow {
-            while (true) {
-                delay(options.rulesetsSyncIntervalMs)
-                options.dataStore?.let { dataStore ->
-                    val adapterKey = dataStore.dataStoreKey
-                    val cacheString = dataStore.get(adapterKey)
-                    val response = parseConfigSpecs(cacheString)
-                    response?.let {
-                        emit(it)
-                    }
-                }
-            }
-        }
     }
 
     private fun fireRulesUpdatedCallback(configSpecs: APIDownloadedConfigs) {
@@ -284,23 +208,17 @@ internal class SpecStore(
         options.rulesUpdatedCallback?.accept(configString)
     }
 
-    private suspend fun syncIdListsFromNetwork() {
-        var response: Response? = null
+    private suspend fun syncIdListsFromNetwork(idListResponse: Map<String, IDList>?) {
+        if (idListResponse == null) return
         try {
-            response = network.downloadIDLists()
-            val body = response?.body
-            if (body == null || response?.isSuccessful != true) {
-                return
-            }
-            val jsonResponse = gson.fromJson<Map<String, IDList>>(body.string()) ?: return
             diagnostics.markStart(
                 KeyType.GET_ID_LIST_SOURCES,
                 StepType.PROCESS,
-                additionalMarker = Marker(idListCount = jsonResponse.size)
+                additionalMarker = Marker(idListCount = idListResponse.size),
             )
             val tasks = mutableListOf<Job>()
 
-            for ((name, serverList) in jsonResponse) {
+            for ((name, serverList) in idListResponse) {
                 var localList = idLists[name]
                 if (localList == null) {
                     localList = IDList(name = name)
@@ -339,7 +257,7 @@ internal class SpecStore(
             // remove deleted id lists
             val deletedLists = mutableListOf<String>()
             for (name in idLists.keys) {
-                if (!jsonResponse.containsKey(name)) {
+                if (!idListResponse.containsKey(name)) {
                     deletedLists.add(name)
                 }
             }
@@ -348,8 +266,6 @@ internal class SpecStore(
             }
         } catch (e: Exception) {
             throw e
-        } finally {
-            response?.close()
         }
     }
 
@@ -369,9 +285,9 @@ internal class SpecStore(
             maybeDiagnostics?.markStart(
                 KeyType.GET_ID_LIST,
                 StepType.NETWORK_REQUEST,
-                additionalMarker = Marker(markerID = markerID)
+                additionalMarker = Marker(markerID = markerID),
             )
-            response = network.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
+            response = transport.getExternal(list.url, mapOf("Range" to "bytes=${list.size}-"))
             maybeDiagnostics?.markEnd(
                 KeyType.GET_ID_LIST,
                 response?.isSuccessful === true,
@@ -379,8 +295,8 @@ internal class SpecStore(
                 additionalMarker = Marker(
                     markerID = markerID,
                     statusCode = response?.code,
-                    sdkRegion = response?.headers?.get("x-statsig-region")
-                )
+                    sdkRegion = response?.headers?.get("x-statsig-region"),
+                ),
             )
 
             if (response?.isSuccessful !== true) {
@@ -389,7 +305,7 @@ internal class SpecStore(
             maybeDiagnostics?.markStart(
                 KeyType.GET_ID_LIST,
                 StepType.PROCESS,
-                additionalMarker = Marker(markerID = markerID)
+                additionalMarker = Marker(markerID = markerID),
             )
             val contentLength = response.headers["content-length"]?.toIntOrNull()
             var content = response.body?.string()
@@ -419,7 +335,7 @@ internal class SpecStore(
                 KeyType.GET_ID_LIST,
                 true,
                 StepType.PROCESS,
-                additionalMarker = Marker(markerID = markerID)
+                additionalMarker = Marker(markerID = markerID),
             )
         } catch (e: Exception) {
             errorBoundary.logException("downloadIDList", e)
@@ -428,18 +344,36 @@ internal class SpecStore(
                 KeyType.GET_ID_LIST,
                 false,
                 StepType.NETWORK_REQUEST,
-                additionalMarker = Marker(markerID = markerID)
+                additionalMarker = Marker(markerID = markerID),
             )
         } finally {
             response?.close()
         }
     }
 
+    private fun processDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, source: String) {
+        val updated = setDownloadedConfigs(downloadedConfig)
+        if (updated) {
+            initReason = if (source == "DATA_ADAPTER") {
+                EvaluationReason.DATA_ADAPTER
+            } else {
+                EvaluationReason.NETWORK
+            }
+            fireRulesUpdatedCallback(downloadedConfig)
+        }
+        diagnostics.clearContext(ContextType.CONFIG_SYNC)
+    }
+
+    private suspend fun processDownloadedIDLists(idLists: Map<String, IDList>) {
+        syncIdListsFromNetwork(idLists)
+        diagnostics.clearContext(ContextType.CONFIG_SYNC)
+    }
+
     private suspend fun initializeSpecs() {
         var downloadedConfigs: APIDownloadedConfigs? = null
 
         if (options.dataStore != null) {
-            downloadedConfigs = this.loadConfigSpecsFromStorageAdapter()
+            downloadedConfigs = specUpdater.getConfigSpecsFromDataStore()
             if (downloadedConfigs != null) {
                 val updated = setDownloadedConfigs(downloadedConfigs)
                 if (updated) {
@@ -460,7 +394,7 @@ internal class SpecStore(
         }
         // If Bootstrap and DataAdapter failed to load, defaulting to download config spec from network
         if (initReason == EvaluationReason.UNINITIALIZED) {
-            downloadedConfigs = this.downloadConfigSpecsFromNetwork()
+            downloadedConfigs = specUpdater.updateConfigSpecs()
             if (downloadedConfigs != null) {
                 val updated = setDownloadedConfigs(downloadedConfigs)
                 if (updated) {
@@ -481,7 +415,7 @@ internal class SpecStore(
 
     private fun downloadConfigSpecsToDataStore(
         dataStore: IDataStore,
-        response: APIDownloadedConfigs
+        response: APIDownloadedConfigs,
     ): APIDownloadedConfigs {
         val gson = GsonBuilder().setPrettyPrinting().create()
         val specs: String = gson.toJson(response)
@@ -489,10 +423,6 @@ internal class SpecStore(
         val adapterKey = dataStore.dataStoreKey
         dataStore.set(adapterKey, specs)
         return response
-    }
-
-    private suspend fun downloadConfigSpecsFromNetwork(): APIDownloadedConfigs? {
-        return this.downloadConfigSpecs()
     }
 
     private fun getParsedSpecs(values: Array<APIConfig>): Map<String, APIConfig> {
@@ -507,7 +437,7 @@ internal class SpecStore(
 
     private fun bootstrapConfigSpecs(): APIDownloadedConfigs? {
         try {
-            val specs = this.parseConfigSpecs(this.options.bootstrapValues)
+            val specs = specUpdater.parseConfigSpecs(this.options.bootstrapValues)
             if (specs === null) {
                 return null
             }
@@ -515,55 +445,5 @@ internal class SpecStore(
         } catch (e: Exception) {
             throw Exception("Failed to parse bootstrap values")
         }
-    }
-
-    private fun loadConfigSpecsFromStorageAdapter(): APIDownloadedConfigs? {
-        val dataStore = options.dataStore ?: return null
-
-        val adapterKey = dataStore.dataStoreKey
-        val cacheString = dataStore.get(adapterKey)
-
-        val specs = parseConfigSpecs(cacheString)
-        specs?.let {
-            if (it.time < this.lastUpdateTime) {
-                return null
-            }
-        }
-        return specs
-    }
-
-    private fun parseConfigSpecs(specs: String?): APIDownloadedConfigs? {
-        if (specs.isNullOrEmpty()) {
-            return null
-        }
-        try {
-            return gson.fromJson(specs, APIDownloadedConfigs::class.java)
-        } catch (e: Exception) {
-            errorBoundary.logException("parseConfigSpecs", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
-        }
-        return null
-    }
-
-    suspend fun downloadConfigSpecs(): APIDownloadedConfigs? {
-        var response: Response? = null
-        try {
-            response = this.network.downloadConfigSpecs(this.lastUpdateTime, this.options.initTimeoutMs) ?: return null
-            if (!response.isSuccessful) {
-                options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
-                return null
-            }
-            val configs = gson.fromJson(response.body?.charStream(), APIDownloadedConfigs::class.java)
-            if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
-                return null
-            }
-            return configs
-        } catch (e: Exception) {
-            errorBoundary.logException("downloadConfigSpecs", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
-        } finally {
-            response?.close()
-        }
-        return null
     }
 }

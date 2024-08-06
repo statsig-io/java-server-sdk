@@ -1,9 +1,11 @@
-package com.statsig.sdk
+package com.statsig.sdk.network
 
 import com.google.gson.Gson
 import com.google.gson.JsonParseException
 import com.google.gson.reflect.TypeToken
+import com.statsig.sdk.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -14,7 +16,7 @@ import okio.buffer
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 private const val BACKOFF_MULTIPLIER: Int = 10
@@ -23,34 +25,41 @@ const val STATSIG_API_URL_BASE: String = "https://statsigapi.net/v1"
 const val STATSIG_CDN_URL_BASE: String = "https://api.statsigcdn.com/v1"
 const val LOG_EVENT_RETRY_COUNT = 5
 const val LOG_EVENT_FAILURE_TAG = "statsig::log_event_failed"
+private val retryCodes: Set<Int> = setOf(
+    408,
+    500,
+    502,
+    503,
+    504,
+    522,
+    524,
+    599,
+)
 
-internal class StatsigNetwork(
+internal class HTTPWorker(
     private val sdkKey: String,
     private val options: StatsigOptions,
     private val statsigMetadata: StatsigMetadata,
     private val errorBoundary: ErrorBoundary,
     private val sdkConfig: SDKConfigs,
     private val backoffMultiplier: Int = BACKOFF_MULTIPLIER,
-) {
-    private val retryCodes: Set<Int> = setOf(
-        408,
-        500,
-        502,
-        503,
-        504,
-        522,
-        524,
-        599,
-    )
+    private val httpHelper: HTTPHelper,
+) : INetworkWorker {
+    override val type = NetworkProtocol.HTTP
+    override val isPullWorker: Boolean = true
+    override val configSpecsFlow: Flow<String>
+        get() = throw NotImplementedError("downloadConfigSpecsFlow not implemented")
+    override val idListsFlow: Flow<String>
+        get() = throw NotImplementedError("idListsFlow not implemented")
+    override fun initializeFlows() {}
+
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val statsigHttpClient: OkHttpClient
-    private val externalHttpClient: OkHttpClient
     private val gson = Utils.getGson()
-    private val serverSessionID = UUID.randomUUID().toString()
     private var diagnostics: Diagnostics? = null
-    private val api = options.api ?: STATSIG_API_URL_BASE
-    private val apiForDownloadConfigSpecs = (options.apiForDownloadConfigSpecs ?: options.api) ?: STATSIG_CDN_URL_BASE
-    private val apiForGetIDLists = (options.apiForGetIdlists ?: options.api) ?: STATSIG_API_URL_BASE
+    val apiForDownloadConfigSpecs = options.endpointProxyConfigs[NetworkEndpoint.DOWNLOAD_CONFIG_SPECS]?.proxyAddress?.let { "$it/v1" } ?: options.apiForDownloadConfigSpecs ?: options.api ?: STATSIG_CDN_URL_BASE
+    val apiForGetIDLists = options.endpointProxyConfigs[NetworkEndpoint.GET_ID_LISTS]?.proxyAddress?.let { "$it/v1" } ?: options.apiForGetIdlists ?: options.api ?: STATSIG_API_URL_BASE
+    val apiForLogEvent = options.endpointProxyConfigs[NetworkEndpoint.LOG_EVENT]?.proxyAddress?.let { "$it/v1" } ?: options.api ?: STATSIG_API_URL_BASE
     private var eventsCount: String = ""
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
@@ -64,7 +73,7 @@ internal class StatsigNetwork(
                 val request = original.newBuilder()
                     .addHeader("STATSIG-API-KEY", sdkKey)
                     .addHeader("STATSIG-CLIENT-TIME", System.currentTimeMillis().toString())
-                    .addHeader("STATSIG-SERVER-SESSION-ID", serverSessionID)
+                    .addHeader("STATSIG-SERVER-SESSION-ID", statsigMetadata.sessionID)
                     .addHeader("STATSIG-SDK-TYPE", statsigMetadata.sdkType)
                     .addHeader("STATSIG-SDK-VERSION", statsigMetadata.sdkVersion)
                     .addHeader("STATSIG-EVENT-COUNT", eventsCount)
@@ -111,7 +120,88 @@ internal class StatsigNetwork(
         }
 
         statsigHttpClient = clientBuilder.build()
-        externalHttpClient = OkHttpClient.Builder().build()
+    }
+
+    override suspend fun downloadConfigSpecs(sinceTime: Long): String? {
+        var response = get(
+            "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
+            emptyMap(),
+            options.initTimeoutMs,
+        )
+        response?.use {
+            if (!response.isSuccessful) {
+                options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
+                return null
+            }
+            return response.body?.string()
+        }
+        return null
+    }
+
+    override suspend fun getIDLists(): String? {
+        var response = post(
+            "$apiForGetIDLists/get_id_lists",
+            mapOf("statsigMetadata" to statsigMetadata),
+            emptyMap(),
+            this.options.initTimeoutMs,
+        )
+        if (response?.isSuccessful != true) {
+            return null
+        }
+        return response.body?.string()
+    }
+
+    suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long): String? {
+        var response = get(
+            "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
+            emptyMap(),
+            options.initTimeoutMs,
+        )
+        response?.use {
+            if (!response.isSuccessful) {
+                options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
+                return null
+            }
+            return response.body?.string()
+        }
+        return null
+    }
+
+    suspend fun downloadIDListsFromStatsigAPI(): String? {
+        var response = post(
+            "$STATSIG_API_URL_BASE/get_id_lists",
+            mapOf("statsigMetadata" to statsigMetadata),
+            emptyMap(),
+            this.options.initTimeoutMs,
+        )
+        if (response?.isSuccessful != true) {
+            return null
+        }
+        return response.body?.string()
+    }
+
+    override suspend fun logEvents(events: List<StatsigEvent>) {
+        retryPostLogs(events, LOG_EVENT_RETRY_COUNT, 1)
+    }
+
+    override fun setDiagnostics(diagnostics: Diagnostics) {
+        this.diagnostics = diagnostics
+    }
+
+    override fun shutdown() {
+        waitUntilAllRequestsAreFinished(statsigHttpClient.dispatcher)
+        statsigHttpClient.dispatcher.cancelAll()
+        statsigHttpClient.dispatcher.executorService.shutdown()
+        statsigHttpClient.connectionPool.evictAll()
+        statsigHttpClient.cache?.close()
+    }
+
+    private fun waitUntilAllRequestsAreFinished(dispatcher: okhttp3.Dispatcher) {
+        try {
+            dispatcher.executorService.awaitTermination(1, TimeUnit.SECONDS)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     private fun setUpProxyAgent(clientBuilder: OkHttpClient.Builder, proxyConfig: ProxyConfig) {
@@ -141,68 +231,13 @@ internal class StatsigNetwork(
         }
     }
 
-    fun setDiagnostics(diagnostics: Diagnostics) {
-        this.diagnostics = diagnostics
-    }
-
-    suspend fun checkGate(user: StatsigUser?, gateName: String, disableExposureLogging: Boolean): ConfigEvaluation {
-        statsigMetadata.exposureLoggingDisabled = disableExposureLogging
-        val bodyJson = gson.toJson(
-            mapOf(
-                "gateName" to gateName,
-                "user" to user,
-                "statsigMetadata" to statsigMetadata,
-            ),
-        )
-        val requestBody: RequestBody = bodyJson.toRequestBody(json)
-
-        val request: Request = Request.Builder()
-            .url("$api/check_gate")
-            .post(requestBody)
-            .build()
-        statsigHttpClient.newCall(request).await().use { response ->
-            val apiGate = gson.fromJson(response.body?.charStream(), APIFeatureGate::class.java)
-            return ConfigEvaluation(
-                booleanValue = apiGate.value,
-                apiGate.value.toString(),
-                apiGate.ruleID ?: "",
-            )
-        }
-    }
-
-    suspend fun getConfig(user: StatsigUser?, configName: String, disableExposureLogging: Boolean): ConfigEvaluation {
-        statsigMetadata.exposureLoggingDisabled = disableExposureLogging
-        val bodyJson = gson.toJson(
-            mapOf(
-                "configName" to configName,
-                "user" to user,
-                "statsigMetadata" to statsigMetadata,
-            ),
-        )
-        statsigMetadata.exposureLoggingDisabled = null
-        val requestBody: RequestBody = bodyJson.toRequestBody(json)
-
-        val request: Request = Request.Builder()
-            .url("$api/get_config")
-            .post(requestBody)
-            .build()
-        statsigHttpClient.newCall(request).await().use { response ->
-            val apiConfig = gson.fromJson(response.body?.charStream(), APIDynamicConfig::class.java)
-            return ConfigEvaluation(
-                booleanValue = false,
-                apiConfig.value,
-                apiConfig.ruleID ?: "",
-            )
-        }
-    }
-
-    suspend fun post(
+    private suspend fun post(
         url: String,
         body: Map<String, Any> = emptyMap(),
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
     ): Response? {
-        return request(
+        return httpHelper.request(
             statsigHttpClient.newBuilder().callTimeout(
                 timeoutMs,
                 TimeUnit.MILLISECONDS,
@@ -213,12 +248,12 @@ internal class StatsigNetwork(
         )
     }
 
-    suspend fun get(
+    private suspend fun get(
         url: String,
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
     ): Response? {
-        return request(
+        return httpHelper.request(
             statsigHttpClient.newBuilder().callTimeout(
                 timeoutMs,
                 TimeUnit.MILLISECONDS,
@@ -229,87 +264,8 @@ internal class StatsigNetwork(
         )
     }
 
-    suspend fun downloadConfigSpecs(sinceTime: Long, timeoutMs: Long): Response? {
-        var response = get(
-            "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
-            emptyMap(),
-            timeoutMs,
-        )
-        if (response?.isSuccessful != true && options.fallbackToStatsigAPI && apiForDownloadConfigSpecs != STATSIG_CDN_URL_BASE) {
-            // Fallback only when fallbackToStatsigAPI is set to be true, and previous dcs is not hitting Default url
-            response = downloadConfigSpecsFromStatsigAPI(sinceTime, timeoutMs)
-        }
-        return response
-    }
-
-    suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long, timeoutMs: Long): Response? {
-        return get(
-            "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
-            emptyMap(),
-            timeoutMs,
-        )
-    }
-
-    suspend fun downloadIDLists(): Response? {
-        var response = post(
-            "$apiForGetIDLists/get_id_lists",
-            mapOf("statsigMetadata" to statsigMetadata),
-            emptyMap(),
-            this.options.initTimeoutMs,
-        )
-        if (response?.isSuccessful != true && options.fallbackToStatsigAPI && api != STATSIG_API_URL_BASE) {
-            response = downloadIDListsFromStatsigAPI()
-        }
-        return response
-    }
-
-    suspend fun downloadIDListsFromStatsigAPI(): Response? {
-        return post("$STATSIG_API_URL_BASE/get_id_lists", mapOf("statsigMetadata" to statsigMetadata), emptyMap(), this.options.initTimeoutMs)
-    }
-
-    suspend fun getExternal(
-        url: String,
-        headers: Map<String, String> = emptyMap(),
-    ): Response? {
-        return request(externalHttpClient, url, null, headers)
-    }
-
-    private suspend fun request(
-        client: OkHttpClient,
-        url: String,
-        body: Map<String, Any>?,
-        headers: Map<String, String> = emptyMap(),
-    ): Response? {
-        val diagnosticsKey = diagnostics?.getDiagnosticKeyFromURL(url)
-        try {
-            val request = Request.Builder()
-                .url(url)
-            if (body != null) {
-                val bodyJson = gson.toJson(body)
-                request.post(bodyJson.toRequestBody(json))
-            }
-            headers.forEach { (key, value) -> request.addHeader(key, value) }
-            diagnostics?.startNetworkRequestDiagnostics(diagnosticsKey)
-            val response = client.newCall(request.build()).await()
-            diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, response.isSuccessful, response)
-            return response
-        } catch (e: Exception) {
-            options.customLogger.warning("[Statsig]: An exception was caught: $e")
-            if (e is JsonParseException) {
-                errorBoundary.logException("postImpl", e)
-            }
-            diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, false, null)
-            return null
-        }
-    }
-
-    suspend fun postLogs(events: List<StatsigEvent>, statsigMetadata: StatsigMetadata) {
-        retryPostLogs(events, statsigMetadata, LOG_EVENT_RETRY_COUNT, 1)
-    }
-
     suspend fun retryPostLogs(
         events: List<StatsigEvent>,
-        statsigMetadata: StatsigMetadata,
         retries: Int,
         backoff: Int,
     ) {
@@ -322,7 +278,7 @@ internal class StatsigNetwork(
         eventsCount = events.size.toString()
 
         val request: Request = Request.Builder()
-            .url("$api/log_event")
+            .url("$apiForLogEvent/log_event")
             .post(requestBody)
             .build()
 
@@ -360,27 +316,6 @@ internal class StatsigNetwork(
                 val count = retries - --currRetry
                 delay(backoff * (backoffMultiplier * count) * MS_IN_S)
             }
-        }
-    }
-
-    fun shutdown() {
-        externalHttpClient.dispatcher.cancelAll()
-        externalHttpClient.dispatcher.executorService.shutdown()
-        externalHttpClient.connectionPool.evictAll()
-        externalHttpClient.cache?.close()
-
-        waitUntilAllRequestsAreFinished(statsigHttpClient.dispatcher)
-        statsigHttpClient.dispatcher.cancelAll()
-        statsigHttpClient.dispatcher.executorService.shutdown()
-        statsigHttpClient.connectionPool.evictAll()
-        statsigHttpClient.cache?.close()
-    }
-
-    private fun waitUntilAllRequestsAreFinished(dispatcher: okhttp3.Dispatcher) {
-        try {
-            dispatcher.executorService.awaitTermination(1, TimeUnit.SECONDS)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
         }
     }
 

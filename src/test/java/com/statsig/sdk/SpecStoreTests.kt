@@ -21,13 +21,10 @@ class SpecStoreTests {
     fun setDownloadedConfigsTest() {
         var specStore = TestUtilJava.getSpecStoreFromStatsigServer(driver)
 
-        val privateLastUpdateTimeField = specStore.javaClass.getDeclaredField("lastUpdateTime")
-        privateLastUpdateTimeField.isAccessible = true
-
         assertNull(specStore.getConfig("dynamicConfig"))
         assert(specStore.getAllGates() == emptyMap<String, String>())
         assert(specStore.getAllLayers() == emptyMap<String, String>())
-        assert(privateLastUpdateTimeField[specStore] as Long == 0L)
+        assert(specStore.getLastUpdateTime() == 0L)
 
         var input = APIDownloadedConfigs(
             dynamicConfigs = arrayOf(createAPIConfig("dynamicConfig")),
@@ -45,7 +42,7 @@ class SpecStoreTests {
         assertNotNull(specStore.getLayerConfig("layer"))
         assertEquals("layer", specStore.getLayerNameForExperiment("experiment1"))
         assertEquals("layer", specStore.getLayerNameForExperiment("experiment2"))
-        assertEquals(420, privateLastUpdateTimeField[specStore] as Long)
+        assertEquals(420, specStore.getLastUpdateTime())
     }
 
     private fun createAPIConfig(name: String): APIConfig {

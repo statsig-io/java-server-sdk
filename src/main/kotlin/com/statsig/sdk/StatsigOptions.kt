@@ -1,6 +1,8 @@
 package com.statsig.sdk
 
+import com.google.gson.annotations.SerializedName
 import com.statsig.sdk.datastore.IDataStore
+import com.statsig.sdk.network.STATSIG_API_URL_BASE
 
 private const val TIER_KEY: String = "tier"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
@@ -55,6 +57,7 @@ class StatsigOptions(
     var customLogger: LoggerInterface = defaultLogger,
     var disableAllLogging: Boolean = false,
     var proxyConfig: ProxyConfig? = null,
+    var endpointProxyConfigs: Map<NetworkEndpoint, ForwardProxyConfig> = mapOf(),
     var fallbackToStatsigAPI: Boolean = false,
     var disableIPResolution: Boolean = false,
 ) {
@@ -94,6 +97,36 @@ class StatsigOptions(
         )
     }
 }
+
+enum class NetworkEndpoint {
+    @SerializedName("download_config_specs")
+    DOWNLOAD_CONFIG_SPECS,
+
+    @SerializedName("get_id_lists")
+    GET_ID_LISTS,
+
+    @SerializedName("log_event")
+    LOG_EVENT,
+
+    @SerializedName("all")
+    ALL_ENDPOINTS, // Default value for all endpoints
+}
+
+enum class NetworkProtocol {
+    @SerializedName("http")
+    HTTP,
+
+    @SerializedName("grpc")
+    GRPC,
+
+    @SerializedName("grpc_websocket")
+    GRPC_WEBSOCKET,
+}
+
+data class ForwardProxyConfig(
+    @SerializedName("proxyAddress") var proxyAddress: String,
+    @SerializedName("protocol") val proxyProtocol: NetworkProtocol,
+)
 
 data class ProxyConfig @JvmOverloads constructor(
     var proxyHost: String,

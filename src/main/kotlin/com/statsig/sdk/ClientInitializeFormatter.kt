@@ -190,7 +190,7 @@ internal class ClientInitializeFormatter(
             val hashedExposure = mapOf(
                 "gate" to hashName(exposure["gate"] ?: ""),
                 "gateValue" to (exposure["gateValue"] ?: ""),
-                "ruleID" to (exposure["ruleID"] ?: "")
+                "ruleID" to (exposure["ruleID"] ?: ""),
             )
             hashedExposures.add(hashedExposure)
         }

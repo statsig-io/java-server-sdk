@@ -1,5 +1,6 @@
 package com.statsig.sdk
 
+import com.statsig.sdk.network.StatsigTransport
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.sync.Mutex
@@ -238,7 +239,7 @@ private class StatsigServerImpl() :
     private lateinit var coroutineExceptionHandler: CoroutineExceptionHandler
     private lateinit var statsigJob: CompletableJob
     private lateinit var statsigScope: CoroutineScope
-    private lateinit var network: StatsigNetwork
+    private lateinit var transport: StatsigTransport
     private lateinit var logger: StatsigLogger
     private lateinit var evaluator: Evaluator
     private lateinit var diagnostics: Diagnostics
@@ -257,8 +258,8 @@ private class StatsigServerImpl() :
         }
         statsigJob = SupervisorJob()
         statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
-        network = StatsigNetwork(serverSecret, options, statsigMetadata, errorBoundary, sdkConfigs)
-        logger = StatsigLogger(statsigScope, network, statsigMetadata, options, sdkConfigs)
+        transport = StatsigTransport(serverSecret, options, statsigMetadata, statsigScope, errorBoundary, sdkConfigs)
+        logger = StatsigLogger(statsigScope, transport, statsigMetadata, options, sdkConfigs)
         this.options = options
     }
 
@@ -281,7 +282,7 @@ private class StatsigServerImpl() :
                     }
                     setupAndStartDiagnostics()
                     evaluator =
-                        Evaluator(network, options, statsigScope, errorBoundary, diagnostics, statsigMetadata, sdkConfigs, serverSecret)
+                        Evaluator(transport, options, statsigScope, errorBoundary, diagnostics, statsigMetadata, sdkConfigs, serverSecret)
                     evaluator.initialize()
                     if (options.dataStore != null) {
                         dataStoreSetUp()
@@ -736,7 +737,7 @@ private class StatsigServerImpl() :
             // CAUTION: Order matters here! Need to clean up jobs and post logs before
             // shutting down the network and supervisor scope
             logger.shutdown()
-            network.shutdown()
+            transport.shutdown()
             evaluator.shutdown()
             statsigJob.cancelAndJoin()
             statsigScope.cancel()

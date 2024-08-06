@@ -6,7 +6,6 @@ import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -18,6 +17,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.lang.StringBuilder
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class DiagnosticsTest {
     lateinit var driver: StatsigServer
@@ -250,16 +251,12 @@ class DiagnosticsTest {
 
     @Test
     fun testContextBeingClear() = runBlocking {
-        setupWebServer(downloadConfigSpecsResponse)
-        options.rulesetsSyncIntervalMs = 50
-        options.idListsSyncIntervalMs = 50
+        val countdown = CountDownLatch(2)
+        setupWebServer(downloadConfigSpecsResponse, countdown)
+        options.rulesetsSyncIntervalMs = 500
+        options.idListsSyncIntervalMs = 500
         driver.initializeAsync("secret-testcase", options).get()
         val diagnostics = getDiagnostics()
-        assert(diagnostics.markers[ContextType.INITIALIZE]!!.size == 0) // Ensure initialize markers are cleared
-        // Wait for config sync happen
-        delay(100)
-        // Ensure config sync markers are cleared
-        assert((diagnostics.markers[ContextType.CONFIG_SYNC]?.size ?: 0) == 0)
         driver.checkGate(StatsigUser("testUser"), "always_on_gate")
         driver.checkGate(StatsigUser("testUser"), "always_off_gate")
         driver.getClientInitializeResponse(StatsigUser("testUser"))
@@ -267,6 +264,12 @@ class DiagnosticsTest {
         logger.flush()
         assert(diagnostics.markers[ContextType.API_CALL]!!.size == 0) // Ensure api call markers are cleared
         assert(diagnostics.markers[ContextType.GET_CLIENT_INITIALIZE_RESPONSE]!!.size == 0) // Ensure api call markers are cleared
+        assert(diagnostics.markers[ContextType.INITIALIZE]!!.size == 0) // Ensure initialize markers are cleared
+        // Wait for config sync happen
+        val a = countdown.await(1000, TimeUnit.SECONDS)
+        driver.shutdown()
+        // Ensure config sync markers are cleared
+        assert((diagnostics.markers[ContextType.CONFIG_SYNC]?.size ?: 0) == 0)
     }
 
     @Test
@@ -355,7 +358,6 @@ class DiagnosticsTest {
                 markerID = "51",
             ),
         )
-        println(idListMarkers)
     }
 
     private fun getLogger(): StatsigLogger {
@@ -416,13 +418,13 @@ class DiagnosticsTest {
         }
     }
 
-    private fun setupWebServer(downLoadConfigResponse: String) {
+    private fun setupWebServer(downLoadConfigResponse: String, dcsCountDown: CountDownLatch? = null) {
         server.apply {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
                 override fun dispatch(request: RecordedRequest): MockResponse {
                     if ("/v1/download_config_specs" in request.path!!) {
-                        println("dcs")
+                        dcsCountDown?.countDown()
                         return MockResponse().setResponseCode(200)
                             .setBody(downLoadConfigResponse)
                     }

@@ -15,7 +15,7 @@ internal class EvaluationContext(
         evaluation = ctx.evaluation,
         clientSDKKey = ctx.clientSDKKey,
         hash = ctx.hash,
-        isNested = ctx.isNested
+        isNested = ctx.isNested,
     )
 
     internal fun asDelegate(): EvaluationContext {

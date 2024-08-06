@@ -1,0 +1,3 @@
+[submodule "api-interface-definitions"]
+	path = api-interface-definitions
+	url = git@github.com:statsig-io/api-interface-definitions.git
