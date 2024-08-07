@@ -98,7 +98,6 @@ internal class GRPCWebsocketWorker(
     }
 
     private suspend fun connectWithRetry(scope: CoroutineScope) {
-        println("connect with retry")
         while (remainingRetries > 0 && currentCoroutineContext().isActive) {
             remainingRetries -= 1
             shouldRetry = true
