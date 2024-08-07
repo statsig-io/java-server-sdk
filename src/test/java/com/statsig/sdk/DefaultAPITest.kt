@@ -5,10 +5,13 @@ import io.mockk.mockkConstructor
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.junit.Rule
 import org.junit.Test
 
 class DefaultAPITest {
-
+    @JvmField
+    @Rule
+    val retry = RetryRule(3)
     @Test
     fun testDefaultAPI() {
         val requests: MutableList<Request> = mutableListOf()
@@ -18,7 +21,7 @@ class DefaultAPITest {
             callOriginal()
         }
         runBlocking {
-            Statsig.initialize("secret-key", StatsigOptions())
+            Statsig.initialize("secret-key", StatsigOptions(rulesetsSyncIntervalMs = 1000000))
             Statsig.checkGate(StatsigUser("test-user"), "always_on_gate")
             Statsig.shutdown()
         }

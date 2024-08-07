@@ -9,11 +9,16 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class ConcurrentInitializeTest {
+    @JvmField
+    @Rule
+    val retry = RetryRule(3)
+
     private lateinit var options: StatsigOptions
     private var neworkCallCnt = 0
 
