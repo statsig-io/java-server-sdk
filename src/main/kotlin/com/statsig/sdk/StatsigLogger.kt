@@ -225,11 +225,16 @@ internal class StatsigLogger(
     }
 
     private fun getEventQueueCap(): Int {
-        if (eventQueueSize is Int) {
+        try {
+            if (eventQueueSize is Int) {
+                return eventQueueSize as Int
+            }
+            val size = sdkConfigs.getConfigNumValue("event_queue_size")?.toInt()
+            eventQueueSize = if (size is Int && size > 0) size else DEFAULT_MAX_EVENTS
             return eventQueueSize as Int
+        } catch (_: Exception) {
+            return DEFAULT_MAX_EVENTS
         }
-        eventQueueSize = sdkConfigs.getConfigNumValue("event_queue_size")?.toInt()
-        return eventQueueSize ?: DEFAULT_MAX_EVENTS
     }
 
     private fun isUniqueExposure(user: StatsigUser?, configName: String, ruleID: String, value: String, allocatedExperiment: String): Boolean {
