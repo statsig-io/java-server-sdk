@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -25,7 +26,7 @@ internal class SpecUpdater(
 ) {
     var lastUpdateTime: Long = 0
 
-    private var configSpecCallback: suspend (config: APIDownloadedConfigs, source: String) -> Unit = { _, _ -> }
+    private var configSpecCallback: suspend (config: APIDownloadedConfigs, source: DataSource) -> Unit = { _, _ -> }
     private var idListCallback: suspend (config: Map<String, IDList>) -> Unit = { }
     private var backgroundDownloadConfigs: Job? = null
     private var backgroundDownloadIDLists: Job? = null
@@ -42,7 +43,7 @@ internal class SpecUpdater(
         this.backgroundDownloadIDLists?.cancel()
     }
 
-    fun registerConfigSpecListener(callback: suspend (config: APIDownloadedConfigs, source: String) -> Unit) {
+    fun registerConfigSpecListener(callback: suspend (config: APIDownloadedConfigs, source: DataSource) -> Unit) {
         configSpecCallback = callback
     }
     fun registerIDListsListener(callback: suspend (config: Map<String, IDList>) -> Unit) {
@@ -51,9 +52,14 @@ internal class SpecUpdater(
 
     fun startListening() {
         if (backgroundDownloadConfigs == null) {
+            val flow = if (transport.downloadConfigSpecWorker.isPullWorker) { pollForConfigSpecs() } else {
+                transport.configSpecsFlow().map(::parseConfigSpecs).filterNotNull().map { Pair(it, DataSource.NETWORK) }
+            }
+
             backgroundDownloadConfigs = statsigScope.launch {
-                val (pollMethod, source) = pollForConfigSpecs()
-                pollMethod.collect { configSpecCallback(it, source) }
+                flow.collect {
+                    configSpecCallback.invoke(it.first, it.second)
+                }
             }
         }
         if (backgroundDownloadIDLists == null) {
@@ -65,24 +71,44 @@ internal class SpecUpdater(
                 idListFlow.collect { idListCallback(it) }
             }
         }
-    }
-
-    suspend fun updateConfigSpecs(): APIDownloadedConfigs? {
-        try {
-            val response = this.transport.downloadConfigSpecs(this.lastUpdateTime) ?: return null
-            val configs = gson.fromJson(response, APIDownloadedConfigs::class.java)
-            if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
-                return null
-            }
-            return configs
-        } catch (e: Exception) {
-            errorBoundary.logException("downloadConfigSpecs", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+        transport.setStreamingFallback(NetworkEndpoint.DOWNLOAD_CONFIG_SPECS) {
+            this.transport.downloadConfigSpecsFromStatsig(
+                this.lastUpdateTime,
+            )
         }
-        return null
     }
 
-    suspend fun getConfigSpecsFromDataStore(): APIDownloadedConfigs? {
+    fun getInitializeOrder(): List<DataSource> {
+        val optionsOrder = options.initializeSources
+        if (optionsOrder != null) return optionsOrder
+        val order = mutableListOf<DataSource>()
+        if (options.dataStore != null) {
+            order.add(DataSource.DATA_STORE)
+        } else if (options.bootstrapValues != null) {
+            order.add(DataSource.BOOTSTRAP)
+        }
+        order.add(DataSource.NETWORK)
+        if (options.fallbackToStatsigAPI) {
+            order.add(DataSource.STATSIG_NETWORK)
+        }
+        return order
+    }
+
+    suspend fun getConfigSpecs(source: DataSource): APIDownloadedConfigs? {
+        return when (source) {
+            DataSource.NETWORK -> getConfigSpecsFromNetwork()
+            DataSource.STATSIG_NETWORK -> parseConfigsFromNetwork(this.transport.downloadConfigSpecsFromStatsig(this.lastUpdateTime))
+            DataSource.DATA_STORE -> {
+                getConfigSpecsFromDataStore()
+            }
+            DataSource.BOOTSTRAP -> {
+                diagnostics.markStart(KeyType.BOOTSTRAP, step = StepType.PROCESS)
+                parseConfigSpecs(this.options.bootstrapValues)
+            }
+        }
+    }
+
+    private fun getConfigSpecsFromDataStore(): APIDownloadedConfigs? {
         val dataStore = options.dataStore ?: return null
 
         val adapterKey = dataStore.dataStoreKey
@@ -105,8 +131,11 @@ internal class SpecUpdater(
             null
         }
     }
+    suspend fun getConfigSpecsFromNetwork(): APIDownloadedConfigs? {
+        return parseConfigsFromNetwork(this.transport.downloadConfigSpecs(this.lastUpdateTime))
+    }
 
-    fun parseConfigSpecs(specs: String?): APIDownloadedConfigs? {
+    private fun parseConfigSpecs(specs: String?): APIDownloadedConfigs? {
         if (specs.isNullOrEmpty()) {
             return null
         }
@@ -119,7 +148,22 @@ internal class SpecUpdater(
         return null
     }
 
-    fun parseIDLists(lists: String?): Map<String, IDList>? {
+    private fun parseConfigsFromNetwork(response: String?): APIDownloadedConfigs? {
+        if (response == null) return null
+        try {
+            val configs = gson.fromJson(response, APIDownloadedConfigs::class.java)
+            if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
+                return null
+            }
+            return configs
+        } catch (e: Exception) {
+            errorBoundary.logException("downloadConfigSpecs", e)
+            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+        }
+        return null
+    }
+
+    private fun parseIDLists(lists: String?): Map<String, IDList>? {
         if (lists.isNullOrEmpty()) {
             return null
         }
@@ -132,26 +176,36 @@ internal class SpecUpdater(
         return null
     }
 
-    fun pollForConfigSpecs(): Pair<Flow<APIDownloadedConfigs>, String> {
-        val (getConfigSpecs, source) = if (options.dataStore?.shouldPollForUpdates() == true) {
-            Pair(::getConfigSpecsFromDataStore, "DATA_ADAPTER")
-        } else {
-            if (!transport.downloadConfigSpecWorker.isPullWorker) {
-                return Pair(transport.configSpecsFlow().map(::parseConfigSpecs).filterNotNull(), "NETWORK")
-            }
-            Pair(::updateConfigSpecs, "NETWORK")
-        }
-
+    private fun pollForConfigSpecs(): Flow<Pair<APIDownloadedConfigs, DataSource>> {
         val configFlow = flow {
             while (true) {
                 delay(options.rulesetsSyncIntervalMs)
-                val response = getConfigSpecs()
-                if (response != null && response.hasUpdates) {
-                    emit(response)
+                for (source in getConfigSyncSources()) {
+                    val config = getConfigSpecs(source)
+                    if (config != null) {
+                        emit(Pair(config, source))
+                    }
                 }
             }
         }
-        return Pair(configFlow, source)
+        return configFlow
+    }
+
+    private fun getConfigSyncSources(): List<DataSource> {
+        val configSpecSources = options.configSyncSources
+        if (configSpecSources != null) {
+            return configSpecSources
+        }
+        val sources = mutableListOf<DataSource>()
+        if (options.dataStore?.shouldPollForUpdates() == true) {
+            sources.add(DataSource.DATA_STORE)
+        } else {
+            sources.add(DataSource.NETWORK)
+        }
+        if (options.fallbackToStatsigAPI) {
+            sources.add(DataSource.STATSIG_NETWORK)
+        }
+        return sources
     }
 
     private fun pollForIDLists(): Flow<Map<String, IDList>> {

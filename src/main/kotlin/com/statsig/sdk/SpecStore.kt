@@ -351,64 +351,55 @@ internal class SpecStore(
         }
     }
 
-    private fun processDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, source: String) {
-        val updated = setDownloadedConfigs(downloadedConfig)
-        if (updated) {
-            initReason = if (source == "DATA_ADAPTER") {
-                EvaluationReason.DATA_ADAPTER
-            } else {
-                EvaluationReason.NETWORK
-            }
-            fireRulesUpdatedCallback(downloadedConfig)
-        }
-        diagnostics.clearContext(ContextType.CONFIG_SYNC)
-    }
-
     private suspend fun processDownloadedIDLists(idLists: Map<String, IDList>) {
         syncIdListsFromNetwork(idLists)
         diagnostics.clearContext(ContextType.CONFIG_SYNC)
     }
 
-    private suspend fun initializeSpecs() {
-        var downloadedConfigs: APIDownloadedConfigs? = null
-
-        if (options.dataStore != null) {
-            downloadedConfigs = specUpdater.getConfigSpecsFromDataStore()
-            if (downloadedConfigs != null) {
-                val updated = setDownloadedConfigs(downloadedConfigs)
+    private fun processDownloadedConfigs(configs: APIDownloadedConfigs?, source: DataSource): Boolean {
+        try {
+            if (configs == null) {
+                if (source == DataSource.BOOTSTRAP) {
+                    diagnostics.markEnd(KeyType.BOOTSTRAP, false, step = StepType.PROCESS)
+                }
+                return false
+            }
+            if (source == DataSource.DATA_STORE) {
+                val updated = setDownloadedConfigs(configs)
                 if (updated) {
                     initReason = EvaluationReason.DATA_ADAPTER
-                    return
                 }
+                return updated
             }
-        } else if (options.bootstrapValues != null) {
-            diagnostics.markStart(KeyType.BOOTSTRAP, step = StepType.PROCESS)
-            downloadedConfigs = this.bootstrapConfigSpecs()
-            initReason = if (downloadedConfigs == null) EvaluationReason.UNINITIALIZED else EvaluationReason.BOOTSTRAP
-            if (downloadedConfigs != null) {
-                setDownloadedConfigs(downloadedConfigs, true)
+            if (source == DataSource.BOOTSTRAP) {
+                initReason = EvaluationReason.BOOTSTRAP
+                setDownloadedConfigs(configs, true)
                 diagnostics.markEnd(KeyType.BOOTSTRAP, true, step = StepType.PROCESS)
-                return
+                return true
             }
-            diagnostics.markEnd(KeyType.BOOTSTRAP, false, step = StepType.PROCESS)
-        }
-        // If Bootstrap and DataAdapter failed to load, defaulting to download config spec from network
-        if (initReason == EvaluationReason.UNINITIALIZED) {
-            downloadedConfigs = specUpdater.updateConfigSpecs()
-            if (downloadedConfigs != null) {
-                val updated = setDownloadedConfigs(downloadedConfigs)
+            if (source == DataSource.NETWORK || source == DataSource.STATSIG_NETWORK) {
+                // If Bootstrap and DataAdapter failed to load, defaulting to download config spec from network
+                val updated = setDownloadedConfigs(configs)
                 if (updated) {
                     initReason = EvaluationReason.NETWORK
-
                     options.dataStore?.let {
-                        downloadConfigSpecsToDataStore(it, downloadedConfigs)
+                        downloadConfigSpecsToDataStore(it, configs)
                     }
-
-                    if (options.bootstrapValues == null) {
-                        // only fire the callback if this was not the result of a bootstrap
-                        fireRulesUpdatedCallback(downloadedConfigs)
-                    }
+                    fireRulesUpdatedCallback(configs)
                 }
+                return updated
+            }
+            return false
+        } finally {
+            diagnostics.clearContext(ContextType.CONFIG_SYNC)
+        }
+    }
+
+    private suspend fun initializeSpecs() {
+        for (source in specUpdater.getInitializeOrder()) {
+            val configs = specUpdater.getConfigSpecs(source)
+            if (processDownloadedConfigs(configs, source)) {
+                return
             }
         }
     }
@@ -433,17 +424,5 @@ internal class SpecStore(
             parsed[specName] = value
         }
         return parsed
-    }
-
-    private fun bootstrapConfigSpecs(): APIDownloadedConfigs? {
-        try {
-            val specs = specUpdater.parseConfigSpecs(this.options.bootstrapValues)
-            if (specs === null) {
-                return null
-            }
-            return specs
-        } catch (e: Exception) {
-            throw Exception("Failed to parse bootstrap values")
-        }
     }
 }

@@ -58,6 +58,8 @@ class StatsigOptions(
     var disableAllLogging: Boolean = false,
     var proxyConfig: ProxyConfig? = null,
     var endpointProxyConfigs: Map<NetworkEndpoint, ForwardProxyConfig> = mapOf(),
+    var initializeSources: List<DataSource>? = null,
+    var configSyncSources: List<DataSource>? = null,
     var fallbackToStatsigAPI: Boolean = false,
     var disableIPResolution: Boolean = false,
 ) {
@@ -98,6 +100,20 @@ class StatsigOptions(
     }
 }
 
+enum class DataSource {
+    @SerializedName("network")
+    NETWORK,
+
+    @SerializedName("statsig_network")
+    STATSIG_NETWORK,
+
+    @SerializedName("datastore")
+    DATA_STORE,
+
+    @SerializedName("bootstrap")
+    BOOTSTRAP,
+}
+
 enum class NetworkEndpoint {
     @SerializedName("download_config_specs")
     DOWNLOAD_CONFIG_SPECS,
@@ -126,6 +142,11 @@ enum class NetworkProtocol {
 data class ForwardProxyConfig(
     @SerializedName("proxyAddress") var proxyAddress: String,
     @SerializedName("protocol") val proxyProtocol: NetworkProtocol,
+    // Websocket streaming failover spec
+    @SerializedName("max_retry_attempt") val maxRetryAttempt: Int? = null,
+    @SerializedName("retry_backoff_multiplier") val retryBackoffMultiplier: Int? = null,
+    @SerializedName("retry_backoff_base_ms") val retryBackoffBaseMs: Long? = null,
+    @SerializedName("push_worker_failover_threshold") val pushWorkerFailoverThreshold: Int? = null,
 )
 
 data class ProxyConfig @JvmOverloads constructor(

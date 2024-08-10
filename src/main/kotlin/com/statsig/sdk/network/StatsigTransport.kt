@@ -58,14 +58,22 @@ internal class StatsigTransport(
         return downloadConfigSpecWorker.idListsFlow
     }
 
-    suspend fun downloadConfigSpecs(sinceTime: Long): String? {
-        var res = downloadConfigSpecWorker.downloadConfigSpecs(sinceTime)
-        if (res == null && options.fallbackToStatsigAPI) {
-            if (downloadConfigSpecWorker !is HTTPWorker || (downloadConfigSpecWorker as HTTPWorker).apiForDownloadConfigSpecs != STATSIG_CDN_URL_BASE) {
-                res = httpWorker.downloadConfigSpecsFromStatsigAPI(sinceTime)
+    fun setStreamingFallback(endpoint: NetworkEndpoint, getDcsFn: suspend () -> String?) {
+        when (endpoint) {
+            NetworkEndpoint.DOWNLOAD_CONFIG_SPECS -> {
+                if (downloadConfigSpecWorker is GRPCWebsocketWorker) {
+                    (downloadConfigSpecWorker as GRPCWebsocketWorker).streamingFallback = StreamingFallback(statsigScope, getDcsFn, options.rulesetsSyncIntervalMs)
+                }
             }
         }
-        return res
+    }
+
+    suspend fun downloadConfigSpecs(sinceTime: Long): String? {
+        return downloadConfigSpecWorker.downloadConfigSpecs(sinceTime)
+    }
+
+    suspend fun downloadConfigSpecsFromStatsig(sinceTime: Long): String? {
+        return httpWorker.downloadConfigSpecsFromStatsigAPI(sinceTime)
     }
 
     suspend fun getIDLists(): String? {
@@ -101,7 +109,7 @@ internal class StatsigTransport(
         val worker = when (config?.proxyProtocol) {
             NetworkProtocol.HTTP -> httpWorker
             NetworkProtocol.GRPC -> GRPCWorker(sdkKey, options, statsigMetadata, errorBoundary, config.proxyAddress)
-            NetworkProtocol.GRPC_WEBSOCKET -> GRPCWebsocketWorker(sdkKey, options, statsigMetadata, statsigScope, errorBoundary, config.proxyAddress)
+            NetworkProtocol.GRPC_WEBSOCKET -> GRPCWebsocketWorker(sdkKey, options, statsigScope, errorBoundary, config)
             else -> null
         }
         return worker

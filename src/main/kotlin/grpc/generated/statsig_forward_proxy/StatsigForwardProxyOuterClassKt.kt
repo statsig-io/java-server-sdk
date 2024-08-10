@@ -3,5 +3,5 @@
 
 // Generated files should ignore deprecation warnings
 @file:Suppress("DEPRECATION")
-package grpc.generated.statsig_forward_proxy;
 
+package grpc.generated.statsig_forward_proxy

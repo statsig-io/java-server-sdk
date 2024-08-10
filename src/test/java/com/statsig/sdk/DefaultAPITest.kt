@@ -12,6 +12,7 @@ class DefaultAPITest {
     @JvmField
     @Rule
     val retry = RetryRule(3)
+
     @Test
     fun testDefaultAPI() {
         val requests: MutableList<Request> = mutableListOf()

@@ -40,7 +40,7 @@ class StatsigErrorBoundaryUsage {
             every { anyConstructed<SpecStore>().getLayerConfig(any()) } throws Exception("Test Evaluator LayerConfig")
             every { anyConstructed<SpecStore>().getLayer(any()) } throws Exception("Test Evaluator Layers")
             every { anyConstructed<StatsigLogger>().log(match { it.eventName != "statsig::diagnostics" }) } throws Exception("Test Logger Log")
-            coEvery { anyConstructed<SpecUpdater>().updateConfigSpecs() } coAnswers {
+            coEvery { anyConstructed<SpecUpdater>().getConfigSpecsFromNetwork() } coAnswers {
                 if (throwOnDownloadConfigSpecs) {
                     throw Exception("Bad Config Specs")
                 }
