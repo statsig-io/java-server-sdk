@@ -44,7 +44,6 @@ dependencies {
     implementation("com.statsig:ip3country:0.1.5")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     implementation("io.grpc:grpc-netty-shaded:1.54.0")
-    implementation("javax.annotation:javax.annotation-api:1.3.1")
     implementation("io.grpc:grpc-kotlin-stub:1.3.1")
     implementation("io.grpc:grpc-protobuf:1.54.0")
     implementation("com.google.protobuf:protobuf-kotlin:3.24.4")
