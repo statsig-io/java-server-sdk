@@ -12,7 +12,7 @@ internal class StreamingFallback(
     private val interval: Long,
 ) {
     private var job: Job? = null
-    suspend fun startBackup(flow: MutableSharedFlow<String>) {
+    fun startBackup(flow: MutableSharedFlow<String>) {
         if (job == null) {
             job = statsigScope.launch {
                 while (true) {

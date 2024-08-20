@@ -35,7 +35,7 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
     testImplementation("io.mockk:mockk:1.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
-    testImplementation("io.grpc:grpc-testing:1.54.0")
+    testImplementation("io.grpc:grpc-testing:1.66.0")
     implementation("com.google.code.gson:gson:2.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
@@ -43,11 +43,12 @@ dependencies {
     implementation("com.github.ua-parser:uap-java:1.6.1")
     implementation("com.statsig:ip3country:0.1.5")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
-    implementation("io.grpc:grpc-netty-shaded:1.54.0")
-    implementation("io.grpc:grpc-kotlin-stub:1.3.1")
-    implementation("io.grpc:grpc-protobuf:1.54.0")
-    implementation("com.google.protobuf:protobuf-kotlin:3.24.4")
+    // GRPC Dependencies
+    implementation("io.grpc:grpc-netty-shaded:1.66.0")
+    implementation("io.grpc:grpc-stub:1.66.0")
+    implementation("io.grpc:grpc-protobuf:1.66.0")
     implementation("com.google.protobuf:protobuf-java:3.24.4")
+    implementation("org.apache.tomcat:annotations-api:6.0.53")
 }
 
 val sourcesJar by tasks.registering(Jar::class) {
@@ -101,20 +102,13 @@ protobuf {
     }
     plugins {
         id("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.62.2"
-        }
-        id("grpckt") {
-            artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.1:jdk8@jar"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.66.0"
         }
     }
     generateProtoTasks {
         all().forEach { task ->
             task.plugins {
-                create("grpc")
-                create("grpckt")
-            }
-            task.builtins {
-                create("kotlin")
+                id("grpc")
             }
             task.doLast {
                 val outputPath = task.outputs.files.getAsPath()
@@ -122,11 +116,6 @@ protobuf {
                     from("$outputPath/grpc")
                     from("$outputPath/java")
                     into("$projectDir/src/main/java")
-                }
-                copy {
-                    from("$outputPath/grpckt")
-                    from("$outputPath/kotlin")
-                    into("$projectDir/src/main/kotlin")
                 }
                 delete("$outputPath")
             }

@@ -1,15 +1,12 @@
 package com.statsig.sdk
 
 import com.statsig.sdk.network.GRPCWorker
-import grpc.generated.statsig_forward_proxy.ConfigSpecResponseKt
-import grpc.generated.statsig_forward_proxy.StatsigForwardProxyGrpcKt.StatsigForwardProxyCoroutineImplBase
-import grpc.generated.statsig_forward_proxy.StatsigForwardProxyGrpcKt.StatsigForwardProxyCoroutineStub
+import grpc.generated.statsig_forward_proxy.StatsigForwardProxyGrpc
 import grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecRequest
 import grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecResponse
-import grpc.generated.statsig_forward_proxy.configSpecResponse
+import io.grpc.stub.StreamObserver
 import io.grpc.testing.GrpcServerRule
 import io.mockk.mockk
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -23,28 +20,12 @@ class GRPCTest {
     @JvmField
     @Rule
     val retry = RetryRule(3)
-    private fun ConfigSpecRequest.configSpecResponseWithCheck(genResponse: ConfigSpecResponseKt.Dsl.() -> Unit): ConfigSpecResponse {
-        val response = configSpecResponse(genResponse)
-        if (response.lastUpdated.toULong() > sinceTime.toULong()) {
-            return response
-        } else {
-            return configSpecResponse { lastUpdated = sinceTime; spec = "no update" }
-        }
-    }
 
-    private fun setupGRPC(outerGetConfigSpec: suspend ConfigSpecRequest.() -> ConfigSpecResponse) {
-        val service = object : StatsigForwardProxyCoroutineImplBase() {
-            override suspend fun getConfigSpec(request: ConfigSpecRequest): ConfigSpecResponse {
-                return outerGetConfigSpec(request)
-            }
-        }
-        grpcServerRule.serviceRegistry.addService(service)
-    }
-
-    private fun setupGRPCStreaming(outerStreamConfigSpec: ConfigSpecRequest.() -> Flow<ConfigSpecResponse>) {
-        val service = object : StatsigForwardProxyCoroutineImplBase() {
-            override fun streamConfigSpec(request: ConfigSpecRequest): Flow<ConfigSpecResponse> {
-                return outerStreamConfigSpec(request)
+    private fun setupGRPC(spec: ConfigSpecResponse) {
+        val service = object : StatsigForwardProxyGrpc.StatsigForwardProxyImplBase() {
+            override fun getConfigSpec(request: ConfigSpecRequest?, responseObserver: StreamObserver<ConfigSpecResponse>?) {
+                responseObserver?.onNext(spec)
+                responseObserver?.onCompleted()
             }
         }
         grpcServerRule.serviceRegistry.addService(service)
@@ -52,12 +33,12 @@ class GRPCTest {
 
     @Test
     fun testGRPC() = runBlocking {
-        setupGRPC { configSpecResponseWithCheck { lastUpdated = 1; spec = "spec-1" } }
+        setupGRPC(ConfigSpecResponse.newBuilder().setSpec("spec-1").setLastUpdated(123).build())
         val metadata = StatsigMetadata()
         val options = StatsigOptions()
         val boundary = mockk<ErrorBoundary>()
         val worker = GRPCWorker("sdk", options, metadata, boundary, "localhost")
-        val stub = StatsigForwardProxyCoroutineStub(grpcServerRule.channel)
+        val stub = StatsigForwardProxyGrpc.newBlockingStub(grpcServerRule.channel)
 
         val stubField = GRPCWorker::class.java.getDeclaredField("stub")
         stubField.isAccessible = true

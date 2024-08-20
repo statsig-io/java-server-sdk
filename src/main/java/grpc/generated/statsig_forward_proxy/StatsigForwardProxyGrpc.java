@@ -3,8 +3,11 @@ package grpc.generated.statsig_forward_proxy;
 import static io.grpc.MethodDescriptor.generateFullMethodName;
 
 /**
- * Generated file
  */
+@javax.annotation.Generated(
+    value = "by gRPC proto compiler (version 1.66.0)",
+    comments = "Source: statsig_forward_proxy.proto")
+@io.grpc.stub.annotations.GrpcGenerated
 public final class StatsigForwardProxyGrpc {
 
   private StatsigForwardProxyGrpc() {}

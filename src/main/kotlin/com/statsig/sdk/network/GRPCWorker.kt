@@ -1,8 +1,8 @@
 package com.statsig.sdk.network
 
 import com.statsig.sdk.*
-import grpc.generated.statsig_forward_proxy.StatsigForwardProxyGrpcKt.StatsigForwardProxyCoroutineStub
-import grpc.generated.statsig_forward_proxy.configSpecRequest
+import grpc.generated.statsig_forward_proxy.StatsigForwardProxyGrpc
+import grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecRequest
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.StatusException
@@ -27,13 +27,10 @@ internal class GRPCWorker(
 
     private var diagnostics: Diagnostics? = null
     private val channel: ManagedChannel = ManagedChannelBuilder.forTarget(proxyApi).usePlaintext().build()
-    private val stub = StatsigForwardProxyCoroutineStub(channel)
+    private val stub = StatsigForwardProxyGrpc.newBlockingStub(channel)
 
     override suspend fun downloadConfigSpecs(sinceTime: Long): String? {
-        val request = configSpecRequest {
-            this.sdkKey = this@GRPCWorker.sdkKey
-            this.sinceTime = sinceTime
-        }
+        val request = ConfigSpecRequest.newBuilder().setSdkKey(this.sdkKey).setSinceTime(sinceTime).build()
         try {
             diagnostics?.startNetworkRequestDiagnostics(KeyType.DOWNLOAD_CONFIG_SPECS, NetworkProtocol.GRPC)
             val response = stub.withDeadlineAfter(options.initTimeoutMs, TimeUnit.MILLISECONDS).getConfigSpec(request)
