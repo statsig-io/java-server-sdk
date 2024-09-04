@@ -610,6 +610,32 @@ internal class Evaluator(
                     return Regex(targetValue).containsMatchIn(strValue)
                 }
 
+                Const.ARRAY_CONTAINS_ANY -> {
+                    if (value !is ArrayList<*> || condition.targetValue !is ArrayList<*>) {
+                        return false
+                    }
+
+                    val targetArray = condition.targetValue as? ArrayList<String>
+                    if (targetArray != null) {
+                        return arrayHasValue(value, targetArray)
+                    }
+
+                    return false
+                }
+
+                Const.ARRAY_CONTAINS_NONE -> {
+                    if (value !is ArrayList<*> || condition.targetValue !is ArrayList<*>) {
+                        return false
+                    }
+
+                    val targetArray = condition.targetValue as? ArrayList<String>
+                    if (targetArray != null) {
+                        return !arrayHasValue(value, targetArray)
+                    }
+
+                    return false
+                }
+
                 Const.EQ -> {
                     return value == condition.targetValue
                 }
@@ -677,6 +703,20 @@ internal class Evaluator(
             }
         } catch (e: IllegalArgumentException) {
             errorBoundary.logException("evaluateCondition:all", e)
+        }
+        return false
+    }
+
+    private fun arrayHasValue(value: ArrayList<*>, target: ArrayList<String>): Boolean {
+        val valueSet = value.filter { it is Any }.toSet()
+
+        for (item in target) {
+            val itemAsAny = item as? Any
+            val itemAsDouble = item.toDoubleOrNull()
+
+            if (itemAsAny in valueSet || itemAsDouble?.let { it in valueSet } == true) {
+                return true
+            }
         }
         return false
     }

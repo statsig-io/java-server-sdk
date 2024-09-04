@@ -29,6 +29,8 @@ object Const {
     const val ON: String = "on"
     const val IN_SEGMENT_LIST: String = "in_segment_list"
     const val NOT_IN_SEGMENT_LIST: String = "not_in_segment_list"
+    const val ARRAY_CONTAINS_ANY: String = "array_contains_any"
+    const val ARRAY_CONTAINS_NONE: String = "array_contains_none"
 
     const val APP_VERSION: String = "app_version"
     const val APPVERSION: String = "appversion"
