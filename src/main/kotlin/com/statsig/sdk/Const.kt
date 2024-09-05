@@ -31,6 +31,8 @@ object Const {
     const val NOT_IN_SEGMENT_LIST: String = "not_in_segment_list"
     const val ARRAY_CONTAINS_ANY: String = "array_contains_any"
     const val ARRAY_CONTAINS_NONE: String = "array_contains_none"
+    const val ARRAY_CONTAINS_ALL: String = "array_contains_all"
+    const val NOT_ARRAY_CONTAINS_ALL: String = "not_array_contains_all"
 
     const val APP_VERSION: String = "app_version"
     const val APPVERSION: String = "appversion"

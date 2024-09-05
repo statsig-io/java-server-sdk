@@ -636,6 +636,30 @@ internal class Evaluator(
                     return false
                 }
 
+                Const.ARRAY_CONTAINS_ALL -> {
+                    if (value !is ArrayList<*>) {
+                        return false
+                    }
+
+                    if (condition.targetValue == null) {
+                        return false
+                    }
+
+                    return arrayContainsAny(value, condition.targetValue)
+                }
+
+                Const.NOT_ARRAY_CONTAINS_ALL -> {
+                    if (value !is ArrayList<*>) {
+                        return false
+                    }
+
+                    if (condition.targetValue == null) {
+                        return false
+                    }
+
+                    return !arrayContainsAny(value, condition.targetValue)
+                }
+
                 Const.EQ -> {
                     return value == condition.targetValue
                 }
@@ -719,6 +743,23 @@ internal class Evaluator(
             }
         }
         return false
+    }
+
+    private fun arrayContainsAny(value: ArrayList<*>, target: Any): Boolean {
+        val targetList = if (target is Iterable<*>) target.toList() else listOf(target)
+
+        for (item in targetList) {
+            val itemAsDouble = item.toString().toDoubleOrNull()
+
+            val containsItem = value.contains(item)
+            val containsItemAsDouble = itemAsDouble != null && value.contains(itemAsDouble)
+
+            if (!containsItem && !containsItemAsDouble) {
+                return false
+            }
+        }
+
+        return true
     }
 
     private fun matchStringInArray(
