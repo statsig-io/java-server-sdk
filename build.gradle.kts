@@ -47,7 +47,6 @@ dependencies {
     implementation("io.grpc:grpc-netty-shaded:1.66.0")
     implementation("io.grpc:grpc-stub:1.66.0")
     implementation("io.grpc:grpc-protobuf:1.66.0")
-    implementation("com.google.protobuf:protobuf-java:3.24.4")
     implementation("org.apache.tomcat:annotations-api:6.0.53")
 }
 
