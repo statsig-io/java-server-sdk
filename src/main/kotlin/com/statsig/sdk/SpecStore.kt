@@ -21,9 +21,8 @@ internal class SpecStore(
     private val serverSecret: String,
 ) {
     private var initTime: Long = 0
-    private var initReason: EvaluationReason = EvaluationReason.UNINITIALIZED
+    private var evalReason: EvaluationReason = EvaluationReason.UNINITIALIZED
     private var downloadIDListCallCount: Long = 0
-    var isInitialized: Boolean = false
 
     private var dynamicConfigs: Map<String, APIConfig> = emptyMap()
     private var gates: Map<String, APIConfig> = emptyMap()
@@ -46,18 +45,19 @@ internal class SpecStore(
     private val gson = Utils.getGson()
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
-    suspend fun initialize() {
+    suspend fun initialize(): FailureDetails? {
         if (!options.localMode) {
             specUpdater.initialize()
 
-            this.initializeSpecs()
+            var failureDetails = this.initializeSpecs()
             this.initTime = if (specUpdater.lastUpdateTime == 0L) -1 else specUpdater.lastUpdateTime
 
             this.syncIdListsFromNetwork(specUpdater.updateIDLists())
-
             specUpdater.startListening()
+
+            return failureDetails
         }
-        this.isInitialized = true
+        return null
     }
 
     fun shutdown() {
@@ -157,16 +157,12 @@ internal class SpecStore(
         return this.idLists[idListName]
     }
 
-    fun getAllIDLists(): Map<String, IDList> {
-        return this.idLists
-    }
-
     fun getInitTime(): Long {
         return this.initTime
     }
 
     fun getEvaluationReason(): EvaluationReason {
-        return this.initReason
+        return this.evalReason
     }
 
     fun getLastUpdateTime(): Long {
@@ -367,12 +363,12 @@ internal class SpecStore(
             if (source == DataSource.DATA_STORE) {
                 val updated = setDownloadedConfigs(configs)
                 if (updated) {
-                    initReason = EvaluationReason.DATA_ADAPTER
+                    this.evalReason = EvaluationReason.DATA_ADAPTER
                 }
                 return updated
             }
             if (source == DataSource.BOOTSTRAP) {
-                initReason = EvaluationReason.BOOTSTRAP
+                this.evalReason = EvaluationReason.BOOTSTRAP
                 setDownloadedConfigs(configs, true)
                 diagnostics.markEnd(KeyType.BOOTSTRAP, true, step = StepType.PROCESS)
                 return true
@@ -381,7 +377,7 @@ internal class SpecStore(
                 // If Bootstrap and DataAdapter failed to load, defaulting to download config spec from network
                 val updated = setDownloadedConfigs(configs)
                 if (updated) {
-                    initReason = EvaluationReason.NETWORK
+                    this.evalReason = EvaluationReason.NETWORK
                     options.dataStore?.let {
                         downloadConfigSpecsToDataStore(it, configs)
                     }
@@ -395,13 +391,16 @@ internal class SpecStore(
         }
     }
 
-    private suspend fun initializeSpecs() {
+    private suspend fun initializeSpecs(): FailureDetails? {
+        var failureDetails: FailureDetails? = FailureDetails(FailureReason.EMPTY_SPEC)
         for (source in specUpdater.getInitializeOrder()) {
             val configs = specUpdater.getConfigSpecs(source)
-            if (processDownloadedConfigs(configs, source)) {
-                return
+            if (processDownloadedConfigs(configs.first, source)) {
+                return null
             }
+            failureDetails = configs.second
         }
+        return failureDetails
     }
 
     private fun downloadConfigSpecsToDataStore(

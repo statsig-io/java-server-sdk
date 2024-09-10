@@ -122,8 +122,8 @@ internal class HTTPWorker(
         statsigHttpClient = clientBuilder.build()
     }
 
-    override suspend fun downloadConfigSpecs(sinceTime: Long): String? {
-        var response = get(
+    override suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
+        var (response, exception) = get(
             "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
             emptyMap(),
             options.initTimeoutMs,
@@ -131,11 +131,11 @@ internal class HTTPWorker(
         response?.use {
             if (!response.isSuccessful) {
                 options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
-                return null
+                return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
-            return response.body?.string()
+            return Pair(response.body?.string(), null)
         }
-        return null
+        return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = exception))
     }
 
     override suspend fun getIDLists(): String? {
@@ -151,8 +151,8 @@ internal class HTTPWorker(
         return response.body?.string()
     }
 
-    suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long): String? {
-        var response = get(
+    suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long): Pair<String?, FailureDetails?> {
+        var (response, exception) = get(
             "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
             emptyMap(),
             options.initTimeoutMs,
@@ -160,11 +160,11 @@ internal class HTTPWorker(
         response?.use {
             if (!response.isSuccessful) {
                 options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
-                return null
+                return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
-            return response.body?.string()
+            return Pair(response.body?.string(), null)
         }
-        return null
+        return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = exception))
     }
 
     suspend fun downloadIDListsFromStatsigAPI(): String? {
@@ -245,14 +245,14 @@ internal class HTTPWorker(
             url,
             body,
             headers,
-        )
+        ).first
     }
 
     private suspend fun get(
         url: String,
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
-    ): Response? {
+    ): Pair<Response?, Exception?> {
         return httpHelper.request(
             statsigHttpClient.newBuilder().callTimeout(
                 timeoutMs,

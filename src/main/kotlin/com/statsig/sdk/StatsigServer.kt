@@ -21,7 +21,7 @@ sealed class StatsigServer {
     @JvmSynthetic abstract suspend fun initialize(
         serverSecret: String,
         options: StatsigOptions,
-    )
+    ): InitializationDetails?
 
     abstract fun isInitialized(): Boolean
 
@@ -110,7 +110,7 @@ sealed class StatsigServer {
         metadata: Map<String, String>? = null,
     )
 
-    abstract fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<Void?>
+    abstract fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<InitializationDetails?>
 
     abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
 
@@ -248,9 +248,11 @@ private class StatsigServerImpl() :
     private val statsigMetadata = StatsigMetadata()
     private val sdkConfigs = SDKConfigs()
     override var initialized = AtomicBoolean(false)
+    private var setupStartTime = 0L
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
         Thread.setDefaultUncaughtExceptionHandler(MainThreadExceptionHandler(this, Thread.currentThread()))
+        setupStartTime = System.currentTimeMillis()
         errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
         coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
             // no-op - supervisor job should not throw when a child fails
@@ -263,15 +265,16 @@ private class StatsigServerImpl() :
         this.options = options
     }
 
-    override suspend fun initialize(serverSecret: String, options: StatsigOptions) {
+    override suspend fun initialize(serverSecret: String, options: StatsigOptions): InitializationDetails? {
         if (!initialized.getAndSet(true)) {
             setup(serverSecret, options)
-            initializeImpl(serverSecret, options)
+            return initializeImpl(serverSecret, options)
         }
+        return null
     }
 
-    private suspend fun initializeImpl(serverSecret: String, options: StatsigOptions) {
-        errorBoundary.capture(
+    private suspend fun initializeImpl(serverSecret: String, options: StatsigOptions): InitializationDetails {
+        return errorBoundary.capture(
             "initialize",
             {
                 mutex.withLock { // Prevent multiple coroutines from calling this at once.
@@ -283,15 +286,16 @@ private class StatsigServerImpl() :
                     setupAndStartDiagnostics()
                     evaluator =
                         Evaluator(transport, options, statsigScope, errorBoundary, diagnostics, statsigMetadata, sdkConfigs, serverSecret)
-                    evaluator.initialize()
+                    val failureDetails = evaluator.initialize()
                     if (options.dataStore != null) {
                         dataStoreSetUp()
                     }
-                    endInitDiagnostics(isSDKInitialized())
+                    endInitDiagnostics(failureDetails == null)
+                    return@capture InitializationDetails(System.currentTimeMillis() - setupStartTime, isSDKReady = true, configSpecReady = failureDetails == null, failureDetails)
                 }
             },
             {
-                endInitDiagnostics(false)
+                return@capture InitializationDetails(System.currentTimeMillis() - setupStartTime, false, false, FailureDetails(FailureReason.INTERNAL_ERROR))
             },
         )
     }
@@ -785,13 +789,12 @@ private class StatsigServerImpl() :
         }, { return@captureSync })
     }
 
-    override fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<Void?> {
+    override fun initializeAsync(serverSecret: String, options: StatsigOptions): CompletableFuture<InitializationDetails?> {
         if (!initialized.getAndSet(true)) {
             setup(serverSecret, options)
         }
         return statsigScope.future {
-            initializeImpl(serverSecret, options)
-            null
+            return@future initializeImpl(serverSecret, options)
         }
     }
 

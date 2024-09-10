@@ -62,7 +62,7 @@ class EvaluationDetailsTest {
         }
 
         driver = StatsigServer.create()
-        driver.initialize("secret-local", options)
+        val _detail = driver.initialize("secret-local", options)
     }
 
     @Test

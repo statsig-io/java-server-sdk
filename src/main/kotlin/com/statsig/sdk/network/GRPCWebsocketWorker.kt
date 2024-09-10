@@ -83,7 +83,7 @@ internal class GRPCWebsocketWorker(
         downloadConfigsJob = statsigScope.launch(Dispatchers.IO) { streamConfigSpec() }
     }
 
-    override suspend fun downloadConfigSpecs(sinceTime: Long): String? {
+    override suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
         diagnostics?.startNetworkRequestDiagnostics(KeyType.DOWNLOAD_CONFIG_SPECS, NetworkProtocol.GRPC_WEBSOCKET)
         val res = withTimeoutOrNull(options.initTimeoutMs) { configSpecsFlow.first() }
         diagnostics?.endNetworkRequestDiagnostics(
@@ -93,7 +93,8 @@ internal class GRPCWebsocketWorker(
             if (res == null) "failed to receive config spec within init timeout" else null,
             null,
         )
-        return res
+        val details = if (res == null) FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = java.lang.Exception("Statsig: failed to receive config spec within init timeout")) else null
+        return Pair(res, details)
     }
 
     override suspend fun getIDLists(): String? {

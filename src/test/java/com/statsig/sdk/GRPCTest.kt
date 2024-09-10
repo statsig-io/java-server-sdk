@@ -44,6 +44,6 @@ class GRPCTest {
         stubField.isAccessible = true
         stubField.set(worker, stub)
 
-        assertEquals("spec-1", worker.downloadConfigSpecs(0))
+        assertEquals(Pair("spec-1", null), worker.downloadConfigSpecs(0))
     }
 }

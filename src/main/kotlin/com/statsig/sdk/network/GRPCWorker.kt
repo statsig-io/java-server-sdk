@@ -29,7 +29,7 @@ internal class GRPCWorker(
     private val channel: ManagedChannel = ManagedChannelBuilder.forTarget(proxyApi).usePlaintext().build()
     private val stub = StatsigForwardProxyGrpc.newBlockingStub(channel)
 
-    override suspend fun downloadConfigSpecs(sinceTime: Long): String? {
+    override suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
         val request = ConfigSpecRequest.newBuilder().setSdkKey(this.sdkKey).setSinceTime(sinceTime).build()
         try {
             diagnostics?.startNetworkRequestDiagnostics(KeyType.DOWNLOAD_CONFIG_SPECS, NetworkProtocol.GRPC)
@@ -41,7 +41,7 @@ internal class GRPCWorker(
                 null,
                 null,
             )
-            return response.spec
+            return Pair(response.spec, null)
         } catch (e: StatusException) {
             diagnostics?.endNetworkRequestDiagnostics(
                 KeyType.DOWNLOAD_CONFIG_SPECS,
@@ -51,7 +51,7 @@ internal class GRPCWorker(
                 null,
             )
             options.customLogger.warning("[Statsig]: An status exception was received from forward proxy: $e")
-            return null
+            return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = e))
         }
     }
 

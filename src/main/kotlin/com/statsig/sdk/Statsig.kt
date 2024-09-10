@@ -10,14 +10,14 @@ class Statsig {
 
         /**
          * Initializes the Statsig SDK.
-         *
+         * @return Details of initializaiton, success
          * @param serverSecret The server SDK key copied from the project's API Keys
          * @param options The StatsigOptions object used to configure the SDK
          */
         suspend fun initialize(
             serverSecret: String,
             options: StatsigOptions,
-        ) {
+        ): InitializationDetails? {
             if (!isInitialized()) { // Quick check without synchronization
                 synchronized(this) {
                     if (!isInitialized()
@@ -25,8 +25,10 @@ class Statsig {
                         statsigServer = StatsigServer.create()
                     }
                 }
-                statsigServer.initialize(serverSecret, options)
+                return statsigServer.initialize(serverSecret, options)
             }
+
+            return null
         }
 
         /**
@@ -429,7 +431,7 @@ class Statsig {
         fun initializeAsync(
             serverSecret: String,
             options: StatsigOptions = StatsigOptions(),
-        ): CompletableFuture<Void?> {
+        ): CompletableFuture<InitializationDetails?> {
             if (!isInitialized()) { // Quick check without synchronization
                 synchronized(this) {
                     if (!isInitialized()

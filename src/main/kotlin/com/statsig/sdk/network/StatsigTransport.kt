@@ -68,11 +68,11 @@ internal class StatsigTransport(
         }
     }
 
-    suspend fun downloadConfigSpecs(sinceTime: Long): String? {
+    suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
         return downloadConfigSpecWorker.downloadConfigSpecs(sinceTime)
     }
 
-    suspend fun downloadConfigSpecsFromStatsig(sinceTime: Long): String? {
+    suspend fun downloadConfigSpecsFromStatsig(sinceTime: Long): Pair<String?, FailureDetails?> {
         return httpWorker.downloadConfigSpecsFromStatsigAPI(sinceTime)
     }
 
@@ -94,7 +94,7 @@ internal class StatsigTransport(
         url: String,
         headers: Map<String, String> = emptyMap(),
     ): Response? {
-        return httpHelper.request(externalHttpClient, url, null, headers)
+        return httpHelper.request(externalHttpClient, url, null, headers).first
     }
 
     fun shutdown() {

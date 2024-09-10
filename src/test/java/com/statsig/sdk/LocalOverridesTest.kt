@@ -1,11 +1,11 @@
 package com.statsig.sdk
 
 import kotlinx.coroutines.runBlocking
-import org.junit.AfterClass
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.BeforeClass
+import org.junit.Before
 import org.junit.Test
 
 class LocalOverridesTest {
@@ -13,19 +13,15 @@ class LocalOverridesTest {
     private val userB = StatsigUser(customIDs = mapOf("customID" to "user-b"))
     private val users = listOf<StatsigUser>(userA, userB)
 
-    companion object {
-        @BeforeClass
-        @JvmStatic
-        internal fun beforeAll() = runBlocking {
-            val options = StatsigOptions(localMode = true)
-            Statsig.initialize("secret-local", options)
-        }
+    @Before
+    fun setup() = runBlocking {
+        val options = StatsigOptions(localMode = true)
+        val _detail = Statsig.initialize("secret-local", options)
+    }
 
-        @AfterClass
-        @JvmStatic
-        fun afterAll() {
-            Statsig.shutdown()
-        }
+    @After
+    fun afterEach() {
+        Statsig.shutdown()
     }
 
     @Test

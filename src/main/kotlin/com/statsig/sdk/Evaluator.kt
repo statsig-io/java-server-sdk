@@ -88,9 +88,10 @@ internal class Evaluator(
         }
     }
 
-    suspend fun initialize() {
-        specStore.initialize()
+    suspend fun initialize(): FailureDetails? {
+        val failureDetails = specStore.initialize()
         isInitialized = true
+        return failureDetails
     }
 
     fun shutdown() {

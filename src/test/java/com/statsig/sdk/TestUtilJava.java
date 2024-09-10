@@ -30,7 +30,7 @@ public class TestUtilJava {
         return (EvaluationReason) privateSpecStoreField.get(specStore);
     }
     static public void setInitReasonFromSpecStore(SpecStore specStore, EvaluationReason reason) throws NoSuchFieldException, IllegalAccessException {
-        Field privateSpecStoreField = specStore.getClass().getDeclaredField("initReason");
+        Field privateSpecStoreField = specStore.getClass().getDeclaredField("evalReason");
         privateSpecStoreField.setAccessible(true);
         privateSpecStoreField.set(specStore, reason);
     }

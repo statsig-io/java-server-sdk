@@ -8,7 +8,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -53,12 +52,13 @@ internal class SpecUpdater(
     fun startListening() {
         if (backgroundDownloadConfigs == null) {
             val flow = if (transport.downloadConfigSpecWorker.isPullWorker) { pollForConfigSpecs() } else {
-                transport.configSpecsFlow().map(::parseConfigSpecs).filterNotNull().map { Pair(it, DataSource.NETWORK) }
+                transport.configSpecsFlow().map(::parseConfigSpecs).map { Pair(it.first, DataSource.NETWORK) }
             }
 
             backgroundDownloadConfigs = statsigScope.launch {
-                flow.collect {
-                    configSpecCallback.invoke(it.first, it.second)
+                flow.collect { response ->
+                    val spec = response.first
+                    spec?.let { configSpecCallback(spec, response.second) }
                 }
             }
         }
@@ -74,7 +74,7 @@ internal class SpecUpdater(
         transport.setStreamingFallback(NetworkEndpoint.DOWNLOAD_CONFIG_SPECS) {
             this.transport.downloadConfigSpecsFromStatsig(
                 this.lastUpdateTime,
-            )
+            ).first
         }
     }
 
@@ -94,7 +94,8 @@ internal class SpecUpdater(
         return order
     }
 
-    suspend fun getConfigSpecs(source: DataSource): APIDownloadedConfigs? {
+    // This can return a tuple
+    suspend fun getConfigSpecs(source: DataSource): Pair<APIDownloadedConfigs?, FailureDetails?> {
         return when (source) {
             DataSource.NETWORK -> getConfigSpecsFromNetwork()
             DataSource.STATSIG_NETWORK -> parseConfigsFromNetwork(this.transport.downloadConfigSpecsFromStatsig(this.lastUpdateTime))
@@ -108,16 +109,16 @@ internal class SpecUpdater(
         }
     }
 
-    private fun getConfigSpecsFromDataStore(): APIDownloadedConfigs? {
-        val dataStore = options.dataStore ?: return null
+    private fun getConfigSpecsFromDataStore(): Pair<APIDownloadedConfigs?, FailureDetails?> {
+        val dataStore = options.dataStore ?: return Pair(null, FailureDetails(FailureReason.INTERNAL_ERROR))
 
         val adapterKey = dataStore.dataStoreKey
         val cacheString = dataStore.get(adapterKey)
 
         val specs = parseConfigSpecs(cacheString)
-        specs?.let {
+        specs?.first?.let {
             if (it.time < this.lastUpdateTime) {
-                return null
+                return Pair(null, null)
             }
         }
         return specs
@@ -131,36 +132,38 @@ internal class SpecUpdater(
             null
         }
     }
-    suspend fun getConfigSpecsFromNetwork(): APIDownloadedConfigs? {
+    suspend fun getConfigSpecsFromNetwork(): Pair<APIDownloadedConfigs?, FailureDetails?> {
         return parseConfigsFromNetwork(this.transport.downloadConfigSpecs(this.lastUpdateTime))
     }
 
-    private fun parseConfigSpecs(specs: String?): APIDownloadedConfigs? {
+    private fun parseConfigSpecs(specs: String?): Pair<APIDownloadedConfigs?, FailureDetails?> {
         if (specs.isNullOrEmpty()) {
-            return null
+            return Pair(null, FailureDetails(FailureReason.EMPTY_SPEC))
         }
         try {
-            return gson.fromJson(specs, APIDownloadedConfigs::class.java)
+            return Pair(gson.fromJson(specs, APIDownloadedConfigs::class.java), null)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseConfigSpecs", e)
             options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
         }
-        return null
     }
 
-    private fun parseConfigsFromNetwork(response: String?): APIDownloadedConfigs? {
-        if (response == null) return null
+    private fun parseConfigsFromNetwork(response: Pair<String?, FailureDetails?>): Pair<APIDownloadedConfigs?, FailureDetails?> {
+        if (response.first == null) {
+            return Pair(null, response.second)
+        }
         try {
-            val configs = gson.fromJson(response, APIDownloadedConfigs::class.java)
+            val configs = gson.fromJson(response.first, APIDownloadedConfigs::class.java)
             if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
-                return null
+                return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR))
             }
-            return configs
+            return Pair(configs, null)
         } catch (e: Exception) {
             errorBoundary.logException("downloadConfigSpecs", e)
             options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
         }
-        return null
     }
 
     private fun parseIDLists(lists: String?): Map<String, IDList>? {
@@ -181,7 +184,7 @@ internal class SpecUpdater(
             while (true) {
                 delay(options.rulesetsSyncIntervalMs)
                 for (source in getConfigSyncSources()) {
-                    val config = getConfigSpecs(source)
+                    val config = getConfigSpecs(source).first
                     if (config != null) {
                         emit(Pair(config, source))
                     }

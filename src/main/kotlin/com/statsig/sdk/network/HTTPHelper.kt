@@ -27,7 +27,7 @@ internal class HTTPHelper(
         url: String,
         body: Map<String, Any>?,
         headers: Map<String, String> = emptyMap(),
-    ): Response? {
+    ): Pair<Response?, Exception?> {
         val diagnosticsKey = diagnostics?.getDiagnosticKeyFromURL(url)
         try {
             val request = Request.Builder()
@@ -46,14 +46,14 @@ internal class HTTPHelper(
                 null,
                 response,
             )
-            return response
+            return Pair(response, null)
         } catch (e: Exception) {
             options.customLogger.warning("[Statsig]: An exception was caught: $e")
             if (e is JsonParseException) {
                 errorBoundary.logException("postImpl", e)
             }
             diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, NetworkProtocol.HTTP, false, e.message, null)
-            return null
+            return Pair(null, e)
         }
     }
 }
