@@ -15,6 +15,15 @@ class StatsigUserTest {
     }
 
     @Test
+    fun testInitializeWithUserIDAndCustomID() {
+        val userID = "abc123"
+        val customIDs = mapOf<String, String>("customID" to "abc123")
+        val user = StatsigUser(userID, customIDs)
+        assertEquals(user.userID, "abc123")
+        assertEquals(user.customIDs, customIDs)
+    }
+
+    @Test
     fun testInitializeCustomID() {
         val customIDs = mapOf<String, String>("customID" to "abc123")
         val user = StatsigUser(customIDs)
