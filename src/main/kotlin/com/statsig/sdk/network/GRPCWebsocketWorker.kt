@@ -133,11 +133,12 @@ internal class GRPCWebsocketWorker(
             streamingFallback?.startBackup(dcsFlowBacker)
         }
         if (shouldRetry) {
+            options.customLogger.warning("[Statsig]: grpcWebSocket: connection error: $throwable")
             errorBoundary.logException("grpcWebSocket: connection error", throwable ?: Exception("connection closed"), bypassDedupe = true)
             streamConfigSpecWithBackoff()
             connected = false
         } else {
-            options.customLogger.warning("failed to connect to forward proxy using gRPC streaming")
+            options.customLogger.warning("[Statsig]: grpcWebSocket: connection error: retry exhausted")
             errorBoundary.logException(
                 "grpcWebSocket: retry exhausted",
                 Exception("Remaining retry is $remainingRetries, exception is ${throwable?.message}"),
@@ -162,6 +163,7 @@ internal class GRPCWebsocketWorker(
         if (response.lastUpdated >= lastUpdateTime) {
             lastUpdateTime = response.lastUpdated
             if (!dcsFlowBacker.tryEmit(response.spec)) {
+                options.customLogger.warning("[Statsig]: grpcWebSocket: Failed to emit response")
                 errorBoundary.logException(
                     "grpcWebSocket: Failed to emit response",
                     Exception("${response.lastUpdated}"),
