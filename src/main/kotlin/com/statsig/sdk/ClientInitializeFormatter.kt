@@ -49,6 +49,7 @@ internal data class ClientConfig(
     @SerializedName("explicit_parameters") var explicitParameters: Array<String>? = null,
     @SerializedName("is_in_layer") var isInLayer: Boolean? = null,
     @SerializedName("is_device_based") var isDeviceBased: Boolean? = null,
+    @SerializedName("group_name") var group_name: String? = null,
 ) {
     fun toMap(): Map<String, Any?> {
         val map = mutableMapOf<String, Any?>()
@@ -67,6 +68,7 @@ internal data class ClientConfig(
         if (explicitParameters != null) map["explicit_parameters"] = explicitParameters
         if (isInLayer != null) map["is_in_layer"] = isInLayer
         if (isDeviceBased != null) map["is_device_based"] = isDeviceBased
+        if (group_name != null) map["group_name"] = group_name
         return map
     }
 }
@@ -177,6 +179,9 @@ internal class ClientInitializeFormatter(
                 result.isExperimentActive = delegateSpec.isActive
                 result.explicitParameters = delegateSpec.explicitParameters ?: emptyArray()
                 result.secondaryExposures = hashExposures(delegateContext.evaluation.secondaryExposures)
+                if (delegateContext.evaluation.groupName != null && delegateContext.evaluation.groupName != "") {
+                    result.group_name = delegateContext.evaluation.groupName
+                }
             }
         }
 
@@ -229,6 +234,9 @@ internal class ClientInitializeFormatter(
             result.value = evalContext.evaluation.jsonValue ?: emptyMap<Any, Any>()
             result.group = evalContext.evaluation.ruleID
             result.isDeviceBased = configSpec.idType.lowercase() == "stableid"
+            if (evalContext.evaluation.groupName != null && evalContext.evaluation.groupName != "") {
+                result.group_name = evalContext.evaluation.groupName
+            }
 
             if (entityType == "experiment") {
                 populateExperimentFields(
