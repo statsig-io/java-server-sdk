@@ -6,8 +6,6 @@ import grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.Config
 import grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecResponse
 import io.grpc.Channel
 import io.grpc.ManagedChannelBuilder
-import io.grpc.Status
-import io.grpc.StatusException
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -20,11 +18,6 @@ private const val RETRY_LIMIT = 10
 private const val INITIAL_RETRY_BACKOFF_MS: Long = 10 * 1000
 private const val RETRY_BACKOFF_MULTIPLIER = 5
 private const val FAILOVER_THRESHOLD = 4
-
-private val badRetryCodes: Set<Status.Code> = setOf(
-    Status.Code.PERMISSION_DENIED,
-    Status.Code.UNAUTHENTICATED,
-)
 
 internal class GRPCWebsocketWorker(
     private val sdkKey: String,
@@ -128,7 +121,7 @@ internal class GRPCWebsocketWorker(
     }
 
     private fun processStreamErrorOrClose(throwable: Throwable? = null) {
-        shouldRetry = !(throwable is StatusException && throwable.status.code in badRetryCodes) && remainingRetries > 0
+        shouldRetry = remainingRetries > 0
         if ((retryLimit - remainingRetries) == failoverThreshold) {
             streamingFallback?.startBackup(dcsFlowBacker)
         }

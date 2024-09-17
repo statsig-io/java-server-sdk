@@ -54,7 +54,7 @@ data class StatsigUser private constructor(
     var privateAttributes: Map<String, Any>? = null,
 
     @SerializedName("statsigEnvironment")
-    internal var statsigEnvironment: Map<String, String>? = null
+    internal var statsigEnvironment: Map<String, String>? = null,
 ) {
     constructor(userID: String) : this(userID = userID, null)
 
@@ -73,7 +73,7 @@ data class StatsigUser private constructor(
             locale = this.locale,
             appVersion = this.appVersion,
             custom = this.custom,
-            statsigEnvironment = this.statsigEnvironment
+            statsigEnvironment = this.statsigEnvironment,
             // DO NOT copy privateAttributes to the logging copy!
         )
     }
