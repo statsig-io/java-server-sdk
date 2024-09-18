@@ -62,6 +62,14 @@ data class StatsigUser private constructor(
 
     constructor(userID: String, customIDs: Map<String, String>) : this(userID = userID, customIDs = customIDs, null)
 
+    internal fun getID(idType: String?): String? {
+        val lowerIdType = idType?.lowercase()
+        if (lowerIdType != "userid" && lowerIdType?.isEmpty() == false) {
+            return customIDs?.get(idType) ?: customIDs?.get(lowerIdType)
+        }
+        return userID
+    }
+
     internal fun getCopyForLogging(): StatsigUser {
         return StatsigUser(
             userID = this.userID,

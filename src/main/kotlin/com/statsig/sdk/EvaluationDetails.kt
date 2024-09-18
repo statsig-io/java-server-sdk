@@ -26,4 +26,5 @@ enum class EvaluationReason(val reason: String) {
     DATA_ADAPTER("DataAdapter"),
     UNSUPPORTED("Unsupported"),
     DEFAULT("Default"),
+    PERSISTED("Persisted"),
 }

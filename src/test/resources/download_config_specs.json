@@ -25,7 +25,8 @@
           "id": "1kNmlB23wylPFZi1M0Divl",
           "salt": "f2ac6975-174d-497e-be7f-599fea626132"
         }
-      ]
+      ],
+      "idType": "userID"
     },
     {
       "name": "sample_experiment",
@@ -180,7 +181,8 @@
           "id": "2RamGujUou6h2bVNQWhtNZ",
           "salt": "2RamGujUou6h2bVNQWhtNZ"
         }
-      ]
+      ],
+      "idType": "userID"
     }
   ],
   "feature_gates": [
@@ -209,7 +211,8 @@
           "id": "6N6Z8ODekNYZ7F8gFdoLP5",
           "salt": "14862979-1468-4e49-9b2a-c8bb100eed8f"
         }
-      ]
+      ],
+      "idType": "userID"
     },
     {
       "name": "on_for_statsig_email",
@@ -236,7 +239,8 @@
           "id": "7w9rbTSffLT89pxqpyhuqK",
           "salt": "e452510f-bd5b-42cb-a71e-00498a7903fc"
         }
-      ]
+      ],
+      "idType": "userID"
     },
     {
       "name": "on_for_id_list",
@@ -263,7 +267,8 @@
           "id": "7w9rbTSffLT89pxqpyhuqA",
           "salt": "e452510f-bd5b-42cb-a71e-00498a7903fD"
         }
-      ]
+      ],
+      "idType": "userID"
     }
   ],
   "layer_configs": [

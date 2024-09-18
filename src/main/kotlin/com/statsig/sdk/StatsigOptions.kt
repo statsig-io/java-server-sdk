@@ -3,6 +3,8 @@ package com.statsig.sdk
 import com.google.gson.annotations.SerializedName
 import com.statsig.sdk.datastore.IDataStore
 import com.statsig.sdk.network.STATSIG_API_URL_BASE
+import com.statsig.sdk.persistent_storage.IUserPersistentStorage
+import com.statsig.sdk.persistent_storage.UserPersistedValues
 
 private const val TIER_KEY: String = "tier"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
@@ -62,6 +64,7 @@ class StatsigOptions(
     var configSyncSources: List<DataSource>? = null,
     var fallbackToStatsigAPI: Boolean = false,
     var disableIPResolution: Boolean = false,
+    var userPersistentStorage: IUserPersistentStorage? = null
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(STATSIG_API_URL_BASE, initTimeoutMs)
@@ -168,10 +171,16 @@ data class GetConfigOptions(var disableExposureLogging: Boolean = false) {
     constructor() : this(false)
 }
 
-data class GetLayerOptions(var disableExposureLogging: Boolean = false) {
+data class GetLayerOptions(
+    var disableExposureLogging: Boolean = false,
+    var userPersistedValues: UserPersistedValues? = null
+) {
     constructor() : this(false)
 }
 
-data class GetExperimentOptions(var disableExposureLogging: Boolean = false) {
+data class GetExperimentOptions(
+    var disableExposureLogging: Boolean = false,
+    var userPersistedValues: UserPersistedValues? = null
+) {
     constructor() : this(false)
 }

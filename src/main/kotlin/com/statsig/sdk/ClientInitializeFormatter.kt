@@ -75,7 +75,7 @@ internal data class ClientConfig(
 
 internal class ClientInitializeFormatter(
     private val specStore: SpecStore,
-    private val evalFun: (ctx: EvaluationContext, config: APIConfig?) -> Unit,
+    private val evalFun: (ctx: EvaluationContext, config: APIConfig) -> Unit,
     private val context: EvaluationContext,
 ) {
     private val user: StatsigUser = context.user
@@ -172,8 +172,8 @@ internal class ClientInitializeFormatter(
         if (delegate != null && delegate != "") {
             val delegateSpec = specStore.getConfig(delegate)
             var delegateContext = context.asNewEvaluation()
-            evalFun(delegateContext, delegateSpec)
             if (delegateSpec != null) {
+                evalFun(delegateContext, delegateSpec)
                 result.allocatedExperimentName = hashName(delegate)
                 result.isUserInExperiment = delegateContext.evaluation.isExperimentGroup
                 result.isExperimentActive = delegateSpec.isActive
@@ -182,6 +182,14 @@ internal class ClientInitializeFormatter(
                 if (delegateContext.evaluation.groupName != null && delegateContext.evaluation.groupName != "") {
                     result.group_name = delegateContext.evaluation.groupName
                 }
+            } else {
+                delegateContext.evaluation = ConfigEvaluation(
+                    evaluationDetails = EvaluationDetails(
+                        this.specStore.getLastUpdateTime(),
+                        this.specStore.getInitTime(),
+                        EvaluationReason.UNRECOGNIZED
+                    )
+                )
             }
         }
 

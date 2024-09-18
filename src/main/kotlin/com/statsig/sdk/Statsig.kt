@@ -1,5 +1,6 @@
 package com.statsig.sdk
 
+import com.statsig.sdk.persistent_storage.UserPersistedValues
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 
@@ -335,6 +336,25 @@ class Statsig {
             if (checkInitialized()) {
                 statsigServer.removeConfigOverride(configName)
             }
+        }
+
+        /**
+         * Load persisted values for given user and idType used for evaluation
+         *
+         * @param user The StatsigUser object used for evaluation
+         * @param idType The ID type
+         *
+         * @return A map of persisted evaluations for a given user
+         */
+        @JvmStatic
+        suspend fun getUserPersistedValues(
+            user: StatsigUser,
+            idType: String,
+        ): UserPersistedValues {
+            if (!checkInitialized()) {
+                return emptyMap()
+            }
+            return statsigServer.getUserPersistedValues(user, idType)
         }
 
         /**

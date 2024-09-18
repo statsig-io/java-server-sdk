@@ -1,6 +1,8 @@
 package com.statsig.sdk
 
 import com.statsig.sdk.network.StatsigTransport
+import com.statsig.sdk.persistent_storage.UserPersistedValues
+import com.statsig.sdk.persistent_storage.UserPersistentStorageHandler
 import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -19,28 +21,6 @@ import kotlin.collections.set
 
 internal class UnsupportedException(message: String) : Exception(message)
 
-internal class ConfigEvaluation(
-    var booleanValue: Boolean = false,
-    var jsonValue: Any? = null,
-    var ruleID: String = Const.EMPTY_STR,
-    var groupName: String? = null,
-    var secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-    var undelegatedSecondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
-    var explicitParameters: Array<String> = arrayOf(),
-    var configDelegate: String? = null,
-    var evaluationDetails: EvaluationDetails? = null,
-    var isExperimentGroup: Boolean = false,
-) {
-    internal var isDelegate: Boolean = false
-
-    fun addSecondaryExposure(exposure: Map<String, String>) {
-        secondaryExposures.add(exposure)
-        if (!isDelegate) {
-            undelegatedSecondaryExposures.add(exposure)
-        }
-    }
-}
-
 internal class Evaluator(
     private var transport: StatsigTransport,
     private var options: StatsigOptions,
@@ -57,6 +37,7 @@ internal class Evaluator(
             Parser()
         }
     }
+    private val persistentStore: UserPersistentStorageHandler
     private var gateOverrides: MutableMap<String, Boolean> = HashMap()
     private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
@@ -81,6 +62,9 @@ internal class Evaluator(
             diagnostics,
             sdkConfigs,
             serverSecret,
+        )
+        persistentStore = UserPersistentStorageHandler(
+            options.userPersistentStorage,
         )
         transport.setDiagnostics(diagnostics)
         statsigScope.launch {
@@ -191,7 +175,16 @@ internal class Evaluator(
             return
         }
 
-        this.evaluateConfig(ctx, specStore.getConfig(dynamicConfigName))
+        val config = specStore.getConfig(dynamicConfigName)
+        if (config == null) {
+            ctx.evaluation = this.getUnrecognizedEvaluation()
+            return
+        }
+        this.evaluateConfig(ctx, config)
+    }
+
+    suspend fun getUserPersistedValues(user: StatsigUser, idType: String): UserPersistedValues {
+        return this.persistentStore.load(user, idType) ?: mapOf()
     }
 
     fun getClientInitializeResponse(
@@ -218,6 +211,13 @@ internal class Evaluator(
             )
         }
         return response
+    }
+
+    private fun finalizeEvaluation(ctx: EvaluationContext) {
+        if (!ctx.isNested) {
+            ctx.evaluation.secondaryExposures = cleanExposures(ctx.evaluation.secondaryExposures)
+            ctx.evaluation.undelegatedSecondaryExposures = cleanExposures(ctx.evaluation.undelegatedSecondaryExposures)
+        }
     }
 
     private fun cleanExposures(exposures: ArrayList<Map<String, String>>): ArrayList<Map<String, String>> {
@@ -248,7 +248,12 @@ internal class Evaluator(
             return
         }
 
-        this.evaluateConfig(ctx, specStore.getLayerConfig(layerName))
+        val layer = specStore.getLayerConfig(layerName)
+        if (layer == null) {
+            ctx.evaluation = this.getUnrecognizedEvaluation()
+            return
+        }
+        this.evaluateLayer(ctx, layer)
     }
 
     fun getExperimentsInLayer(layerName: String): Array<String> {
@@ -270,35 +275,104 @@ internal class Evaluator(
             return
         }
 
-        val evalGate = specStore.getGate(gateName)
-        this.evaluateConfig(ctx, evalGate)
+        val gate = specStore.getGate(gateName)
+        if (gate == null) {
+            ctx.evaluation = this.getUnrecognizedEvaluation()
+            return
+        }
+        this.evaluateConfig(ctx, gate)
     }
 
-    private fun evaluateConfig(
-        ctx: EvaluationContext,
-        config: APIConfig?,
-    ) {
-        if (config == null) {
-            ctx.evaluation.booleanValue = false
-            ctx.evaluation.ruleID = Const.EMPTY_STR
-            ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.UNRECOGNIZED)
+    private fun getUnrecognizedEvaluation(): ConfigEvaluation {
+        return ConfigEvaluation(
+            evaluationDetails = EvaluationDetails(
+                this.specStore.getLastUpdateTime(),
+                this.specStore.getInitTime(),
+                EvaluationReason.UNRECOGNIZED
+            )
+        )
+    }
+
+    private fun evaluateConfig(ctx: EvaluationContext, config: APIConfig) {
+        this.evaluateConfigImpl(ctx, config)
+        this.finalizeEvaluation(ctx)
+    }
+
+    private fun evaluateConfigImpl(ctx: EvaluationContext, config: APIConfig) {
+        val userPersistedValues = ctx.userPersistedValues
+        if (userPersistedValues == null || !config.isActive) {
+            this.persistentStore.delete(ctx.user, config.idType, config.name)
+            this.evaluate(ctx, config)
+            return
+        }
+
+        val stickyValues = userPersistedValues[config.name]
+        if (stickyValues != null) {
+            val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
+            ctx.evaluation = stickyEvaluation
             return
         }
 
         this.evaluate(ctx, config)
-        if (!ctx.isNested) {
-            ctx.evaluation.secondaryExposures = cleanExposures(ctx.evaluation.secondaryExposures)
-            ctx.evaluation.undelegatedSecondaryExposures = cleanExposures(ctx.evaluation.undelegatedSecondaryExposures)
+        if (ctx.evaluation.isExperimentGroup) {
+            this.persistentStore.save(
+                ctx.user,
+                config.idType,
+                config.name,
+                ctx.evaluation.toStickyValues()
+            )
+        }
+    }
+    private fun evaluateLayer(ctx: EvaluationContext, config: APIConfig) {
+        this.evaluateLayerImpl(ctx, config)
+        this.finalizeEvaluation(ctx)
+    }
+
+    private fun evaluateLayerImpl(ctx: EvaluationContext, config: APIConfig) {
+        val userPersistedValues = ctx.userPersistedValues
+        if (userPersistedValues == null) {
+            this.persistentStore.delete(ctx.user, config.idType, config.name)
+            this.evaluate(ctx, config)
+            return
+        }
+        val stickyValues = userPersistedValues[config.name]
+        if (stickyValues != null) {
+            val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
+            val delegate = stickyEvaluation.configDelegate
+            val delegateSpec = if (delegate != null) this.specStore.getConfig(delegate) else null
+            if (delegateSpec != null && delegateSpec.isActive) {
+                ctx.evaluation = stickyEvaluation
+            } else {
+                this.persistentStore.delete(ctx.user, config.idType, config.name)
+                this.evaluate(ctx, config)
+            }
+            return
+        }
+
+        this.evaluate(ctx, config)
+        val delegate = ctx.evaluation.configDelegate
+        val delegateSpec = if (delegate != null) this.specStore.getConfig(delegate) else null
+        if (delegateSpec != null && delegateSpec.isActive) {
+            if (ctx.evaluation.isExperimentGroup) {
+                this.persistentStore.save(
+                    ctx.user,
+                    config.idType,
+                    config.name,
+                    ctx.evaluation.toStickyValues()
+                )
+            }
+        } else {
+            this.persistentStore.delete(ctx.user, config.idType, config.name)
         }
     }
 
     private fun evaluate(ctx: EvaluationContext, config: APIConfig) {
-        val evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
+        ctx.evaluation.evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
+
         if (!config.enabled) {
             ctx.evaluation.booleanValue = false
             ctx.evaluation.jsonValue = config.defaultValue
             ctx.evaluation.ruleID = Const.DISABLED
-            ctx.evaluation.evaluationDetails = evaluationDetails
             return
         }
 
@@ -309,7 +383,6 @@ internal class Evaluator(
                 return
             }
 
-            ctx.evaluation.evaluationDetails = evaluationDetails
             if (ctx.evaluation.booleanValue) {
                 if (this.evaluateDelegate(ctx, rule)) {
                     // if it's not null
@@ -322,7 +395,7 @@ internal class Evaluator(
                             '.' +
                             (rule.salt ?: rule.id) +
                             '.' +
-                            (getUnitID(ctx.user, rule.idType) ?: Const.EMPTY_STR),
+                            (ctx.user.getID(rule.idType) ?: Const.EMPTY_STR),
                     )
                         .mod(10000UL) < (rule.passPercentage.times(100.0)).toULong()
 
@@ -331,7 +404,6 @@ internal class Evaluator(
                 }
 
                 ctx.evaluation.booleanValue = pass
-                ctx.evaluation.evaluationDetails = evaluationDetails
                 ctx.evaluation.isExperimentGroup = rule.isExperimentGroup ?: false
                 return
             }
@@ -341,7 +413,6 @@ internal class Evaluator(
         ctx.evaluation.jsonValue = config.defaultValue
         ctx.evaluation.ruleID = Const.DEFAULT
         ctx.evaluation.groupName = null
-        ctx.evaluation.evaluationDetails = evaluationDetails
     }
 
     private fun evaluateDelegate(
@@ -351,11 +422,13 @@ internal class Evaluator(
         val configDelegate = rule.configDelegate ?: return false
         val config = specStore.getConfig(configDelegate) ?: return false
 
-        this.evaluate(ctx.asDelegate(), config)
+        val delegateCtx = ctx.asDelegate()
+        this.evaluate(delegateCtx, config)
 
         ctx.evaluation.configDelegate = rule.configDelegate
         ctx.evaluation.explicitParameters = config.explicitParameters ?: arrayOf()
         ctx.evaluation.evaluationDetails = this.createEvaluationDetails(this.specStore.getEvaluationReason())
+        ctx.evaluation.isExperimentGroup = delegateCtx.evaluation.isExperimentGroup
         return true
     }
 
@@ -414,17 +487,16 @@ internal class Evaluator(
 
                 ConfigCondition.FAIL_GATE, ConfigCondition.PASS_GATE -> {
                     val name = Utils.toStringOrEmpty(condition.targetValue)
-                    this.checkGate(ctx.asNested(), name)
+                    val nestedCtx = ctx.asNested()
+                    this.checkGate(nestedCtx, name)
                     val newExposure =
                         mapOf(
                             "gate" to name,
-                            "gateValue" to ctx.evaluation.booleanValue.toString(),
-                            "ruleID" to ctx.evaluation.ruleID,
+                            "gateValue" to nestedCtx.evaluation.booleanValue.toString(),
+                            "ruleID" to nestedCtx.evaluation.ruleID,
                         )
                     ctx.evaluation.addSecondaryExposure(newExposure)
-                    val booleanVal =
-                        if (conditionEnum == ConfigCondition.PASS_GATE) ctx.evaluation.booleanValue else !ctx.evaluation.booleanValue
-                    return booleanVal
+                    return if (conditionEnum == ConfigCondition.PASS_GATE) nestedCtx.evaluation.booleanValue else !nestedCtx.evaluation.booleanValue
                 }
 
                 ConfigCondition.IP_BASED -> {
@@ -460,12 +532,12 @@ internal class Evaluator(
 
                 ConfigCondition.USER_BUCKET -> {
                     val salt = getValueAsString(condition.additionalValues?.let { it["salt"] })
-                    val unitID = getUnitID(ctx.user, condition.idType) ?: Const.EMPTY_STR
+                    val unitID = ctx.user.getID(condition.idType) ?: Const.EMPTY_STR
                     value = computeUserHash("$salt.$unitID").mod(1000UL)
                 }
 
                 ConfigCondition.UNIT_ID -> {
-                    value = getUnitID(ctx.user, condition.idType)
+                    value = ctx.user.getID(condition.idType)
                 }
 
                 ConfigCondition.TARGET_APP -> {
@@ -1063,14 +1135,6 @@ internal class Evaluator(
 
         hashLookupTable[input] = hash
         return hash
-    }
-
-    private fun getUnitID(user: StatsigUser, idType: String?): String? {
-        val lowerIdType = idType?.lowercase()
-        if (lowerIdType != "userid" && lowerIdType?.isEmpty() == false) {
-            return user.customIDs?.get(idType) ?: user.customIDs?.get(lowerIdType)
-        }
-        return user.userID
     }
 }
 
