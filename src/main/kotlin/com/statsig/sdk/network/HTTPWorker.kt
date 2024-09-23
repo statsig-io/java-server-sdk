@@ -139,16 +139,19 @@ internal class HTTPWorker(
     }
 
     override suspend fun getIDLists(): String? {
-        var response = post(
+        val response = post(
             "$apiForGetIDLists/get_id_lists",
             mapOf("statsigMetadata" to statsigMetadata),
             emptyMap(),
             this.options.initTimeoutMs,
         )
-        if (response?.isSuccessful != true) {
-            return null
+        response?.use {
+            if (!it.isSuccessful) {
+                return null
+            }
+            return it.body?.string()
         }
-        return response.body?.string()
+        return null
     }
 
     suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long): Pair<String?, FailureDetails?> {
@@ -168,16 +171,20 @@ internal class HTTPWorker(
     }
 
     suspend fun downloadIDListsFromStatsigAPI(): String? {
-        var response = post(
+        val response = post(
             "$STATSIG_API_URL_BASE/get_id_lists",
             mapOf("statsigMetadata" to statsigMetadata),
             emptyMap(),
             this.options.initTimeoutMs,
         )
-        if (response?.isSuccessful != true) {
-            return null
+
+        response?.use {
+            if (!it.isSuccessful) {
+                return null
+            }
+            return it.body?.string()
         }
-        return response.body?.string()
+        return null
     }
 
     override suspend fun logEvents(events: List<StatsigEvent>) {
