@@ -64,7 +64,7 @@ class StatsigOptions(
     var configSyncSources: List<DataSource>? = null,
     var fallbackToStatsigAPI: Boolean = false,
     var disableIPResolution: Boolean = false,
-    var userPersistentStorage: IUserPersistentStorage? = null
+    var userPersistentStorage: IUserPersistentStorage? = null,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(STATSIG_API_URL_BASE, initTimeoutMs)
@@ -173,14 +173,14 @@ data class GetConfigOptions(var disableExposureLogging: Boolean = false) {
 
 data class GetLayerOptions(
     var disableExposureLogging: Boolean = false,
-    var userPersistedValues: UserPersistedValues? = null
+    var userPersistedValues: UserPersistedValues? = null,
 ) {
     constructor() : this(false)
 }
 
 data class GetExperimentOptions(
     var disableExposureLogging: Boolean = false,
-    var userPersistedValues: UserPersistedValues? = null
+    var userPersistedValues: UserPersistedValues? = null,
 ) {
     constructor() : this(false)
 }

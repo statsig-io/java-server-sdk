@@ -40,7 +40,7 @@ sealed class StatsigServer {
     @JvmSynthetic
     abstract suspend fun getConfigWithExposureLoggingDisabled(
         user: StatsigUser,
-        dynamicConfigName: String
+        dynamicConfigName: String,
     ): DynamicConfig
 
     @JvmSynthetic
@@ -126,7 +126,7 @@ sealed class StatsigServer {
 
     abstract fun initializeAsync(
         serverSecret: String,
-        options: StatsigOptions
+        options: StatsigOptions,
     ): CompletableFuture<InitializationDetails?>
 
     abstract fun checkGateAsync(user: StatsigUser, gateName: String): CompletableFuture<Boolean>
@@ -143,7 +143,7 @@ sealed class StatsigServer {
 
     abstract fun checkGateWithExposureLoggingDisabledAsync(
         user: StatsigUser,
-        gateName: String
+        gateName: String,
     ): CompletableFuture<Boolean>
 
     abstract fun getConfigAsync(
@@ -230,7 +230,7 @@ sealed class StatsigServer {
     abstract fun manuallyLogLayerParameterExposureAsync(
         user: StatsigUser,
         layerName: String,
-        paramName: String
+        paramName: String,
     ): CompletableFuture<Void>
 
     abstract fun manuallyLogGateExposureAsync(user: StatsigUser, gateName: String): CompletableFuture<Void>
@@ -323,7 +323,7 @@ private class StatsigServerImpl() :
                             diagnostics,
                             statsigMetadata,
                             sdkConfigs,
-                            serverSecret
+                            serverSecret,
                         )
                     val failureDetails = evaluator.initialize()
                     if (options.dataStore != null) {
@@ -334,7 +334,7 @@ private class StatsigServerImpl() :
                         System.currentTimeMillis() - setupStartTime,
                         isSDKReady = true,
                         configSpecReady = failureDetails == null,
-                        failureDetails
+                        failureDetails,
                     )
                 }
             },
@@ -343,7 +343,7 @@ private class StatsigServerImpl() :
                     System.currentTimeMillis() - setupStartTime,
                     false,
                     false,
-                    FailureDetails(FailureReason.INTERNAL_ERROR)
+                    FailureDetails(FailureReason.INTERNAL_ERROR),
                 )
             },
         )
@@ -407,11 +407,11 @@ private class StatsigServerImpl() :
                     result.ruleID,
                     result.secondaryExposures,
                     result.evaluationDetails?.reason,
-                    result.evaluationDetails
+                    result.evaluationDetails,
                 )
             },
             { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null) },
-            configName = gateName
+            configName = gateName,
         )
     }
 
@@ -432,11 +432,11 @@ private class StatsigServerImpl() :
                     result.ruleID,
                     result.secondaryExposures,
                     result.evaluationDetails?.reason,
-                    result.evaluationDetails
+                    result.evaluationDetails,
                 )
             },
             { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null) },
-            configName = gateName
+            configName = gateName,
         )
     }
 
@@ -475,7 +475,7 @@ private class StatsigServerImpl() :
         user: StatsigUser,
         gateName: String,
         evaluation: ConfigEvaluation,
-        isManualExposure: Boolean = false
+        isManualExposure: Boolean = false,
     ) {
         logger.logGateExposure(
             normalizeUser(user),
@@ -537,7 +537,7 @@ private class StatsigServerImpl() :
 
     override suspend fun getConfigWithExposureLoggingDisabled(
         user: StatsigUser,
-        dynamicConfigName: String
+        dynamicConfigName: String,
     ): DynamicConfig {
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(dynamicConfigName)
@@ -582,7 +582,7 @@ private class StatsigServerImpl() :
     override fun getExperimentSync(
         user: StatsigUser,
         experimentName: String,
-        option: GetExperimentOptions?
+        option: GetExperimentOptions?,
     ): DynamicConfig {
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(experimentName)
@@ -719,7 +719,7 @@ private class StatsigServerImpl() :
         return this.errorBoundary.capture(
             "getUserPersistedValues",
             { return@capture this.evaluator.getUserPersistedValues(user, idType) },
-            { return@capture mapOf() }
+            { return@capture mapOf() },
         )
     }
 
@@ -736,7 +736,7 @@ private class StatsigServerImpl() :
             markerID = diagnostics.markStart(
                 KeyType.GET_CLIENT_INITIALIZE_RESPONSE,
                 StepType.PROCESS,
-                ContextType.GET_CLIENT_INITIALIZE_RESPONSE
+                ContextType.GET_CLIENT_INITIALIZE_RESPONSE,
             )
             val normalizedUser = normalizeUser(user)
             val response = evaluator.getClientInitializeResponse(normalizedUser, hash, clientSDKKey)
@@ -888,7 +888,7 @@ private class StatsigServerImpl() :
 
     override fun initializeAsync(
         serverSecret: String,
-        options: StatsigOptions
+        options: StatsigOptions,
     ): CompletableFuture<InitializationDetails?> {
         if (!initialized.getAndSet(true)) {
             setup(serverSecret, options)
@@ -909,7 +909,7 @@ private class StatsigServerImpl() :
 
     override fun checkGateWithExposureLoggingDisabledAsync(
         user: StatsigUser,
-        gateName: String
+        gateName: String,
     ): CompletableFuture<Boolean> {
         if (!isSDKInitialized()) {
             return CompletableFuture.completedFuture(false)
@@ -1031,7 +1031,7 @@ private class StatsigServerImpl() :
     override fun manuallyLogLayerParameterExposureAsync(
         user: StatsigUser,
         layerName: String,
-        paramName: String
+        paramName: String,
     ): CompletableFuture<Void> {
         if (!isSDKInitialized()) {
             return CompletableFuture.completedFuture(null)
@@ -1061,7 +1061,7 @@ private class StatsigServerImpl() :
 
     override fun manuallyLogExperimentExposureAsync(
         user: StatsigUser,
-        experimentName: String
+        experimentName: String,
     ): CompletableFuture<Void> {
         if (!isSDKInitialized()) {
             return CompletableFuture.completedFuture(null)
@@ -1105,7 +1105,7 @@ private class StatsigServerImpl() :
         user: StatsigUser,
         layerName: String,
         options: GetLayerOptions? = null,
-        onExposure: OnLayerExposure? = null
+        onExposure: OnLayerExposure? = null,
     ): Layer {
         if (!isSDKInitialized()) {
             return Layer.empty(layerName)
@@ -1208,7 +1208,7 @@ private class StatsigServerImpl() :
         user: StatsigUser,
         configName: String,
         result: ConfigEvaluation,
-        isManualExposure: Boolean = false
+        isManualExposure: Boolean = false,
     ) {
         logger.logConfigExposure(
             user,
@@ -1216,7 +1216,7 @@ private class StatsigServerImpl() :
             result.ruleID,
             result.secondaryExposures,
             isManualExposure,
-            result.evaluationDetails
+            result.evaluationDetails,
         )
     }
 

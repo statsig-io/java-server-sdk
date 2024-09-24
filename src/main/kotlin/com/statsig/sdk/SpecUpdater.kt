@@ -96,16 +96,21 @@ internal class SpecUpdater(
 
     // This can return a tuple
     suspend fun getConfigSpecs(source: DataSource): Pair<APIDownloadedConfigs?, FailureDetails?> {
-        return when (source) {
-            DataSource.NETWORK -> getConfigSpecsFromNetwork()
-            DataSource.STATSIG_NETWORK -> parseConfigsFromNetwork(this.transport.downloadConfigSpecsFromStatsig(this.lastUpdateTime))
-            DataSource.DATA_STORE -> {
-                getConfigSpecsFromDataStore()
+        try {
+            return when (source) {
+                DataSource.NETWORK -> getConfigSpecsFromNetwork()
+                DataSource.STATSIG_NETWORK -> parseConfigsFromNetwork(this.transport.downloadConfigSpecsFromStatsig(this.lastUpdateTime))
+                DataSource.DATA_STORE -> {
+                    getConfigSpecsFromDataStore()
+                }
+                DataSource.BOOTSTRAP -> {
+                    diagnostics.markStart(KeyType.BOOTSTRAP, step = StepType.PROCESS)
+                    parseConfigSpecs(this.options.bootstrapValues)
+                }
             }
-            DataSource.BOOTSTRAP -> {
-                diagnostics.markStart(KeyType.BOOTSTRAP, step = StepType.PROCESS)
-                parseConfigSpecs(this.options.bootstrapValues)
-            }
+        } catch (e: Exception) {
+            errorBoundary.logException("getConfigSpec", e)
+            return Pair(null, FailureDetails(FailureReason.INTERNAL_ERROR, e))
         }
     }
 
@@ -125,8 +130,8 @@ internal class SpecUpdater(
     }
 
     suspend fun updateIDLists(): Map<String, IDList>? {
-        val response = transport.getIDLists() ?: return null
         return try {
+            val response = transport.getIDLists() ?: return null
             gson.fromJson<Map<String, IDList>>(response)
         } catch (e: JsonSyntaxException) {
             null
@@ -195,20 +200,25 @@ internal class SpecUpdater(
     }
 
     private fun getConfigSyncSources(): List<DataSource> {
-        val configSpecSources = options.configSyncSources
-        if (configSpecSources != null) {
-            return configSpecSources
+        try {
+            val configSpecSources = options.configSyncSources
+            if (configSpecSources != null) {
+                return configSpecSources
+            }
+            val sources = mutableListOf<DataSource>()
+            if (options.dataStore?.shouldPollForUpdates() == true) {
+                sources.add(DataSource.DATA_STORE)
+            } else {
+                sources.add(DataSource.NETWORK)
+            }
+            if (options.fallbackToStatsigAPI) {
+                sources.add(DataSource.STATSIG_NETWORK)
+            }
+            return sources
+        } catch (e: Exception) {
+            errorBoundary.logException("getConfigSyncSources", e)
+            return listOf(DataSource.STATSIG_NETWORK)
         }
-        val sources = mutableListOf<DataSource>()
-        if (options.dataStore?.shouldPollForUpdates() == true) {
-            sources.add(DataSource.DATA_STORE)
-        } else {
-            sources.add(DataSource.NETWORK)
-        }
-        if (options.fallbackToStatsigAPI) {
-            sources.add(DataSource.STATSIG_NETWORK)
-        }
-        return sources
     }
 
     private fun pollForIDLists(): Flow<Map<String, IDList>> {

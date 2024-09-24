@@ -43,7 +43,7 @@ class ConfigEvaluation(
             val evalDetail = EvaluationDetails(
                 stickyValues.time,
                 initTime,
-                EvaluationReason.PERSISTED
+                EvaluationReason.PERSISTED,
             )
             return ConfigEvaluation(
                 jsonValue = stickyValues.jsonValue,

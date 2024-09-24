@@ -87,7 +87,11 @@ internal class StatsigTransport(
     }
 
     suspend fun postLogs(events: List<StatsigEvent>) {
-        logEventsWorker.logEvents(events)
+        try {
+            logEventsWorker.logEvents(events)
+        } catch (e: Exception) {
+            errorBoundary.logException("postLogs", e)
+        }
     }
 
     suspend fun getExternal(

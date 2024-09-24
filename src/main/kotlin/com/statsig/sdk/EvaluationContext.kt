@@ -19,7 +19,7 @@ internal class EvaluationContext(
         clientSDKKey = ctx.clientSDKKey,
         hash = ctx.hash,
         isNested = ctx.isNested,
-        userPersistedValues = ctx.userPersistedValues
+        userPersistedValues = ctx.userPersistedValues,
     )
 
     internal fun asDelegate(): EvaluationContext {

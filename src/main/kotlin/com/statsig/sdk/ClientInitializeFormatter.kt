@@ -187,8 +187,8 @@ internal class ClientInitializeFormatter(
                     evaluationDetails = EvaluationDetails(
                         this.specStore.getLastUpdateTime(),
                         this.specStore.getInitTime(),
-                        EvaluationReason.UNRECOGNIZED
-                    )
+                        EvaluationReason.UNRECOGNIZED,
+                    ),
                 )
             }
         }

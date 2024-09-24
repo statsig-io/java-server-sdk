@@ -288,8 +288,8 @@ internal class Evaluator(
             evaluationDetails = EvaluationDetails(
                 this.specStore.getLastUpdateTime(),
                 this.specStore.getInitTime(),
-                EvaluationReason.UNRECOGNIZED
-            )
+                EvaluationReason.UNRECOGNIZED,
+            ),
         )
     }
 
@@ -319,7 +319,7 @@ internal class Evaluator(
                 ctx.user,
                 config.idType,
                 config.name,
-                ctx.evaluation.toStickyValues()
+                ctx.evaluation.toStickyValues(),
             )
         }
     }
@@ -358,7 +358,7 @@ internal class Evaluator(
                     ctx.user,
                     config.idType,
                     config.name,
-                    ctx.evaluation.toStickyValues()
+                    ctx.evaluation.toStickyValues(),
                 )
             }
         } else {
