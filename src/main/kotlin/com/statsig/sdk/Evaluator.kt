@@ -389,7 +389,11 @@ internal class Evaluator(
                     return
                 }
 
-                val pass =
+                val pass = if (rule.passPercentage == 0.0) {
+                    false
+                } else if (rule.passPercentage == 100.0){
+                    true
+                } else {
                     computeUserHash(
                         config.salt +
                             '.' +
@@ -398,6 +402,7 @@ internal class Evaluator(
                             (ctx.user.getID(rule.idType) ?: Const.EMPTY_STR),
                     )
                         .mod(10000UL) < (rule.passPercentage.times(100.0)).toULong()
+                }
 
                 if (!pass) {
                     ctx.evaluation.jsonValue = config.defaultValue
