@@ -135,10 +135,8 @@ sealed class StatsigServer {
 
     abstract fun checkGateSync(user: StatsigUser, gateName: String): Boolean
 
-    @JvmSynthetic
     abstract fun getFeatureGate(user: StatsigUser, gateName: String, option: GetFeatureGateOptions?): APIFeatureGate
 
-    @JvmSynthetic
     abstract fun getFeatureGate(user: StatsigUser, gateName: String): APIFeatureGate
 
     abstract fun checkGateWithExposureLoggingDisabledAsync(
