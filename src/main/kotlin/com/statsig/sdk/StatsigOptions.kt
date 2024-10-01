@@ -5,19 +5,89 @@ import com.statsig.sdk.datastore.IDataStore
 import com.statsig.sdk.network.STATSIG_API_URL_BASE
 import com.statsig.sdk.persistent_storage.IUserPersistentStorage
 import com.statsig.sdk.persistent_storage.UserPersistedValues
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 private const val TIER_KEY: String = "tier"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
 private const val CONFIG_SYNC_INTERVAL_MS: Long = 10 * 1000
 private const val ID_LISTS_SYNC_INTERVAL_MS: Long = 60 * 1000
-private val defaultLogger = object : LoggerInterface {
 
-    override fun warning(message: String) {
-        println(message)
+enum class LogLevel(val value: Int) {
+    NONE(0),
+    DEBUG(1),
+    INFO(2),
+    WARN(3),
+    ERROR(4);
+
+    fun getLevelString(): String {
+        return when (this) {
+            ERROR -> "ERROR"
+            WARN -> "WARN"
+            INFO -> "INFO"
+            DEBUG -> "DEBUG"
+            NONE -> ""
+        }
+    }
+}
+
+object OutputLogger {
+    var logLevel: LogLevel = LogLevel.WARN
+
+    fun error(message: String) {
+        logMessage(LogLevel.ERROR, message)
+    }
+
+    fun warn(message: String) {
+        logMessage(LogLevel.WARN, message)
+    }
+
+    fun info(message: String) {
+        logMessage(LogLevel.INFO, message)
+    }
+
+    fun debug(message: String) {
+        logMessage(LogLevel.DEBUG, message)
+    }
+
+    private fun logMessage(level: LogLevel, message: String) {
+        if (level.value < logLevel.value) return
+
+        val timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.MILLIS))
+        println("$timestamp ${level.getLevelString()} [Statsig] $message")
+    }
+}
+
+// Example Logger Interface you might use
+interface LoggerInterface {
+    fun error(message: String)
+    fun warn(message: String)
+    fun info(message: String)
+    fun debug(message: String)
+    fun setLogLevel(level: LogLevel)
+}
+
+// Example implementation of LoggerInterface
+private val defaultLogger = object : LoggerInterface {
+    override fun error(message: String) {
+        OutputLogger.error(message)
+    }
+
+    override fun warn(message: String) {
+        OutputLogger.warn(message)
     }
 
     override fun info(message: String) {
-        println(message)
+        OutputLogger.info(message)
+    }
+
+    override fun debug(message: String) {
+        OutputLogger.debug(message)
+    }
+
+    override fun setLogLevel(level: LogLevel) {
+        OutputLogger.logLevel = LogLevel.WARN
     }
 }
 
@@ -27,11 +97,6 @@ private val defaultLogger = object : LoggerInterface {
 @FunctionalInterface
 fun interface RulesUpdatedCallback {
     fun accept(rules: String)
-}
-
-interface LoggerInterface {
-    fun warning(message: String)
-    fun info(message: String)
 }
 
 /**

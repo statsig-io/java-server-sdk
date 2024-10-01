@@ -57,6 +57,8 @@ internal class StatsigLogger(
     private val gson = Utils.getGson()
     internal var diagnostics: Diagnostics? = null
     private var eventQueueSize: Int? = null
+    private val logger = statsigOptions.customLogger
+
     fun log(event: StatsigEvent) {
         if (statsigOptions.disableAllLogging) {
             return
@@ -208,6 +210,7 @@ internal class StatsigLogger(
             addDiagnostics(ContextType.API_CALL)
             addDiagnostics(ContextType.GET_CLIENT_INITIALIZE_RESPONSE)
             if (events.size() == 0) {
+                logger.debug("Event queue is empty.")
                 return@withContext
             }
 

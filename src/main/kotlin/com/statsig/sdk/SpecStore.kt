@@ -194,7 +194,7 @@ internal class SpecStore(
             configString = gson.toJson(configSpecs)
         } catch (e: Exception) {
             errorBoundary.logException("fireRulesUpdatedCallback", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            options.customLogger.error("An exception was caught when fire callback:  $e")
         }
 
         if (configString.isEmpty()) {
@@ -335,7 +335,7 @@ internal class SpecStore(
             )
         } catch (e: Exception) {
             errorBoundary.logException("downloadIDList", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            options.customLogger.error("An exception was caught when downloading ID lists:  $e")
             maybeDiagnostics?.markEnd(
                 KeyType.GET_ID_LIST,
                 false,

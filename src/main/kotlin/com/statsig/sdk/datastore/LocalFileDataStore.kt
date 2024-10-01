@@ -24,6 +24,7 @@ class LocalFileDataStore @JvmOverloads constructor(
     var autoUpdate: Boolean = false,
 ) : IDataStore() {
     private lateinit var options: StatsigOptions
+
     override var dataStoreKey: String
         get() = filePath
         set(value) {
@@ -50,14 +51,14 @@ class LocalFileDataStore @JvmOverloads constructor(
 
                 file.createNewFile()
             } catch (e: Exception) {
-                options.customLogger.warning("[Statsig]: An error occurred while creating the file: ${e.message}")
+                options.customLogger.error("An error occurred while creating the file: ${e.message}")
             }
         }
     }
 
     override fun get(key: String): String? {
         if (key != dataStoreKey) {
-            options.customLogger.warning("[Statsig]: Please provide the correct file path.")
+            options.customLogger.warn("Please provide the correct file path.")
         }
 
         return try {
@@ -69,7 +70,7 @@ class LocalFileDataStore @JvmOverloads constructor(
 
     override fun set(key: String, value: String) {
         if (key != dataStoreKey) {
-            options.customLogger.warning("[Statsig]: Please provide the correct file path.")
+            options.customLogger.warn("Please provide the correct file path.")
         }
 
         File(key).writeText(value)

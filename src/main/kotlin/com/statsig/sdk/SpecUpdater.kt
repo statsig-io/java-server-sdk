@@ -29,6 +29,7 @@ internal class SpecUpdater(
     private var idListCallback: suspend (config: Map<String, IDList>) -> Unit = { }
     private var backgroundDownloadConfigs: Job? = null
     private var backgroundDownloadIDLists: Job? = null
+    private val logger = options.customLogger
 
     private val gson = Utils.getGson()
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
@@ -149,7 +150,7 @@ internal class SpecUpdater(
             return Pair(gson.fromJson(specs, APIDownloadedConfigs::class.java), null)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseConfigSpecs", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            logger.error("An exception was caught when parsing config specs:  $e")
             return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
         }
     }
@@ -166,7 +167,7 @@ internal class SpecUpdater(
             return Pair(configs, null)
         } catch (e: Exception) {
             errorBoundary.logException("downloadConfigSpecs", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            logger.warn("An exception was caught:  $e")
             return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
         }
     }
@@ -179,7 +180,7 @@ internal class SpecUpdater(
             return gson.fromJson<Map<String, IDList>>(lists)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseIDLists", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            logger.warn("An exception was caught when parsing ID lists:  $e")
         }
         return null
     }

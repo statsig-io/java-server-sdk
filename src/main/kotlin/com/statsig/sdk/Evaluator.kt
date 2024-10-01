@@ -43,6 +43,7 @@ internal class Evaluator(
     private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var hashLookupTable: MutableMap<String, ULong> = HashMap()
     private val gson = Utils.getGson()
+    private val logger = options.customLogger
 
     private val calendarOne = Calendar.getInstance()
     private val calendarTwo = Calendar.getInstance()
@@ -245,12 +246,14 @@ internal class Evaluator(
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
             ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
+            logger.debug("SpecStore is uninitialized, returning UNINITIALIZED evaluation for layer: $layerName")
             return
         }
 
         val layer = specStore.getLayerConfig(layerName)
         if (layer == null) {
             ctx.evaluation = this.getUnrecognizedEvaluation()
+            logger.debug("Layer not found: $layerName, returning unrecognized evaluation")
             return
         }
         this.evaluateLayer(ctx, layer)
@@ -271,12 +274,14 @@ internal class Evaluator(
         }
 
         if (specStore.getEvaluationReason() == EvaluationReason.UNINITIALIZED) {
+            logger.debug("SpecStore is uninitialized, returning UNINITIALIZED evaluation for gate: $gateName")
             ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.UNINITIALIZED)
             return
         }
 
         val gate = specStore.getGate(gateName)
         if (gate == null) {
+            logger.debug("Gate not found: $gateName, returning unrecognized evaluation")
             ctx.evaluation = this.getUnrecognizedEvaluation()
             return
         }
@@ -308,6 +313,7 @@ internal class Evaluator(
 
         val stickyValues = userPersistedValues[config.name]
         if (stickyValues != null) {
+            logger.debug("Sticky Evaluation found for experiment: ${config.name} with value: $stickyValues")
             val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
             ctx.evaluation = stickyEvaluation
             return
@@ -337,6 +343,7 @@ internal class Evaluator(
         }
         val stickyValues = userPersistedValues[config.name]
         if (stickyValues != null) {
+            logger.debug("Sticky Evaluation found for layer: ${config.name} with value: $stickyValues")
             val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
             val delegate = stickyEvaluation.configDelegate
             val delegateSpec = if (delegate != null) this.specStore.getConfig(delegate) else null
@@ -370,6 +377,7 @@ internal class Evaluator(
         ctx.evaluation.evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
 
         if (!config.enabled) {
+            logger.debug("${config.name} is not enabled.")
             ctx.evaluation.booleanValue = false
             ctx.evaluation.jsonValue = config.defaultValue
             ctx.evaluation.ruleID = Const.DISABLED
@@ -482,7 +490,7 @@ internal class Evaluator(
                 conditionFromString(condition.type.lowercase())
             } catch (e: java.lang.IllegalArgumentException) {
                 errorBoundary.logException("evaluateCondition:condition", e)
-                options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+                logger.error("An exception was caught when evaluating conditions:  $e")
                 null
             }
 
@@ -983,7 +991,7 @@ internal class Evaluator(
             false
         } catch (e: Exception) {
             errorBoundary.logException("versionCompareHelper", e)
-            options.customLogger.warning("[Statsig]: An exception was caught:  $e")
+            logger.warn("An exception was caught:  $e")
             false
         }
     }

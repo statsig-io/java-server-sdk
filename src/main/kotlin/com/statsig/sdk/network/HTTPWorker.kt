@@ -57,6 +57,7 @@ internal class HTTPWorker(
     private val statsigHttpClient: OkHttpClient
     private val gson = Utils.getGson()
     private var diagnostics: Diagnostics? = null
+    private val logger = options.customLogger
     val apiForDownloadConfigSpecs = options.endpointProxyConfigs[NetworkEndpoint.DOWNLOAD_CONFIG_SPECS]?.proxyAddress?.let { "$it/v1" } ?: options.apiForDownloadConfigSpecs ?: options.api ?: STATSIG_CDN_URL_BASE
     val apiForGetIDLists = options.endpointProxyConfigs[NetworkEndpoint.GET_ID_LISTS]?.proxyAddress?.let { "$it/v1" } ?: options.apiForGetIdlists ?: options.api ?: STATSIG_API_URL_BASE
     val apiForLogEvent = options.endpointProxyConfigs[NetworkEndpoint.LOG_EVENT]?.proxyAddress?.let { "$it/v1" } ?: options.api ?: STATSIG_API_URL_BASE
@@ -130,7 +131,7 @@ internal class HTTPWorker(
         )
         response?.use {
             if (!response.isSuccessful) {
-                options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
+                logger.warn("Failed to download config specification, HTTP Response ${response.code} received from server")
                 return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
             return Pair(response.body?.string(), null)
@@ -162,7 +163,7 @@ internal class HTTPWorker(
         )
         response?.use {
             if (!response.isSuccessful) {
-                options.customLogger.warning("[Statsig]: Failed to download config specification, HTTP Response ${response.code} received from server")
+                logger.warn("Failed to download config specification, HTTP Response ${response.code} received from server")
                 return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
             return Pair(response.body?.string(), null)
@@ -213,7 +214,7 @@ internal class HTTPWorker(
 
     private fun setUpProxyAgent(clientBuilder: OkHttpClient.Builder, proxyConfig: ProxyConfig) {
         if (proxyConfig.proxyHost.isBlank() || proxyConfig.proxyPort !in 1..65535) {
-            options.customLogger.warning("Invalid proxy configuration: Host is blank or port is out of range")
+            logger.warn("Invalid proxy configuration: Host is blank or port is out of range")
         }
 
         val proxyAddress = InetSocketAddress(proxyConfig.proxyHost, proxyConfig.proxyPort)
@@ -300,15 +301,15 @@ internal class HTTPWorker(
                         if (response.isSuccessful) {
                             return@coroutineScope
                         } else if (!retryCodes.contains(response.code) || currRetry == 0) {
-                            options.customLogger.warning("[Statsig]: Network request failed with status code: ${response.code}")
+                            logger.warn("Network request failed with status code: ${response.code}")
                             logPostLogFailure(eventsCount)
                             return@coroutineScope
                         } else if (retryCodes.contains(response.code) && currRetry > 0) {
-                            options.customLogger.info("[Statsig]: Retrying network request. Retry count: $currRetry. Response code: ${response.code}")
+                            logger.info("Retrying network request. Retry count: $currRetry. Response code: ${response.code}")
                         }
                     }
                 } catch (e: Exception) {
-                    options.customLogger.warning("[Statsig]: An exception was caught: $e")
+                    logger.warn("An exception was caught: $e")
                     if (e is JsonParseException) {
                         errorBoundary.logException("retryPostLogs", e)
                     }

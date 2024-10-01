@@ -271,6 +271,7 @@ private class StatsigServerImpl() :
     private lateinit var logger: StatsigLogger
     private lateinit var evaluator: Evaluator
     private lateinit var diagnostics: Diagnostics
+    private lateinit var outputLogger: LoggerInterface
     private var options: StatsigOptions = StatsigOptions()
     private val mutex = Mutex()
     private val statsigMetadata = StatsigMetadata()
@@ -290,6 +291,7 @@ private class StatsigServerImpl() :
         statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
         transport = StatsigTransport(serverSecret, options, statsigMetadata, statsigScope, errorBoundary, sdkConfigs)
         logger = StatsigLogger(statsigScope, transport, statsigMetadata, options, sdkConfigs)
+        options.customLogger.also { outputLogger = it }
         this.options = options
     }
 
@@ -307,6 +309,7 @@ private class StatsigServerImpl() :
             {
                 mutex.withLock { // Prevent multiple coroutines from calling this at once.
                     if (this::evaluator.isInitialized && evaluator.isInitialized) {
+                        outputLogger.warn("Cannot re-initialize server that has shutdown. Please recreate the server connection.")
                         throw StatsigIllegalStateException(
                             "Cannot re-initialize server that has shutdown. Please recreate the server connection.",
                         )
@@ -328,6 +331,7 @@ private class StatsigServerImpl() :
                         dataStoreSetUp()
                     }
                     endInitDiagnostics(failureDetails == null)
+                    outputLogger.info("Statsig Server has been successfully initialized.")
                     return@capture InitializationDetails(
                         System.currentTimeMillis() - setupStartTime,
                         isSDKReady = true,
@@ -337,6 +341,7 @@ private class StatsigServerImpl() :
                 }
             },
             {
+                outputLogger.warn("Statsig Server has not been successfully initialized.")
                 return@capture InitializationDetails(
                     System.currentTimeMillis() - setupStartTime,
                     false,
@@ -1188,15 +1193,15 @@ private class StatsigServerImpl() :
 
     private fun isSDKInitialized(): Boolean {
         if (!isInitialized()) { // for multi-instance, if the server has not been initialized
-            getCustomLogger().warning("Call and wait for initialize StatsigServer to complete before calling SDK methods.")
+            getCustomLogger().warn("Call and wait for initialize StatsigServer to complete before calling SDK methods.")
             return false
         }
         if (statsigJob.isCancelled || statsigJob.isCompleted) {
-            options.customLogger.info("StatsigServer was shutdown")
+            outputLogger.info("StatsigServer was shutdown.")
             return false
         }
         if (!this::evaluator.isInitialized || !evaluator.isInitialized) { // If the server was never initialized
-            options.customLogger.warning("Must initialize a server before calling other APIs")
+            outputLogger.warn("Must initialize a server before calling other APIs.")
             return false
         }
         return true
@@ -1252,7 +1257,7 @@ private class StatsigServerImpl() :
                 throw e
             }
             server.getCustomLogger()
-                .info("[Statsig]: Shutting down Statsig because of unhandled exception from your server")
+                .info("Shutting down Statsig because of unhandled exception from your server")
             server.shutdown()
             throw e
         }

@@ -5,7 +5,7 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CustomLoggerTest {
@@ -13,7 +13,11 @@ class CustomLoggerTest {
     val infoMessage = mutableListOf<String>()
     val server = StatsigServer.create()
     val fakeLogger = object : LoggerInterface {
-        override fun warning(message: String) {
+        override fun error(message: String) {
+            TODO("Not yet implemented")
+        }
+
+        override fun warn(message: String) {
             println(message)
             warningMessage.add(message)
         }
@@ -21,6 +25,14 @@ class CustomLoggerTest {
         override fun info(message: String) {
             println(message)
             infoMessage.add(message)
+        }
+
+        override fun debug(message: String) {
+            TODO("Not yet implemented")
+        }
+
+        override fun setLogLevel(level: LogLevel) {
+            TODO("Not yet implemented")
         }
     }
 
@@ -52,7 +64,8 @@ class CustomLoggerTest {
             ),
         )
         assert(warningMessage.size == 1)
-        assertEquals(warningMessage[0], "[Statsig]: Failed to download config specification, HTTP Response 404 received from server")
+        assertTrue(warningMessage[0].contains("Failed to download config specification"))
+        assertTrue(warningMessage[0].contains("HTTP Response 404 received from server"))
         server.shutdown()
     }
 }

@@ -14,6 +14,7 @@ internal class HTTPHelper(
     private val errorBoundary: ErrorBoundary,
 ) {
     private var diagnostics: Diagnostics? = null
+    private val logger = options.customLogger
 
     private val gson = Utils.getGson()
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
@@ -46,9 +47,10 @@ internal class HTTPHelper(
                 null,
                 response,
             )
+            logger.info("Received response with status code: ${response.code}")
             return Pair(response, null)
         } catch (e: Exception) {
-            options.customLogger.warning("[Statsig]: An exception was caught: $e")
+            logger.warn("An exception was caught: $e")
             if (e is JsonParseException) {
                 errorBoundary.logException("postImpl", e)
             }

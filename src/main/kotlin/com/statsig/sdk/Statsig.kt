@@ -752,9 +752,9 @@ class Statsig {
             val initialized = isInitialized()
             if (!initialized) {
                 if (::statsigServer.isInitialized) {
-                    statsigServer.getCustomLogger().warning("Call and wait for initialize to complete before calling SDK methods.")
+                    statsigServer.getCustomLogger().warn("Call and wait for initialize to complete before calling SDK methods.")
                 } else {
-                    println("Call and wait for initialize to complete before calling SDK methods.")
+                    println("[Statsig] Call and wait for initialize to complete before calling SDK methods.") // this happened before we init so use println
                 }
             }
             return initialized
