@@ -236,9 +236,14 @@ data class GetConfigOptions(var disableExposureLogging: Boolean = false) {
     constructor() : this(false)
 }
 
+data class PersistentAssignmentOptions(
+    var enforceTargeting: Boolean = false
+)
+
 data class GetLayerOptions(
     var disableExposureLogging: Boolean = false,
     var userPersistedValues: UserPersistedValues? = null,
+    var persistentAssignmentOptions: PersistentAssignmentOptions? = null,
 ) {
     constructor() : this(false)
 }
@@ -246,6 +251,7 @@ data class GetLayerOptions(
 data class GetExperimentOptions(
     var disableExposureLogging: Boolean = false,
     var userPersistedValues: UserPersistedValues? = null,
+    var persistentAssignmentOptions: PersistentAssignmentOptions? = null,
 ) {
     constructor() : this(false)
 }

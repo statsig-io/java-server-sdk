@@ -52,7 +52,11 @@ internal data class APIRule(
     @SerializedName("groupName") val groupName: String?,
     @SerializedName("configDelegate") val configDelegate: String?,
     @SerializedName("isExperimentGroup") val isExperimentGroup: Boolean?,
-)
+) {
+    fun isTargetingRule(): Boolean {
+        return id == "targetingGate" || id == "inlineTargetingRules"
+    }
+}
 
 internal data class APICondition(
     @SerializedName("type") val type: String,

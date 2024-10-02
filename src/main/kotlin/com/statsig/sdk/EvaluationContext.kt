@@ -9,6 +9,8 @@ internal class EvaluationContext(
     var hash: HashAlgo = HashAlgo.SHA256,
     var isNested: Boolean = false,
     var userPersistedValues: UserPersistedValues? = null,
+    var persistentAssignmentOptions: PersistentAssignmentOptions? = null,
+    var onlyEvaluateTargeting: Boolean = false,
 ) {
     // Overload without default parameters required for Java
     constructor(user: StatsigUser) : this(user, ConfigEvaluation())
@@ -20,6 +22,8 @@ internal class EvaluationContext(
         hash = ctx.hash,
         isNested = ctx.isNested,
         userPersistedValues = ctx.userPersistedValues,
+        persistentAssignmentOptions = ctx.persistentAssignmentOptions,
+        onlyEvaluateTargeting = ctx.onlyEvaluateTargeting,
     )
 
     internal fun asDelegate(): EvaluationContext {
@@ -37,6 +41,12 @@ internal class EvaluationContext(
     internal fun asNewEvaluation(): EvaluationContext {
         var context = EvaluationContext(this)
         context.evaluation = ConfigEvaluation()
+        return context
+    }
+
+    internal fun onlyForTargeting(): EvaluationContext {
+        var context = EvaluationContext(this)
+        context.onlyEvaluateTargeting = true
         return context
     }
 }

@@ -285,7 +285,8 @@ internal class Evaluator(
             ctx.evaluation = this.getUnrecognizedEvaluation()
             return
         }
-        this.evaluateConfig(ctx, gate)
+        this.evaluate(ctx, gate)
+        this.finalizeEvaluation(ctx)
     }
 
     private fun getUnrecognizedEvaluation(): ConfigEvaluation {
@@ -315,8 +316,16 @@ internal class Evaluator(
         if (stickyValues != null) {
             logger.debug("Sticky Evaluation found for experiment: ${config.name} with value: $stickyValues")
             val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
-            ctx.evaluation = stickyEvaluation
-            return
+            if (ctx.persistentAssignmentOptions?.enforceTargeting == true) {
+                val passesTargeting = this.evaluateTargeting(ctx, config)
+                if (passesTargeting) {
+                    ctx.evaluation = stickyEvaluation
+                    return
+                }
+            } else {
+                ctx.evaluation = stickyEvaluation
+                return
+            }
         }
 
         this.evaluate(ctx, config)
@@ -348,12 +357,21 @@ internal class Evaluator(
             val delegate = stickyEvaluation.configDelegate
             val delegateSpec = if (delegate != null) this.specStore.getConfig(delegate) else null
             if (delegateSpec != null && delegateSpec.isActive) {
-                ctx.evaluation = stickyEvaluation
+                if (ctx.persistentAssignmentOptions?.enforceTargeting == true) {
+                    val passesTargeting = this.evaluateTargeting(ctx, delegateSpec)
+                    if (passesTargeting) {
+                        ctx.evaluation = stickyEvaluation
+                        return
+                    }
+                } else {
+                    ctx.evaluation = stickyEvaluation
+                    return
+                }
             } else {
                 this.persistentStore.delete(ctx.user, config.idType, config.name)
                 this.evaluate(ctx, config)
+                return
             }
-            return
         }
 
         this.evaluate(ctx, config)
@@ -373,6 +391,12 @@ internal class Evaluator(
         }
     }
 
+    private fun evaluateTargeting(ctx: EvaluationContext, config: APIConfig): Boolean {
+        var context = ctx.onlyForTargeting()
+        this.evaluate(context, config)
+        return !context.evaluation.booleanValue // Fail evaluation means to pass targeting (fall through logic)
+    }
+
     private fun evaluate(ctx: EvaluationContext, config: APIConfig) {
         ctx.evaluation.evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
 
@@ -384,7 +408,16 @@ internal class Evaluator(
             return
         }
 
-        for (rule in config.rules) {
+        var rules = config.rules
+        if (ctx.onlyEvaluateTargeting) {
+            rules = rules.filter { it.isTargetingRule() }.toTypedArray()
+            if (rules.isEmpty()) {
+                ctx.evaluation = ConfigEvaluation(true)
+                return
+            }
+        }
+
+        for (rule in rules) {
             this.evaluateRule(ctx, rule)
 
             if (ctx.evaluation.evaluationDetails?.reason == EvaluationReason.UNSUPPORTED) {

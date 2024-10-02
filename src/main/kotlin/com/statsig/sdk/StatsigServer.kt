@@ -585,16 +585,20 @@ private class StatsigServerImpl() :
     override fun getExperimentSync(
         user: StatsigUser,
         experimentName: String,
-        option: GetExperimentOptions?,
+        options: GetExperimentOptions?,
     ): DynamicConfig {
         if (!isSDKInitialized()) {
             return DynamicConfig.empty(experimentName)
         }
         return this.errorBoundary.captureSync("getExperimentSync", {
             val normalizedUser = normalizeUser(user)
-            val context = EvaluationContext(normalizedUser, userPersistedValues = option?.userPersistedValues)
+            val context = EvaluationContext(
+                user,
+                userPersistedValues = options?.userPersistedValues,
+                persistentAssignmentOptions = options?.persistentAssignmentOptions
+            )
             evaluator.getConfig(context, experimentName)
-            if (option?.disableExposureLogging !== true) {
+            if (options?.disableExposureLogging !== true) {
                 logConfigImpl(normalizedUser, experimentName, context.evaluation)
             }
             return@captureSync getDynamicConfigFromEvalResult(context.evaluation, experimentName)
@@ -1116,7 +1120,11 @@ private class StatsigServerImpl() :
         return this.errorBoundary.captureSync("getLayerImpl", {
             val normalizedUser = normalizeUser(user)
 
-            val context = EvaluationContext(user, userPersistedValues = options?.userPersistedValues)
+            val context = EvaluationContext(
+                user,
+                userPersistedValues = options?.userPersistedValues,
+                persistentAssignmentOptions = options?.persistentAssignmentOptions
+            )
             evaluator.getLayer(context, layerName)
 
             val value = (context.evaluation.jsonValue as? Map<*, *>) ?: mapOf<String, Any>()
