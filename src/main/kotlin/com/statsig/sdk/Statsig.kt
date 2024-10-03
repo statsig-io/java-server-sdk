@@ -380,6 +380,28 @@ class Statsig {
         }
 
         /**
+         * Gets all evaluated values for the given user in a way that leads to a smaller size.
+         * These values can then be given to a Statsig Client SDK via bootstrapping.
+         * Note: Only works with client sdk versions that support the new format
+         *
+         * @param user The StatsigUser object used for evaluation
+         * @param hash The hashing algorithm to use when obfuscating names
+         *
+         * @return An initialize response containing evaluated gates/configs/layers
+         */
+        @JvmStatic
+        fun getEvaluationsForUser(
+            user: StatsigUser,
+            hash: HashAlgo = HashAlgo.SHA256,
+            clientSDKKey: String? = null,
+        ): Map<String, Any> {
+            if (!checkInitialized()) {
+                return emptyMap()
+            }
+            return statsigServer.getEvaluationsForUser(user, hash, clientSDKKey)
+        }
+
+        /**
          * Logs an event to Statsig with the provided values.
          *
          * @param user A StatsigUser object to be included in the log

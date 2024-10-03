@@ -31,6 +31,9 @@ enum class ContextType {
 
     @SerializedName("get_client_initialize_response")
     GET_CLIENT_INITIALIZE_RESPONSE,
+
+    @SerializedName("get_evaluations_for_user")
+    GET_EVALUATIONS_FOR_USER,
 }
 
 enum class KeyType {
@@ -60,6 +63,9 @@ enum class KeyType {
 
     @SerializedName("get_layer")
     GET_LAYER,
+
+    @SerializedName("get_evaluations_for_user")
+    GET_EVALUATIONS_FOR_USER,
 
     @SerializedName("get_client_initialize_response")
     GET_CLIENT_INITIALIZE_RESPONSE, ;

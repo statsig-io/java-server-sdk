@@ -98,6 +98,12 @@ sealed class StatsigServer {
         clientSDKKey: String? = null,
     ): Map<String, Any>
 
+    abstract fun getEvaluationsForUser(
+        user: StatsigUser,
+        hash: HashAlgo = HashAlgo.SHA256,
+        clientSDKKey: String? = null,
+    ): Map<String, Any>
+
     fun logEvent(user: StatsigUser?, eventName: String) {
         logEvent(user, eventName, null)
     }
@@ -761,6 +767,43 @@ private class StatsigServerImpl() :
                 false,
                 StepType.PROCESS,
                 ContextType.GET_CLIENT_INITIALIZE_RESPONSE,
+                Marker(markerID = markerID),
+            )
+            return@captureSync emptyMap()
+        })
+    }
+
+    override fun getEvaluationsForUser(
+        user: StatsigUser,
+        hash: HashAlgo,
+        clientSDKKey: String?,
+    ): Map<String, Any> {
+        if (!isSDKInitialized()) {
+            return emptyMap()
+        }
+        var markerID: String? = null
+        return this.errorBoundary.captureSync("getEvaluationsForUser", {
+            markerID = diagnostics.markStart(
+                KeyType.GET_EVALUATIONS_FOR_USER,
+                StepType.PROCESS,
+                ContextType.GET_EVALUATIONS_FOR_USER
+            )
+            val normalizedUser = normalizeUser(user)
+            val response = evaluator.getEvaluationsForUser(normalizedUser, hash, clientSDKKey)
+            diagnostics.markEnd(
+                KeyType.GET_EVALUATIONS_FOR_USER,
+                !response.isEmpty(),
+                StepType.PROCESS,
+                ContextType.GET_EVALUATIONS_FOR_USER,
+                Marker(markerID = markerID),
+            )
+            return@captureSync response.toMap()
+        }, {
+            diagnostics.markEnd(
+                KeyType.GET_EVALUATIONS_FOR_USER,
+                false,
+                StepType.PROCESS,
+                ContextType.GET_EVALUATIONS_FOR_USER,
                 Marker(markerID = markerID),
             )
             return@captureSync emptyMap()

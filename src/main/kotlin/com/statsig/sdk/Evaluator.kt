@@ -214,6 +214,32 @@ internal class Evaluator(
         return response
     }
 
+    fun getEvaluationsForUser(
+        user: StatsigUser,
+        hash: HashAlgo = HashAlgo.SHA256,
+        clientSDKKey: String? = null,
+    ): EvaluationsResponse {
+        var context = EvaluationContext(user, clientSDKKey = clientSDKKey, hash = hash)
+        val response = EvaluationsFormatter(
+            this.specStore,
+            this::evaluateConfig,
+            context,
+        ).getFormattedResponse()
+        if (response == null || response.isEmpty()) {
+            val extraInfo = """{
+                "hash": "$hash",
+                "clientKey": "$clientSDKKey"
+                }
+            """.trimIndent()
+            errorBoundary.logException(
+                "getEvaluationsForUser",
+                IllegalStateException("getEvaluationsForUser returns empty result: Possibly SDK failed to initialize"),
+                extraInfo = extraInfo,
+            )
+        }
+        return response
+    }
+
     private fun finalizeEvaluation(ctx: EvaluationContext) {
         if (!ctx.isNested) {
             ctx.evaluation.secondaryExposures = cleanExposures(ctx.evaluation.secondaryExposures)

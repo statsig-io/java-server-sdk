@@ -137,6 +137,7 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
                 ContextType.INITIALIZE -> "initialize"
                 ContextType.API_CALL -> "api_call"
                 ContextType.GET_CLIENT_INITIALIZE_RESPONSE -> "gcir"
+                ContextType.GET_EVALUATIONS_FOR_USER -> "gcir"
             }
         val rand = Math.random() * MAX_SAMPLING_RATE
         return samplingRates[samplingKey] ?: 0 > rand
