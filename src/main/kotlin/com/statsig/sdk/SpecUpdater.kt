@@ -35,6 +35,11 @@ internal class SpecUpdater(
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     fun initialize() {
+        transport.setStreamingFallback(NetworkEndpoint.DOWNLOAD_CONFIG_SPECS) {
+            this.transport.downloadConfigSpecsFromStatsig(
+                this.lastUpdateTime,
+            ).first
+        }
         transport.initialize()
     }
 
@@ -71,11 +76,6 @@ internal class SpecUpdater(
             backgroundDownloadIDLists = statsigScope.launch {
                 idListFlow.collect { idListCallback(it) }
             }
-        }
-        transport.setStreamingFallback(NetworkEndpoint.DOWNLOAD_CONFIG_SPECS) {
-            this.transport.downloadConfigSpecsFromStatsig(
-                this.lastUpdateTime,
-            ).first
         }
     }
 

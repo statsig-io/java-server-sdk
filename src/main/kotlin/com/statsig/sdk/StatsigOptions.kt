@@ -5,6 +5,7 @@ import com.statsig.sdk.datastore.IDataStore
 import com.statsig.sdk.network.STATSIG_API_URL_BASE
 import com.statsig.sdk.persistent_storage.IUserPersistentStorage
 import com.statsig.sdk.persistent_storage.UserPersistedValues
+import java.io.InputStream
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -208,6 +209,17 @@ enum class NetworkProtocol {
     GRPC_WEBSOCKET,
 }
 
+enum class AuthenticationMode {
+    @SerializedName("disabled")
+    DISABLED,
+
+    @SerializedName("tls")
+    TLS,
+
+    @SerializedName("mTls")
+    MTLS,
+}
+
 data class ForwardProxyConfig(
     @SerializedName("proxyAddress") var proxyAddress: String,
     @SerializedName("protocol") val proxyProtocol: NetworkProtocol,
@@ -216,6 +228,12 @@ data class ForwardProxyConfig(
     @SerializedName("retry_backoff_multiplier") val retryBackoffMultiplier: Int? = null,
     @SerializedName("retry_backoff_base_ms") val retryBackoffBaseMs: Long? = null,
     @SerializedName("push_worker_failover_threshold") val pushWorkerFailoverThreshold: Int? = null,
+
+    // TLS Certification
+    @SerializedName("authentication_mode") var authenticationMode: AuthenticationMode = AuthenticationMode.DISABLED,
+    @SerializedName("tls_cert_chain") var tlsCertChain: InputStream? = null,
+    @SerializedName("tls_private_key") var tlsPrivateKey: InputStream? = null,
+    @SerializedName("tls_private_key_password") var tlsPrivateKeyPassword: InputStream? = null,
 )
 
 data class ProxyConfig @JvmOverloads constructor(

@@ -286,19 +286,25 @@ private class StatsigServerImpl() :
     private var setupStartTime = 0L
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
-        Thread.setDefaultUncaughtExceptionHandler(MainThreadExceptionHandler(this, Thread.currentThread()))
-        setupStartTime = System.currentTimeMillis()
-        errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
-        coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
-            // no-op - supervisor job should not throw when a child fails
-            errorBoundary.logException("coroutineExceptionHandler", ex)
+        try {
+            Thread.setDefaultUncaughtExceptionHandler(MainThreadExceptionHandler(this, Thread.currentThread()))
+            setupStartTime = System.currentTimeMillis()
+            errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
+            coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
+                // no-op - supervisor job should not throw when a child fails
+                errorBoundary.logException("coroutineExceptionHandler", ex)
+            }
+            statsigJob = SupervisorJob()
+            statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
+            transport = StatsigTransport(serverSecret, options, statsigMetadata, statsigScope, errorBoundary, sdkConfigs)
+            logger = StatsigLogger(statsigScope, transport, statsigMetadata, options, sdkConfigs)
+            options.customLogger.also { outputLogger = it }
+            this.options = options
+        } catch (e: Throwable) {
+            // noop swallow and let other part handle error
+            options.customLogger.warn("[STATSIG]Failed to setup sdk")
+            options.customLogger.warn(e.stackTraceToString())
         }
-        statsigJob = SupervisorJob()
-        statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
-        transport = StatsigTransport(serverSecret, options, statsigMetadata, statsigScope, errorBoundary, sdkConfigs)
-        logger = StatsigLogger(statsigScope, transport, statsigMetadata, options, sdkConfigs)
-        options.customLogger.also { outputLogger = it }
-        this.options = options
     }
 
     override suspend fun initialize(serverSecret: String, options: StatsigOptions): InitializationDetails? {
