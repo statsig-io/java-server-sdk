@@ -74,7 +74,13 @@ internal class GRPCWebsocketWorker(
         get() = throw NotImplementedError("idListsFlow not implemented")
 
     override fun initializeFlows() {
-        downloadConfigsJob = statsigScope.launch(Dispatchers.IO) { streamConfigSpec() }
+        downloadConfigsJob = statsigScope.launch(Dispatchers.IO) {
+            try {
+                streamConfigSpec()
+            } catch (e: Throwable) {
+                processStreamErrorOrClose(e)
+            }
+        }
     }
 
     override suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
