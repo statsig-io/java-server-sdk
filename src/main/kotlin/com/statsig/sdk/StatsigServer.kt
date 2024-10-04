@@ -601,7 +601,7 @@ private class StatsigServerImpl() :
             val context = EvaluationContext(
                 user,
                 userPersistedValues = options?.userPersistedValues,
-                persistentAssignmentOptions = options?.persistentAssignmentOptions
+                persistentAssignmentOptions = options?.persistentAssignmentOptions,
             )
             evaluator.getConfig(context, experimentName)
             if (options?.disableExposureLogging !== true) {
@@ -786,7 +786,7 @@ private class StatsigServerImpl() :
             markerID = diagnostics.markStart(
                 KeyType.GET_EVALUATIONS_FOR_USER,
                 StepType.PROCESS,
-                ContextType.GET_EVALUATIONS_FOR_USER
+                ContextType.GET_EVALUATIONS_FOR_USER,
             )
             val normalizedUser = normalizeUser(user)
             val response = evaluator.getEvaluationsForUser(normalizedUser, hash, clientSDKKey)
@@ -1166,7 +1166,7 @@ private class StatsigServerImpl() :
             val context = EvaluationContext(
                 user,
                 userPersistedValues = options?.userPersistedValues,
-                persistentAssignmentOptions = options?.persistentAssignmentOptions
+                persistentAssignmentOptions = options?.persistentAssignmentOptions,
             )
             evaluator.getLayer(context, layerName)
 

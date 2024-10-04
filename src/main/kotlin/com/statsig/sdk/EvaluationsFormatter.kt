@@ -216,8 +216,8 @@ internal class EvaluationsFormatter(
                     evaluationDetails = EvaluationDetails(
                         this.specStore.getLastUpdateTime(),
                         this.specStore.getInitTime(),
-                        EvaluationReason.UNRECOGNIZED
-                    )
+                        EvaluationReason.UNRECOGNIZED,
+                    ),
                 )
             }
         }
@@ -259,7 +259,7 @@ internal class EvaluationsFormatter(
             hashedName,
             "value" to false,
             evalContext.evaluation.ruleID,
-            dedupeExposures(hashedExposures)
+            dedupeExposures(hashedExposures),
         )
         val category = configSpec.type
         val entityType = configSpec.entity

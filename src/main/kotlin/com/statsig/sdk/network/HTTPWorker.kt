@@ -58,9 +58,9 @@ internal class HTTPWorker(
     private val gson = Utils.getGson()
     private var diagnostics: Diagnostics? = null
     private val logger = options.customLogger
-    val apiForDownloadConfigSpecs = options.endpointProxyConfigs[NetworkEndpoint.DOWNLOAD_CONFIG_SPECS]?.proxyAddress?.let { "$it/v1" } ?: options.apiForDownloadConfigSpecs ?: options.api ?: STATSIG_CDN_URL_BASE
-    val apiForGetIDLists = options.endpointProxyConfigs[NetworkEndpoint.GET_ID_LISTS]?.proxyAddress?.let { "$it/v1" } ?: options.apiForGetIdlists ?: options.api ?: STATSIG_API_URL_BASE
-    val apiForLogEvent = options.endpointProxyConfigs[NetworkEndpoint.LOG_EVENT]?.proxyAddress?.let { "$it/v1" } ?: options.api ?: STATSIG_API_URL_BASE
+    val apiForDownloadConfigSpecs = options.endpointProxyConfigs[NetworkEndpoint.DOWNLOAD_CONFIG_SPECS]?.proxyAddress ?: options.apiForDownloadConfigSpecs ?: options.api ?: STATSIG_CDN_URL_BASE
+    val apiForGetIDLists = options.endpointProxyConfigs[NetworkEndpoint.GET_ID_LISTS]?.proxyAddress ?: options.apiForGetIdlists ?: options.api ?: STATSIG_API_URL_BASE
+    val apiForLogEvent = options.endpointProxyConfigs[NetworkEndpoint.LOG_EVENT]?.proxyAddress ?: options.api ?: STATSIG_API_URL_BASE
     private var eventsCount: String = ""
 
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)

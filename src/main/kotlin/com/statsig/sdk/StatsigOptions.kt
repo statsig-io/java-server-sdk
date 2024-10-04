@@ -19,7 +19,8 @@ enum class LogLevel(val value: Int) {
     DEBUG(1),
     INFO(2),
     WARN(3),
-    ERROR(4);
+    ERROR(4),
+    ;
 
     fun getLevelString(): String {
         return when (this) {
@@ -237,7 +238,7 @@ data class GetConfigOptions(var disableExposureLogging: Boolean = false) {
 }
 
 data class PersistentAssignmentOptions(
-    var enforceTargeting: Boolean = false
+    var enforceTargeting: Boolean = false,
 )
 
 data class GetLayerOptions(
