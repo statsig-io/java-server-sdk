@@ -11,7 +11,7 @@ internal data class EvaluationsResponse(
     @SerializedName("hash_used") var hashUsed: String,
     @SerializedName("user") var user: Map<String, Any?>,
     @SerializedName("sdk_info") var sdkInfo: Map<String, String>,
-    @SerializedName("exposures") var exposures: ArrayList<Map<String, String>>,
+    @SerializedName("exposures") var exposures: Map<String, Map<String, String>>,
 ) {
 
     fun toMap(): Map<String, Any> {
@@ -37,9 +37,9 @@ internal data class EvaluationClientConfig(
     @SerializedName("name") var name: String,
     @SerializedName("value") var value: Any,
     @SerializedName("rule_id") var ruleID: String,
-    @SerializedName("secondary_exposures") var secondaryExposures: ArrayList<Int>,
+    @SerializedName("secondary_exposures") var secondaryExposures: ArrayList<String>,
     @SerializedName("undelegated_secondary_exposures")
-    var undelegatedSecondaryExposures: ArrayList<Int>? = null,
+    var undelegatedSecondaryExposures: ArrayList<String>? = null,
     @SerializedName("allocated_experiment_name") var allocatedExperimentName: String? = null,
     @SerializedName("is_user_in_experiment") var isUserInExperiment: Boolean? = null,
     @SerializedName("is_experiment_active") var isExperimentActive: Boolean? = null,
@@ -88,8 +88,7 @@ internal class EvaluationsFormatter(
     private val user: StatsigUser = context.user
     private val clientSDKKey: String? = context.clientSDKKey
     private val hash: HashAlgo = context.hash
-    private val exposures: ArrayList<Map<String, String>> = ArrayList<Map<String, String>>()
-    private val exposureMap: MutableMap<String, Int> = mutableMapOf()
+    private val exposures: MutableMap<String, Map<String, String>> = mutableMapOf()
 
     fun getFormattedResponse(): EvaluationsResponse {
         val evaluatedKeys = mutableMapOf<String, Any>()
@@ -149,20 +148,19 @@ internal class EvaluationsFormatter(
         )
     }
 
-    private fun dedupeExposures(exposures: List<Map<String, String>>): ArrayList<Int> {
-        val compressedExposures = ArrayList<Int>()
-        for (exposure in exposures) {
+    private fun dedupeExposures(secondaryExposures: List<Map<String, String>>): ArrayList<String> {
+        val exposureKeys = ArrayList<String>()
+        for (exposure in secondaryExposures) {
             val key = exposure["gate"] ?: "" + ":" + exposure["gateValue"] ?: "" + ":" + exposure["ruleID"] ?: ""
-            val exposureIndex = exposureMap.getOrDefault(key, -1)
-            if (exposureIndex == -1) {
-                exposureMap[key] = exposureMap.size
-                this.exposures.add(exposure)
-                compressedExposures.add(exposureMap.size - 1)
+            val hashKey = Hashing.djb2(key)
+            if (this.exposures.containsKey(hashKey)) {
+                exposureKeys.add(hashKey)
             } else {
-                compressedExposures.add(exposureIndex)
+                this.exposures[hashKey] = exposure
+                exposureKeys.add(hashKey)
             }
         }
-        return compressedExposures
+        return exposureKeys
     }
 
     private fun populateExperimentFields(
