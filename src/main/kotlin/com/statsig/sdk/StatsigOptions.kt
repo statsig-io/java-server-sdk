@@ -257,6 +257,7 @@ data class GetConfigOptions(var disableExposureLogging: Boolean = false) {
 
 data class PersistentAssignmentOptions(
     var enforceTargeting: Boolean = false,
+    var enforceOverrides: Boolean = false,
 )
 
 data class GetLayerOptions(

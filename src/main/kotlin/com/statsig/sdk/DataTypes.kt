@@ -56,6 +56,10 @@ internal data class APIRule(
     fun isTargetingRule(): Boolean {
         return id == "targetingGate" || id == "inlineTargetingRules"
     }
+
+    fun isOverrideRule(): Boolean {
+        return id.endsWith("override")
+    }
 }
 
 internal data class APICondition(

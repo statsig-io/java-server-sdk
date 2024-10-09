@@ -342,13 +342,7 @@ internal class Evaluator(
         if (stickyValues != null) {
             logger.debug("Sticky Evaluation found for experiment: ${config.name} with value: $stickyValues")
             val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
-            if (ctx.persistentAssignmentOptions?.enforceTargeting == true) {
-                val passesTargeting = this.evaluateTargeting(ctx, config)
-                if (passesTargeting) {
-                    ctx.evaluation = stickyEvaluation
-                    return
-                }
-            } else {
+            if (this.evaluateShouldReturnSticky(ctx, config)) {
                 ctx.evaluation = stickyEvaluation
                 return
             }
@@ -364,6 +358,7 @@ internal class Evaluator(
             )
         }
     }
+
     private fun evaluateLayer(ctx: EvaluationContext, config: APIConfig) {
         this.evaluateLayerImpl(ctx, config)
         this.finalizeEvaluation(ctx)
@@ -383,13 +378,7 @@ internal class Evaluator(
             val delegate = stickyEvaluation.configDelegate
             val delegateSpec = if (delegate != null) this.specStore.getConfig(delegate) else null
             if (delegateSpec != null && delegateSpec.isActive) {
-                if (ctx.persistentAssignmentOptions?.enforceTargeting == true) {
-                    val passesTargeting = this.evaluateTargeting(ctx, delegateSpec)
-                    if (passesTargeting) {
-                        ctx.evaluation = stickyEvaluation
-                        return
-                    }
-                } else {
+                if (this.evaluateShouldReturnSticky(ctx, delegateSpec)) {
                     ctx.evaluation = stickyEvaluation
                     return
                 }
@@ -417,10 +406,25 @@ internal class Evaluator(
         }
     }
 
-    private fun evaluateTargeting(ctx: EvaluationContext, config: APIConfig): Boolean {
-        var context = ctx.onlyForTargeting()
-        this.evaluate(context, config)
-        return !context.evaluation.booleanValue // Fail evaluation means to pass targeting (fall through logic)
+    private fun evaluateShouldReturnSticky(ctx: EvaluationContext, config: APIConfig): Boolean {
+        if (ctx.persistentAssignmentOptions?.enforceTargeting == true) {
+            var targetingContext = ctx.onlyForTargeting()
+            this.evaluate(targetingContext, config)
+            val passesTargeting =
+                !targetingContext.evaluation.booleanValue // Fail evaluation means to pass targeting (fall through logic)
+            if (!passesTargeting) {
+                return false
+            }
+        }
+        if (ctx.persistentAssignmentOptions?.enforceOverrides == true) {
+            var overrideContext = ctx.onlyForOverrides()
+            this.evaluate(overrideContext, config)
+            val isOverridden = overrideContext.evaluation.booleanValue
+            if (isOverridden) {
+                return false
+            }
+        }
+        return true
     }
 
     private fun evaluate(ctx: EvaluationContext, config: APIConfig) {
@@ -437,6 +441,13 @@ internal class Evaluator(
         var rules = config.rules
         if (ctx.onlyEvaluateTargeting) {
             rules = rules.filter { it.isTargetingRule() }.toTypedArray()
+            if (rules.isEmpty()) {
+                ctx.evaluation = ConfigEvaluation(true)
+                return
+            }
+        }
+        if (ctx.onlyEvaluateOverrides) {
+            rules = rules.filter { it.isOverrideRule() }.toTypedArray()
             if (rules.isEmpty()) {
                 ctx.evaluation = ConfigEvaluation(true)
                 return

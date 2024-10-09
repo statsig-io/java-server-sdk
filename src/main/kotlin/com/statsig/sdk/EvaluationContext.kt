@@ -11,6 +11,7 @@ internal class EvaluationContext(
     var userPersistedValues: UserPersistedValues? = null,
     var persistentAssignmentOptions: PersistentAssignmentOptions? = null,
     var onlyEvaluateTargeting: Boolean = false,
+    var onlyEvaluateOverrides: Boolean = false,
 ) {
     // Overload without default parameters required for Java
     constructor(user: StatsigUser) : this(user, ConfigEvaluation())
@@ -24,6 +25,7 @@ internal class EvaluationContext(
         userPersistedValues = ctx.userPersistedValues,
         persistentAssignmentOptions = ctx.persistentAssignmentOptions,
         onlyEvaluateTargeting = ctx.onlyEvaluateTargeting,
+        onlyEvaluateOverrides = ctx.onlyEvaluateOverrides,
     )
 
     internal fun asDelegate(): EvaluationContext {
@@ -47,6 +49,12 @@ internal class EvaluationContext(
     internal fun onlyForTargeting(): EvaluationContext {
         var context = EvaluationContext(this)
         context.onlyEvaluateTargeting = true
+        return context
+    }
+
+    internal fun onlyForOverrides(): EvaluationContext {
+        var context = EvaluationContext(this)
+        context.onlyEvaluateOverrides = true
         return context
     }
 }
