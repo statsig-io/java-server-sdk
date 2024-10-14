@@ -220,7 +220,7 @@ internal class ClientInitializeFormatter(
             return null
         }
 
-        if (!configSpecIsForThisTargetApp(configSpec)) {
+        if (!InitializeFormatterUtils.configSpecIsForThisTargetApp(clientSDKKey, specStore, configSpec)) {
             return null
         }
 
@@ -275,24 +275,5 @@ internal class ClientInitializeFormatter(
             HashAlgo.DJB2 -> Hashing.djb2(name)
             else -> Hashing.sha256(name)
         }
-    }
-
-    private fun configSpecIsForThisTargetApp(configSpec: APIConfig): Boolean {
-        if (clientSDKKey == null) {
-            // no client key provided, send me everything
-            return true
-        }
-        var targetAppID = specStore.getAppIDFromKey(clientSDKKey)
-        if (targetAppID == null) {
-            // no target app id for the given SDK key, send me everything
-            return true
-        }
-        if (configSpec.targetAppIDs == null) {
-            // no target app id associated with this config
-            // if the key does have a target app id its not for this app
-            return false
-        }
-
-        return configSpec.targetAppIDs.contains(targetAppID)
     }
 }

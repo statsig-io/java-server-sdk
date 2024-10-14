@@ -98,6 +98,10 @@ sealed class StatsigServer {
         clientSDKKey: String? = null,
     ): Map<String, Any>
 
+    abstract fun getOnDeviceEvalInitializeResponse(
+        clientSDKKey: String? = null,
+    ): Map<String, Any>
+
     abstract fun getEvaluationsForUser(
         user: StatsigUser,
         hash: HashAlgo = HashAlgo.SHA256,
@@ -302,7 +306,7 @@ private class StatsigServerImpl() :
             this.options = options
         } catch (e: Throwable) {
             // noop swallow and let other part handle error
-            options.customLogger.warn("[STATSIG]Failed to setup sdk")
+            options.customLogger.warn("Failed to setup sdk")
             options.customLogger.warn(e.stackTraceToString())
         }
     }
@@ -740,6 +744,18 @@ private class StatsigServerImpl() :
             { return@capture this.evaluator.getUserPersistedValues(user, idType) },
             { return@capture mapOf() },
         )
+    }
+
+    override fun getOnDeviceEvalInitializeResponse(clientSDKKey: String?): Map<String, Any> {
+        if (!isSDKInitialized()) {
+            return emptyMap()
+        }
+        return this.errorBoundary.captureSync("getOnDeviceEvalConfigSpecs", {
+            val response = evaluator.getOnDeviceEvalInitializeResponse(clientSDKKey)
+            return@captureSync response.toMap()
+        }, {
+            return@captureSync emptyMap()
+        })
     }
 
     override fun getClientInitializeResponse(

@@ -380,6 +380,25 @@ class Statsig {
         }
 
         /**
+         * Retrieves the initialization data required for on-device evaluation sdks.
+         * These values can then be given to an on-device eval Statsig Client SDK via bootstrapping.
+         * Note: See Java SDK documentation https://docs.statsig.com/server/javaSDK
+         *
+         * @param clientSDKKey the secret key used for your on device eval client sdk
+         *
+         * @return An initialize response containing evaluated gates/configs/layers etc.
+         */
+        @JvmStatic
+        fun getOnDeviceEvalInitializeResponse(
+            clientSDKKey: String? = null,
+        ): Map<String, Any> {
+            if (!checkInitialized()) {
+                return emptyMap()
+            }
+            return statsigServer.getOnDeviceEvalInitializeResponse(clientSDKKey)
+        }
+
+        /**
          * Gets all evaluated values for the given user in a way that leads to a smaller size.
          * These values can then be given to a Statsig Client SDK via bootstrapping.
          * Note: Only works with client sdk versions that support the new format

@@ -188,6 +188,15 @@ internal class Evaluator(
         return this.persistentStore.load(user, idType) ?: mapOf()
     }
 
+    fun getOnDeviceEvalInitializeResponse(
+        clientSDKKey: String? = null,
+    ): OnDeviceEvalClientIntializeResponse {
+        return OnDeviceEvalClientInitializeFormatter(
+            this.specStore,
+            clientSDKKey,
+        ).getFormattedResponse()
+    }
+
     fun getClientInitializeResponse(
         user: StatsigUser,
         hash: HashAlgo = HashAlgo.SHA256,
