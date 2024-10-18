@@ -83,6 +83,13 @@ internal class Evaluator(
         specStore.shutdown()
     }
 
+    suspend fun syncConfigSpecs(): FailureDetails? {
+        if (!isInitialized) {
+            return FailureDetails(FailureReason.EMPTY_SPEC)
+        }
+        return specStore.syncConfigSpecs()
+    }
+
     private fun createEvaluationDetails(reason: EvaluationReason): EvaluationDetails {
         if (reason == EvaluationReason.UNINITIALIZED) {
             return EvaluationDetails(0, 0, reason)

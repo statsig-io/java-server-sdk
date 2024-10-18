@@ -46,6 +46,8 @@ sealed class StatsigServer {
     @JvmSynthetic
     abstract suspend fun manuallyLogConfigExposure(user: StatsigUser, configName: String)
 
+    abstract fun syncConfigSpecs(): CompletableFuture<ConfigSyncDetails>
+
     @JvmSynthetic
     abstract suspend fun getExperiment(user: StatsigUser, experimentName: String): DynamicConfig
 
@@ -580,6 +582,31 @@ private class StatsigServerImpl() :
             val context = EvaluationContext(normalizedUser)
             evaluator.getConfig(context, configName)
             logConfigImpl(normalizedUser, configName, context.evaluation, isManualExposure = true)
+        }
+    }
+
+    override fun syncConfigSpecs(): CompletableFuture<ConfigSyncDetails> {
+        return statsigScope.future {
+            errorBoundary.capture("syncConfigSpecs", {
+                val failureDetails = evaluator.syncConfigSpecs()
+                ConfigSyncDetails(
+                    InitializationDetails(
+                        System.currentTimeMillis() - setupStartTime,
+                        isSDKReady = isSDKInitialized(),
+                        configSpecReady = failureDetails == null,
+                        failureDetails,
+                    )
+                )
+            }, {
+                ConfigSyncDetails(
+                    InitializationDetails(
+                        System.currentTimeMillis() - setupStartTime,
+                        isSDKReady = isSDKInitialized(),
+                        configSpecReady = false,
+                        FailureDetails(FailureReason.INTERNAL_ERROR),
+                    )
+                )
+            })
         }
     }
 

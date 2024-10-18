@@ -784,6 +784,17 @@ class Statsig {
             runBlocking { statsigServer.shutdown() }
         }
 
+        /**
+         * Manually sync config specs if initialize is failed
+         */
+        @JvmStatic
+        fun syncConfigSpecs(): CompletableFuture<ConfigSyncDetails> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(ConfigSyncDetails(InitializationDetails(0, false, false)))
+            }
+            return statsigServer.syncConfigSpecs()
+        }
+
         @JvmStatic
         fun isInitialized(): Boolean {
             return ::statsigServer.isInitialized && statsigServer.initialized.get()

@@ -5,6 +5,7 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
@@ -41,6 +42,7 @@ class APIOverrideTest {
                 }
             }
         }
+
         server2.apply {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)
@@ -87,6 +89,13 @@ class APIOverrideTest {
         server1Calls.clear()
         server2Calls.clear()
         server3Calls.clear()
+    }
+
+    @After
+    fun tearDown() {
+        server1.shutdown()
+        server2.shutdown()
+        server3.shutdown()
     }
 
     @Test

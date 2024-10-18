@@ -204,6 +204,7 @@ class StatsigE2ETest {
     @After
     fun afterEach() {
         server.shutdown()
+        driver.shutdown()
     }
 
     @Test

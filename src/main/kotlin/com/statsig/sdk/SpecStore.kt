@@ -49,7 +49,7 @@ internal class SpecStore(
         if (!options.localMode) {
             specUpdater.initialize()
 
-            var failureDetails = this.initializeSpecs()
+            val failureDetails = this.initializeSpecs()
             this.initTime = if (specUpdater.lastUpdateTime == 0L) -1 else specUpdater.lastUpdateTime
 
             this.syncIdListsFromNetwork(specUpdater.updateIDLists())
@@ -65,6 +65,10 @@ internal class SpecStore(
             return
         }
         this.specUpdater.shutdown()
+    }
+
+    suspend fun syncConfigSpecs(): FailureDetails? {
+        return initializeSpecs()
     }
 
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false): Boolean {

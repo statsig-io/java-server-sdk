@@ -13,6 +13,11 @@ data class InitializationDetails(
     var failureDetails: FailureDetails? = null,
 )
 
+data class ConfigSyncDetails(
+    @SerializedName("details")
+    var details: InitializationDetails
+)
+
 data class FailureDetails(
     @SerializedName("reason") var reason: FailureReason,
     @SerializedName("exception") var exception: Exception? = null,
