@@ -790,7 +790,7 @@ class Statsig {
         @JvmStatic
         fun syncConfigSpecs(): CompletableFuture<ConfigSyncDetails> {
             if (!checkInitialized()) {
-                return CompletableFuture.completedFuture(ConfigSyncDetails(InitializationDetails(0, false, false)))
+                return CompletableFuture.completedFuture(ConfigSyncDetails(0, false, null))
             }
             return statsigServer.syncConfigSpecs()
         }

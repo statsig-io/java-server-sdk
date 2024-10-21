@@ -67,8 +67,16 @@ internal class SpecStore(
         this.specUpdater.shutdown()
     }
 
-    suspend fun syncConfigSpecs(): FailureDetails? {
-        return initializeSpecs()
+    suspend fun syncConfigSpecs(): ConfigSyncDetails {
+        val startTime = System.currentTimeMillis()
+        val failureDetails = initializeSpecs()
+        val endTime = System.currentTimeMillis()
+        return ConfigSyncDetails(
+            duration = endTime - startTime,
+            configSpecReady = failureDetails == null,
+            failureDetails,
+            specUpdater.lastUpdateTime
+        )
     }
 
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false): Boolean {

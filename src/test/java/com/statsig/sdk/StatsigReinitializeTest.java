@@ -47,7 +47,7 @@ public class StatsigReinitializeTest {
             }
         });
 
-        server.start(1080);
+        server.start(9874);
 
         options = new StatsigOptions();
         options.setApi(server.url("/v1").toString());
@@ -80,8 +80,8 @@ public class StatsigReinitializeTest {
         CompletableFuture<ConfigSyncDetails> details2Future = Statsig.syncConfigSpecs();
         ConfigSyncDetails details2 = details2Future.get();
         Assert.assertNotNull(details2);
-        Assert.assertTrue(details2.getDetails().isSDKReady());
-        Assert.assertFalse(details2.getDetails().getConfigSpecReady());  // Second try should also fail
+        Assert.assertFalse(details2.getConfigSpecReady());  // Second try should also fail
+        Assert.assertNotNull(details2.getLcut());
         Assert.assertFalse(Statsig.checkGateSync(user, "always_on_gate"));
         Assert.assertFalse(Statsig.checkGateSync(user, "on_for_statsig_email"));
         Layer layer2 = Statsig.getLayerSync(user, "c_layer_with_holdout");
@@ -90,9 +90,9 @@ public class StatsigReinitializeTest {
         CompletableFuture<ConfigSyncDetails> details3Future = Statsig.syncConfigSpecs();
         ConfigSyncDetails details3 = details3Future.get();
         Assert.assertNotNull(details3);
-        Assert.assertTrue(details3.getDetails().isSDKReady());
-        Assert.assertTrue(details3.getDetails().getConfigSpecReady());  // Third try should succeed with 200 response
-        Assert.assertNull(details3.getDetails().getFailureDetails());  // No failure details expected for successful init
+        Assert.assertTrue(details3.getConfigSpecReady());  // Third try should succeed with 200 response
+        Assert.assertNull(details3.getFailureDetails());  // No failure details expected for successful init
+        Assert.assertNotNull(details3.getLcut());
         Assert.assertTrue(Statsig.checkGateSync(user, "always_on_gate"));
         Assert.assertTrue(Statsig.checkGateSync(user, "on_for_statsig_email"));
         Layer layer3 = Statsig.getLayerSync(user, "c_layer_with_holdout");

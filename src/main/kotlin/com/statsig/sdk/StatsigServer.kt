@@ -586,25 +586,16 @@ private class StatsigServerImpl() :
     }
 
     override fun syncConfigSpecs(): CompletableFuture<ConfigSyncDetails> {
+        val startTime = System.currentTimeMillis()
         return statsigScope.future {
             errorBoundary.capture("syncConfigSpecs", {
-                val failureDetails = evaluator.syncConfigSpecs()
-                ConfigSyncDetails(
-                    InitializationDetails(
-                        System.currentTimeMillis() - setupStartTime,
-                        isSDKReady = isSDKInitialized(),
-                        configSpecReady = failureDetails == null,
-                        failureDetails,
-                    )
-                )
+                evaluator.syncConfigSpecs()
             }, {
                 ConfigSyncDetails(
-                    InitializationDetails(
-                        System.currentTimeMillis() - setupStartTime,
-                        isSDKReady = isSDKInitialized(),
-                        configSpecReady = false,
-                        FailureDetails(FailureReason.INTERNAL_ERROR),
-                    )
+                    duration = System.currentTimeMillis() - startTime,
+                    configSpecReady = false,
+                    FailureDetails(FailureReason.INTERNAL_ERROR),
+                    lcut = 0L,
                 )
             })
         }

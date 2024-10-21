@@ -83,9 +83,9 @@ internal class Evaluator(
         specStore.shutdown()
     }
 
-    suspend fun syncConfigSpecs(): FailureDetails? {
+    suspend fun syncConfigSpecs(): ConfigSyncDetails {
         if (!isInitialized) {
-            return FailureDetails(FailureReason.EMPTY_SPEC)
+            return ConfigSyncDetails(0L, false, FailureDetails(FailureReason.EMPTY_SPEC), 0L)
         }
         return specStore.syncConfigSpecs()
     }

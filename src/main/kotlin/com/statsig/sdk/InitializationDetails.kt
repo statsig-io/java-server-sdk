@@ -14,8 +14,14 @@ data class InitializationDetails(
 )
 
 data class ConfigSyncDetails(
-    @SerializedName("details")
-    var details: InitializationDetails
+    @SerializedName("duration")
+    var duration: Long,
+    @SerializedName("configSpecReady")
+    var configSpecReady: Boolean,
+    @SerializedName("failureDetails")
+    var failureDetails: FailureDetails? = null,
+    @SerializedName("lcut")
+    var lcut: Long? = null,
 )
 
 data class FailureDetails(
