@@ -72,17 +72,14 @@ internal class StatsigLogger(
     fun logGateExposure(
         user: StatsigUser?,
         gateName: String,
-        value: Boolean,
-        ruleID: String,
-        secondaryExposures: ArrayList<Map<String, String>>,
+        result: ConfigEvaluation,
         isManualExposure: Boolean = false,
-        evaluationDetails: EvaluationDetails?,
     ) {
         if (!isUniqueExposure(
                 user,
                 gateName,
-                ruleID,
-                value.toString(),
+                result.ruleID,
+                result.booleanValue.toString(),
                 "",
             )
         ) {
@@ -90,12 +87,15 @@ internal class StatsigLogger(
         }
         val metadata = mutableMapOf(
             "gate" to gateName,
-            "gateValue" to value.toString(),
-            "ruleID" to ruleID,
+            "gateValue" to result.booleanValue.toString(),
+            "ruleID" to result.ruleID,
             "isManualExposure" to isManualExposure.toString(),
         )
 
-        safeAddEvaluationToEvent(evaluationDetails, metadata)
+        safeAddEvaluationToEvent(result.evaluationDetails, metadata)
+        if (result.configVersion != null) {
+            metadata["configVersion"] = result.configVersion.toString()
+        }
 
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
@@ -103,7 +103,7 @@ internal class StatsigLogger(
             metadata,
             user,
             statsigMetadata,
-            secondaryExposures,
+            result.secondaryExposures,
         )
         log(event)
     }
@@ -111,15 +111,13 @@ internal class StatsigLogger(
     fun logConfigExposure(
         user: StatsigUser?,
         configName: String,
-        ruleID: String,
-        secondaryExposures: ArrayList<Map<String, String>>,
+        result: ConfigEvaluation,
         isManualExposure: Boolean,
-        evaluationDetails: EvaluationDetails?,
     ) {
         if (!isUniqueExposure(
                 user,
                 configName,
-                ruleID,
+                result.ruleID,
                 "",
                 "",
             )
@@ -127,8 +125,11 @@ internal class StatsigLogger(
             return
         }
         val metadata =
-            mutableMapOf("config" to configName, "ruleID" to ruleID, "isManualExposure" to isManualExposure.toString())
-        safeAddEvaluationToEvent(evaluationDetails, metadata)
+            mutableMapOf("config" to configName, "ruleID" to result.ruleID, "isManualExposure" to isManualExposure.toString(), "rulePassed" to result.booleanValue.toString())
+        safeAddEvaluationToEvent(result.evaluationDetails, metadata)
+        if (result.configVersion != null) {
+            metadata["configVersion"] = result.configVersion.toString()
+        }
 
         val event = StatsigEvent(
             CONFIG_EXPOSURE_EVENT,
@@ -136,7 +137,7 @@ internal class StatsigLogger(
             metadata,
             user,
             statsigMetadata,
-            secondaryExposures,
+            result.secondaryExposures,
         )
         log(event)
     }

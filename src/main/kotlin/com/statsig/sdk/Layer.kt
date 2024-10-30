@@ -174,5 +174,6 @@ internal fun createLayerExposureMetadata(
         isExplicit.toString(),
         exposures,
         evaluationDetails = configEvaluation.evaluationDetails,
+        configVersion = configEvaluation.configVersion,
     )
 }

@@ -13,6 +13,7 @@ class ConfigEvaluation(
     var configDelegate: String? = null,
     var evaluationDetails: EvaluationDetails? = null,
     var isExperimentGroup: Boolean = false,
+    var configVersion: Long? = null,
 ) {
     internal var isDelegate: Boolean = false
 

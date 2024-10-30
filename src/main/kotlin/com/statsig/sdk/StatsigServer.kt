@@ -501,11 +501,8 @@ private class StatsigServerImpl() :
         logger.logGateExposure(
             normalizeUser(user),
             gateName,
-            evaluation.booleanValue,
-            evaluation.ruleID,
-            evaluation.secondaryExposures,
+            evaluation,
             isManualExposure,
-            evaluation.evaluationDetails,
         )
     }
 
@@ -1307,10 +1304,8 @@ private class StatsigServerImpl() :
         logger.logConfigExposure(
             user,
             configName,
-            result.ruleID,
-            result.secondaryExposures,
+            result,
             isManualExposure,
-            result.evaluationDetails,
         )
     }
 

@@ -39,6 +39,7 @@ internal data class APIConfig(
     @SerializedName("explicitParameters") val explicitParameters: Array<String>?,
     @SerializedName("hasSharedParams") val hasSharedParams: Boolean?,
     @SerializedName("targetAppIDs") val targetAppIDs: Array<String>? = null,
+    @SerializedName("version") val version: Long? = 0,
 )
 
 internal data class APIRule(
@@ -121,9 +122,10 @@ internal data class LayerExposureMetadata(
     @SerializedName("secondaryExposures") val secondaryExposures: ArrayList<Map<String, String>>,
     @SerializedName("isManualExposure") var isManualExposure: String = "false",
     @SerializedName("evaluationDetails") val evaluationDetails: EvaluationDetails?,
+    @SerializedName("configVersion") val configVersion: Long? = null,
 ) {
     fun toStatsigEventMetadataMap(): MutableMap<String, String> {
-        return mutableMapOf(
+        var map = mutableMapOf(
             "config" to config,
             "ruleID" to ruleID,
             "allocatedExperiment" to allocatedExperiment,
@@ -132,5 +134,9 @@ internal data class LayerExposureMetadata(
             "isManualExposure" to isManualExposure,
             // secondaryExposures excluded -- StatsigEvent adds secondaryExposures explicitly as a top level key
         )
+        if (configVersion != null) {
+            map["configVersion"] = configVersion.toString()
+        }
+        return map
     }
 }
