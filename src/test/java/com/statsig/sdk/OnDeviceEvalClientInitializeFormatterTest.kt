@@ -1,9 +1,20 @@
 package com.statsig.sdk
 
 import com.google.gson.*
+import com.google.gson.annotations.SerializedName
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+
+internal data class APIDownloadedConfigsFromLocalEval(
+    @SerializedName("dynamic_configs") val dynamicConfigs: Array<APIConfig>,
+    @SerializedName("feature_gates") val featureGates: Array<APIConfig>,
+    @SerializedName("layer_configs") val layerConfigs: Array<APIConfig>,
+    @SerializedName("layers") val layers: Map<String, Array<String>>?,
+    @SerializedName("time") val time: Long = 0,
+    @SerializedName("has_updates") val hasUpdates: Boolean,
+    @SerializedName("diagnostics") val diagnostics: Map<String, Int>? = null,
+)
 
 class OnDeviceEvalClientInitializeFormatterTest {
     private lateinit var driver: StatsigServer
@@ -25,62 +36,24 @@ class OnDeviceEvalClientInitializeFormatterTest {
             gson.fromJson(dcs, APIDownloadedConfigs::class.java)
         specStore.setDownloadedConfigs(configs)
 
-        val formatter = OnDeviceEvalClientInitializeFormatter(specStore, clientSDKKey = "client-sdk")
-        val response = formatter.getFormattedResponse()
+        val formatter = OnDeviceEvalClientInitializeFormatter(specStore, null)
+        val response = formatter.getFormattedResponse().toMap()
         val serializedResponse = gson.toJson(response)
         assertNotNull(serializedResponse)
         assertTrue(serializedResponse is String)
         assertTrue(serializedResponse.isNotEmpty())
 
-        val actualJson = gson.fromJson(serializedResponse, Map::class.java) as Map<String, Any>
-        val expectedJson = gson.fromJson(dcs, Map::class.java) as Map<String, Any>
+        val actualJson = gson.fromJson(serializedResponse, APIDownloadedConfigsFromLocalEval::class.java)
+        val expectedJson = configs
 
-        val actualFeatureGatesMap = actualJson["feature_gates"] as Map<String, Any>
-        val expectedFeatureGatesList = expectedJson["feature_gates"] as List<Map<String, Any>>
-        val expectedFeatureGatesMap = expectedFeatureGatesList.associateBy { it["name"] as String }
-
-        val gateName = "always_on_gate"
-        val actualGate = actualFeatureGatesMap[gateName] as Map<String, Any>
-        val expectedGate = expectedFeatureGatesMap[gateName] as Map<String, Any>
-
-        val actualRules = actualGate["rules"] as List<Map<String, Any>>
-        val expectedRules = expectedGate["rules"] as List<Map<String, Any>>
-
-        assertEquals(expectedGate["name"], actualGate["name"])
-        assertEquals(expectedGate["type"], actualGate["type"])
-        assertEquals(expectedGate["salt"], actualGate["salt"])
-        assertEquals(expectedGate["enabled"], actualGate["enabled"])
-        assertEquals(expectedGate["defaultValue"], actualGate["defaultValue"])
-
-        assertEquals(expectedRules.size, actualRules.size)
-
-        for (i in expectedRules.indices) {
-            val expectedRule = expectedRules[i]
-            val actualRule = actualRules[i]
-
-            assertEquals(expectedRule["name"], actualRule["name"])
-            assertEquals(expectedRule["groupName"], actualRule["groupName"])
-            assertEquals(expectedRule["passPercentage"], actualRule["passPercentage"])
-            assertEquals(expectedRule["returnValue"], actualRule["returnValue"])
-            assertEquals(expectedRule["id"], actualRule["id"])
-            assertEquals(expectedRule["salt"], actualRule["salt"])
-
-            val actualConditions = actualRule["conditions"] as List<Map<String, Any>>
-            val expectedConditions = expectedRule["conditions"] as List<Map<String, Any>>
-
-            assertEquals(expectedConditions.size, actualConditions.size)
-
-            for (j in expectedConditions.indices) {
-                val expectedCondition = expectedConditions[j]
-                val actualCondition = actualConditions[j]
-
-                assertEquals(expectedCondition["type"], actualCondition["type"])
-                assertEquals(expectedCondition["targetValue"], actualCondition["targetValue"])
-                assertEquals(expectedCondition["operator"], actualCondition["operator"])
-                assertEquals(expectedCondition["field"], actualCondition["field"])
-                assertEquals(expectedCondition["additionalValues"], actualCondition["additionalValues"])
-            }
-        }
+        // Compare the seven fields ( since local eval only have below fields)
+        assertEquals(gson.toJson(expectedJson.dynamicConfigs), gson.toJson(actualJson.dynamicConfigs))
+        assertEquals(gson.toJson(expectedJson.featureGates), gson.toJson(actualJson.featureGates))
+        assertEquals(gson.toJson(expectedJson.layerConfigs), gson.toJson(actualJson.layerConfigs))
+        assertEquals(gson.toJson(expectedJson.layers), gson.toJson(actualJson.layers))
+        assertEquals(gson.toJson(expectedJson.time), gson.toJson(actualJson.time))
+        assertEquals(gson.toJson(expectedJson.hasUpdates), gson.toJson(actualJson.hasUpdates))
+        assertEquals(gson.toJson(expectedJson.diagnostics), gson.toJson(actualJson.diagnostics))
     }
 
     @Test

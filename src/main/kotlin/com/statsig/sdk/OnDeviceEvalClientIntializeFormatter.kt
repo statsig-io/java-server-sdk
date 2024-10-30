@@ -12,9 +12,9 @@ internal data class OnDeviceEvalClientIntializeResponse(
 ) {
     fun toMap(): Map<String, Any> {
         val map = mutableMapOf<String, Any>()
-        map["feature_gates"] = feature_gates
-        map["dynamic_configs"] = dynamic_configs
-        map["layer_configs"] = layer_configs
+        map["feature_gates"] = feature_gates.values.toTypedArray()
+        map["dynamic_configs"] = dynamic_configs.values.toTypedArray()
+        map["layer_configs"] = layer_configs.values.toTypedArray()
         map["has_updates"] = has_updates
         map["time"] = time
         map["sdkInfo"] = sdkInfo
