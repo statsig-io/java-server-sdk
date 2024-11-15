@@ -132,6 +132,7 @@ class StatsigOptions(
     var fallbackToStatsigAPI: Boolean = false,
     var disableIPResolution: Boolean = false,
     var userPersistentStorage: IUserPersistentStorage? = null,
+    var setupFailThrowError: Boolean = false,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(STATSIG_API_URL_BASE, initTimeoutMs)
