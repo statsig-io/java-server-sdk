@@ -1,8 +1,6 @@
 package com.statsig.sdk.network
 
-import com.google.gson.Gson
 import com.google.gson.JsonParseException
-import com.google.gson.reflect.TypeToken
 import com.statsig.sdk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
@@ -55,15 +53,12 @@ internal class HTTPWorker(
 
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
     private val statsigHttpClient: OkHttpClient
-    private val gson = Utils.getGson()
     private var diagnostics: Diagnostics? = null
     private val logger = options.customLogger
     val apiForDownloadConfigSpecs = options.endpointProxyConfigs[NetworkEndpoint.DOWNLOAD_CONFIG_SPECS]?.proxyAddress ?: options.apiForDownloadConfigSpecs ?: options.api ?: STATSIG_CDN_URL_BASE
     val apiForGetIDLists = options.endpointProxyConfigs[NetworkEndpoint.GET_ID_LISTS]?.proxyAddress ?: options.apiForGetIdlists ?: options.api ?: STATSIG_API_URL_BASE
     val apiForLogEvent = options.endpointProxyConfigs[NetworkEndpoint.LOG_EVENT]?.proxyAddress ?: options.api ?: STATSIG_API_URL_BASE
     private var eventsCount: String = ""
-
-    private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     init {
         val clientBuilder = OkHttpClient.Builder()
@@ -281,7 +276,7 @@ internal class HTTPWorker(
             return
         }
 
-        val bodyJson = gson.toJson(mapOf("events" to events, "statsigMetadata" to statsigMetadata))
+        val bodyJson = Utils.GSON.toJson(mapOf("events" to events, "statsigMetadata" to statsigMetadata))
         val requestBody: RequestBody = bodyJson.toRequestBody(json)
         eventsCount = events.size.toString()
 

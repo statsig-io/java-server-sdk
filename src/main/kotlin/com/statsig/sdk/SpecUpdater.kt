@@ -1,8 +1,6 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.google.gson.reflect.TypeToken
 import com.statsig.sdk.network.StatsigTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -30,9 +28,6 @@ internal class SpecUpdater(
     private var backgroundDownloadConfigs: Job? = null
     private var backgroundDownloadIDLists: Job? = null
     private val logger = options.customLogger
-
-    private val gson = Utils.getGson()
-    private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     fun initialize() {
         transport.setStreamingFallback(NetworkEndpoint.DOWNLOAD_CONFIG_SPECS) {
@@ -133,7 +128,7 @@ internal class SpecUpdater(
     suspend fun updateIDLists(): Map<String, IDList>? {
         return try {
             val response = transport.getIDLists() ?: return null
-            gson.fromJson<Map<String, IDList>>(response)
+            Utils.GSON.fromJson<Map<String, IDList>>(response)
         } catch (e: JsonSyntaxException) {
             null
         }
@@ -147,7 +142,7 @@ internal class SpecUpdater(
             return Pair(null, FailureDetails(FailureReason.EMPTY_SPEC))
         }
         try {
-            return Pair(gson.fromJson(specs, APIDownloadedConfigs::class.java), null)
+            return Pair(Utils.GSON.fromJson(specs, APIDownloadedConfigs::class.java), null)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseConfigSpecs", e)
             logger.error("An exception was caught when parsing config specs:  $e")
@@ -160,7 +155,7 @@ internal class SpecUpdater(
             return Pair(null, response.second)
         }
         try {
-            val configs = gson.fromJson(response.first, APIDownloadedConfigs::class.java)
+            val configs = Utils.GSON.fromJson(response.first, APIDownloadedConfigs::class.java)
             if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
                 return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR))
             }
@@ -177,7 +172,7 @@ internal class SpecUpdater(
             return null
         }
         try {
-            return gson.fromJson<Map<String, IDList>>(lists)
+            return Utils.GSON.fromJson<Map<String, IDList>>(lists)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseIDLists", e)
             logger.warn("An exception was caught when parsing ID lists:  $e")

@@ -1,7 +1,5 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
-
 /**
  * A helper class for interfacing with Dynamic Configs defined in the Statsig console
  */
@@ -132,7 +130,7 @@ class DynamicConfig(
     }
 
     fun getExposureMetadata(): String {
-        return Gson().toJson(
+        return Utils.PLAIN_GSON.toJson(
             mapOf(
                 "config" to this.name,
                 "ruleID" to this.ruleID,

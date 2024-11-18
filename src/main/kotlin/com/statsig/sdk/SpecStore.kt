@@ -1,8 +1,6 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
 import com.statsig.sdk.datastore.IDataStore
 import com.statsig.sdk.network.StatsigTransport
 import kotlinx.coroutines.*
@@ -20,6 +18,10 @@ internal class SpecStore(
     private val sdkConfigs: SDKConfigs,
     private val serverSecret: String,
 ) {
+    companion object {
+        val PRETTY_PRINTING_GSON = GsonBuilder().setPrettyPrinting().create()
+    }
+
     private var initTime: Long = 0
     private var evalReason: EvaluationReason = EvaluationReason.UNINITIALIZED
     private var downloadIDListCallCount: Long = 0
@@ -41,9 +43,6 @@ internal class SpecStore(
         specUpdater.registerIDListsListener(::processDownloadedIDLists)
         specUpdater.registerConfigSpecListener(::processDownloadedConfigs)
     }
-
-    private val gson = Utils.getGson()
-    private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     suspend fun initialize(): FailureDetails? {
         if (!options.localMode) {
@@ -203,7 +202,7 @@ internal class SpecStore(
 
         var configString = ""
         try {
-            configString = gson.toJson(configSpecs)
+            configString = Utils.GSON.toJson(configSpecs)
         } catch (e: Exception) {
             errorBoundary.logException("fireRulesUpdatedCallback", e)
             options.customLogger.error("An exception was caught when fire callback:  $e")
@@ -419,8 +418,7 @@ internal class SpecStore(
         dataStore: IDataStore,
         response: APIDownloadedConfigs,
     ): APIDownloadedConfigs {
-        val gson = GsonBuilder().setPrettyPrinting().create()
-        val specs: String = gson.toJson(response)
+        val specs: String = PRETTY_PRINTING_GSON.toJson(response)
 
         val adapterKey = dataStore.dataStoreKey
         dataStore.set(adapterKey, specs)

@@ -1,6 +1,5 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
 import java.security.MessageDigest
 import java.util.Base64
 
@@ -22,8 +21,7 @@ class Hashing {
         }
 
         fun djb2ForMap(map: Map<String, Any>): String {
-            val gson = Gson()
-            return djb2(gson.toJson(Utils.sortMap(map)))
+            return djb2(Utils.PLAIN_GSON.toJson(Utils.sortMap(map)))
         }
 
         fun sha256(input: String): String {
