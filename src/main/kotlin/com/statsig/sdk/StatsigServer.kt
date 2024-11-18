@@ -273,8 +273,6 @@ sealed class StatsigServer {
 private class StatsigServerImpl() :
     StatsigServer() {
 
-    private val gson = Utils.getGson()
-
     override lateinit var errorBoundary: ErrorBoundary
     private lateinit var coroutineExceptionHandler: CoroutineExceptionHandler
     private lateinit var statsigJob: CompletableJob
@@ -1228,7 +1226,7 @@ private class StatsigServerImpl() :
                             normalizedUser,
                             layer,
                             paramName,
-                            gson.toJson(metadata),
+                            Utils.GSON.toJson(metadata),
                         ),
                     )
                 } else {
