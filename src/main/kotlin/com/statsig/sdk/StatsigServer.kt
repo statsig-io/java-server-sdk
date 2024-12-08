@@ -85,7 +85,11 @@ sealed class StatsigServer {
 
     abstract fun overrideGate(gateName: String, gateValue: Boolean)
 
+    abstract fun overrideGate(gateName: String, gateValue: Boolean, userId: String)
+
     abstract fun removeGateOverride(gateName: String)
+
+    abstract fun removeGateOverride(gateName: String, userId: String)
 
     abstract fun overrideConfig(configName: String, configValue: Map<String, Any>)
 
@@ -943,6 +947,16 @@ private class StatsigServerImpl() :
         }, { return@captureSync })
     }
 
+    override fun overrideGate(gateName: String, gateValue: Boolean, userId: String) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        errorBoundary.captureSync("overrideGate", {
+            isSDKInitialized()
+            evaluator.overrideGate(gateName, gateValue, userId)
+        }, { return@captureSync })
+    }
+
     override fun removeGateOverride(gateName: String) {
         if (!isSDKInitialized()) {
             return
@@ -950,6 +964,16 @@ private class StatsigServerImpl() :
         errorBoundary.captureSync("removeGateOverride", {
             isSDKInitialized()
             evaluator.removeGateOverride(gateName)
+        }, { return@captureSync })
+    }
+
+    override fun removeGateOverride(gateName: String, userId: String) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        errorBoundary.captureSync("removeGateOverride", {
+            isSDKInitialized()
+            evaluator.removeGateOverride(gateName, userId)
         }, { return@captureSync })
     }
 

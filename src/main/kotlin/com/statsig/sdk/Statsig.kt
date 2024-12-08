@@ -301,6 +301,21 @@ class Statsig {
         }
 
         /**
+         * Sets a value to be returned for the given gate instead of the actual evaluated value.
+         *
+         * @param gateName The name of the gate to be overridden
+         * @param gateValue The value that will be returned
+         * @param userId The user ID to override the gate for
+         */
+        @JvmStatic
+        fun overrideGate(gateName: String, gateValue: Boolean, userId: String) {
+            if (!checkInitialized()) {
+                return
+            }
+            statsigServer.overrideGate(gateName, gateValue, userId)
+        }
+
+        /**
          * Removes the given gate override
          *
          * @param gateName
@@ -309,6 +324,19 @@ class Statsig {
         fun removeGateOverride(gateName: String) {
             if (checkInitialized()) {
                 statsigServer.removeGateOverride(gateName)
+            }
+        }
+
+        /**
+         * Removes the given gate override for the given user ID
+         *
+         * @param gateName
+         * @param userId
+         */
+        @JvmStatic
+        fun removeGateOverride(gateName: String, userId: String) {
+            if (checkInitialized()) {
+                statsigServer.removeGateOverride(gateName, userId)
             }
         }
 

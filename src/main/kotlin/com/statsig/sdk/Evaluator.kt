@@ -38,7 +38,7 @@ internal class Evaluator(
         }
     }
     private val persistentStore: UserPersistentStorageHandler
-    private var gateOverrides: MutableMap<String, Boolean> = HashMap()
+    private var gateOverrides: MutableMap<String, MutableMap<String, Boolean>> = HashMap()
     private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
     private var hashLookupTable: MutableMap<String, ULong> = HashMap()
@@ -148,7 +148,17 @@ internal class Evaluator(
     }
 
     fun overrideGate(gateName: String, gateValue: Boolean) {
-        gateOverrides[gateName] = gateValue
+        if (gateOverrides[gateName] == null) {
+            gateOverrides[gateName] = HashMap()
+        }
+        gateOverrides[gateName]?.set("", gateValue)
+    }
+
+    fun overrideGate(gateName: String, gateValue: Boolean, userId: String) {
+        if (gateOverrides[gateName] == null) {
+            gateOverrides[gateName] = HashMap()
+        }
+        gateOverrides[gateName]?.set(userId, gateValue)
     }
 
     fun overrideConfig(configName: String, configValue: Map<String, Any>) {
@@ -169,6 +179,10 @@ internal class Evaluator(
 
     fun removeGateOverride(gateName: String) {
         gateOverrides.remove(gateName)
+    }
+
+    fun removeGateOverride(gateName: String, userId: String) {
+        gateOverrides[gateName]?.remove(userId)
     }
 
     fun getConfig(ctx: EvaluationContext, dynamicConfigName: String) {
@@ -308,7 +322,18 @@ internal class Evaluator(
     @JvmOverloads
     fun checkGate(ctx: EvaluationContext, gateName: String) {
         if (gateOverrides.containsKey(gateName)) {
-            val value = gateOverrides[gateName] ?: false
+            val userIds = mutableListOf<String>()
+            ctx.user.userID?.let { userIds.add(it) }
+            ctx.user.customIDs?.let { customIdMap -> userIds.addAll(customIdMap.values) }
+            userIds.add("")
+
+            val value: Boolean = userIds
+                .stream()
+                .filter { it != null }
+                .map { gateOverrides[gateName]?.get(it) }
+                .filter { it != null }
+                .findFirst().orElse(false) ?: false
+
             ctx.evaluation.booleanValue = value
             ctx.evaluation.jsonValue = value
             ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
