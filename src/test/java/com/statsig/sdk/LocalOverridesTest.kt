@@ -40,6 +40,21 @@ class LocalOverridesTest {
     }
 
     @Test
+    fun testGateOverridesWithUserId() = runBlocking {
+        users.forEach { user -> testGateOverridesWithUserIdHelper(user) }
+    }
+
+    private fun testGateOverridesWithUserIdHelper(user: StatsigUser) = runBlocking {
+        assertFalse(Statsig.checkGate(user, "override_me"))
+
+        Statsig.overrideGate("override_me", true, user.userID ?: user.customIDs?.get("customID") ?: "")
+        assertTrue(Statsig.checkGate(user, "override_me"))
+
+        Statsig.removeGateOverride("override_me")
+        assertFalse(Statsig.checkGate(user, "override_me"))
+    }
+
+    @Test
     fun testConfigOverrides() = runBlocking {
         users.forEach { user -> testConfigOverridesHelper(user) }
     }
