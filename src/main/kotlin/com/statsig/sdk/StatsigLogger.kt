@@ -40,7 +40,7 @@ internal class StatsigLogger(
 ) {
 
     private val executor = Executors.newSingleThreadExecutor()
-    private var events = LockableArray<StatsigEvent>()
+    private var events = ConcurrentQueue<StatsigEvent>()
     private val flushTimer = coroutineScope.launch {
         while (coroutineScope.isActive) {
             delay(FLUSH_TIMER_MS)
