@@ -38,9 +38,9 @@ internal class Evaluator(
         }
     }
     private val persistentStore: UserPersistentStorageHandler
-    private var gateOverrides: MutableMap<String, Boolean> = HashMap()
-    private var configOverrides: MutableMap<String, Map<String, Any>> = HashMap()
-    private var layerOverrides: MutableMap<String, Map<String, Any>> = HashMap()
+    private var gateOverrides: MutableMap<String, MutableMap<String?, Boolean>> = HashMap()
+    private var configOverrides: MutableMap<String, MutableMap<String?, Map<String, Any>>> = HashMap()
+    private var layerOverrides: MutableMap<String, MutableMap<String?, Map<String, Any>>> = HashMap()
     private var hashLookupTable: MutableMap<String, ULong> = HashMap()
     private val gson = Utils.getGson()
     private val logger = options.customLogger
@@ -147,33 +147,37 @@ internal class Evaluator(
         return false
     }
 
-    fun overrideGate(gateName: String, gateValue: Boolean) {
-        gateOverrides[gateName] = gateValue
+    fun overrideGate(gateName: String, gateValue: Boolean, forID: String?) {
+        val userOverrides = gateOverrides.getOrPut(gateName) { HashMap() }
+        userOverrides[forID] = gateValue
     }
 
-    fun overrideConfig(configName: String, configValue: Map<String, Any>) {
-        configOverrides[configName] = configValue
+    fun overrideConfig(configName: String, configValue: Map<String, Any>, forID: String?) {
+        val userOverrides = configOverrides.getOrPut(configName) { HashMap() }
+        userOverrides[forID] = configValue
     }
 
-    fun overrideLayer(layerName: String, layerValue: Map<String, Any>) {
-        layerOverrides[layerName] = layerValue
+    fun overrideLayer(layerName: String, layerValue: Map<String, Any>, forID: String?) {
+        val userOverrides = layerOverrides.getOrPut(layerName) { HashMap() }
+        userOverrides[forID] = layerValue
     }
 
-    fun removeLayerOverride(layerName: String) {
-        layerOverrides.remove(layerName)
+    fun removeLayerOverride(layerName: String, forID: String?) {
+        layerOverrides[layerName]?.remove(forID)
     }
 
-    fun removeConfigOverride(configName: String) {
-        configOverrides.remove(configName)
+    fun removeConfigOverride(configName: String, forID: String?) {
+        configOverrides[configName]?.remove(forID)
     }
 
-    fun removeGateOverride(gateName: String) {
-        gateOverrides.remove(gateName)
+    fun removeGateOverride(gateName: String, forID: String?) {
+        gateOverrides[gateName]?.remove(forID)
     }
 
     fun getConfig(ctx: EvaluationContext, dynamicConfigName: String) {
         if (configOverrides.containsKey(dynamicConfigName)) {
-            ctx.evaluation.jsonValue = configOverrides[dynamicConfigName] ?: mapOf<String, Any>()
+            ctx.evaluation.jsonValue = configOverrides[dynamicConfigName]?.let { lookupConfigBasedOverride(it, ctx.user) }
+                ?: mapOf<String, Any>()
             ctx.evaluation.evaluationDetails = this.createEvaluationDetails((EvaluationReason.LOCAL_OVERRIDE))
             return
         }
@@ -280,7 +284,7 @@ internal class Evaluator(
 
     fun getLayer(ctx: EvaluationContext, layerName: String) {
         if (layerOverrides.containsKey(layerName)) {
-            val value = layerOverrides[layerName] ?: mapOf()
+            val value = layerOverrides[layerName]?.let { lookupConfigBasedOverride(it, ctx.user) } ?: mapOf()
             ctx.evaluation.jsonValue = value
             ctx.evaluation.evaluationDetails = this.createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
             return
@@ -308,7 +312,7 @@ internal class Evaluator(
     @JvmOverloads
     fun checkGate(ctx: EvaluationContext, gateName: String) {
         if (gateOverrides.containsKey(gateName)) {
-            val value = gateOverrides[gateName] ?: false
+            val value = gateOverrides[gateName]?.let { lookUpGateOverride(it, ctx.user) } ?: false
             ctx.evaluation.booleanValue = value
             ctx.evaluation.jsonValue = value
             ctx.evaluation.evaluationDetails = createEvaluationDetails(EvaluationReason.LOCAL_OVERRIDE)
@@ -373,6 +377,38 @@ internal class Evaluator(
                 ctx.evaluation.toStickyValues(),
             )
         }
+    }
+
+    private fun <T> lookupOverride(
+        userOverrides: MutableMap<String?, T>,
+        user: StatsigUser,
+    ): T? {
+        val overrideVal = user.userID?.let { userOverrides[it] }
+        if (overrideVal != null) {
+            return overrideVal
+        }
+
+        user.customIDs?.forEach { (_, customIdVal) ->
+            userOverrides[customIdVal]?.let {
+                return it
+            }
+        }
+
+        return null
+    }
+
+    private fun lookUpGateOverride(
+        userOverrides: MutableMap<String?, Boolean>,
+        user: StatsigUser
+    ): Boolean {
+        return lookupOverride(userOverrides, user) ?: userOverrides[null] ?: false
+    }
+
+    private fun lookupConfigBasedOverride(
+        userOverrides: MutableMap<String?, Map<String, Any>>,
+        user: StatsigUser
+    ): Map<String, Any> {
+        return lookupOverride(userOverrides, user) ?: userOverrides[null] ?: mapOf()
     }
 
     private fun evaluateLayer(ctx: EvaluationContext, config: APIConfig) {

@@ -76,18 +76,30 @@ sealed class StatsigServer {
     @JvmSynthetic
     abstract suspend fun getLayerWithExposureLoggingDisabled(user: StatsigUser, layerName: String): Layer
 
+    abstract fun overrideLayer(layerName: String, value: Map<String, Any>, forID: String? = null)
+
     abstract fun overrideLayer(layerName: String, value: Map<String, Any>)
+
+    abstract fun removeLayerOverride(layerName: String, forID: String? = null)
 
     abstract fun removeLayerOverride(layerName: String)
 
     @JvmSynthetic
     abstract suspend fun shutdownSuspend()
 
+    abstract fun overrideGate(gateName: String, gateValue: Boolean, forID: String? = null)
+
     abstract fun overrideGate(gateName: String, gateValue: Boolean)
+
+    abstract fun removeGateOverride(gateName: String, forID: String? = null)
 
     abstract fun removeGateOverride(gateName: String)
 
+    abstract fun overrideConfig(configName: String, configValue: Map<String, Any>, forID: String? = null)
+
     abstract fun overrideConfig(configName: String, configValue: Map<String, Any>)
+
+    abstract fun removeConfigOverride(configName: String, forID: String? = null)
 
     abstract fun removeConfigOverride(configName: String)
 
@@ -853,7 +865,17 @@ private class StatsigServerImpl() :
         }
         this.errorBoundary.captureSync("overrideLayer", {
             isSDKInitialized()
-            evaluator.overrideLayer(layerName, value)
+            evaluator.overrideLayer(layerName, value, null)
+        }, { return@captureSync })
+    }
+
+    override fun overrideLayer(layerName: String, value: Map<String, Any>, forID: String?) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        this.errorBoundary.captureSync("overrideLayer", {
+            isSDKInitialized()
+            evaluator.overrideLayer(layerName, value, forID)
         }, { return@captureSync })
     }
 
@@ -863,7 +885,17 @@ private class StatsigServerImpl() :
         }
         this.errorBoundary.captureSync("removeLayerOverride", {
             isSDKInitialized()
-            evaluator.removeLayerOverride(layerName)
+            evaluator.removeLayerOverride(layerName, null)
+        }, { return@captureSync })
+    }
+
+    override fun removeLayerOverride(layerName: String, forID: String?) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        this.errorBoundary.captureSync("removeLayerOverride", {
+            isSDKInitialized()
+            evaluator.removeLayerOverride(layerName, forID)
         }, { return@captureSync })
     }
 
@@ -933,13 +965,23 @@ private class StatsigServerImpl() :
         }
     }
 
+    override fun overrideGate(gateName: String, gateValue: Boolean, forID: String?) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        errorBoundary.captureSync("overrideGate", {
+            isSDKInitialized()
+            evaluator.overrideGate(gateName, gateValue, forID)
+        }, { return@captureSync })
+    }
+
     override fun overrideGate(gateName: String, gateValue: Boolean) {
         if (!isSDKInitialized()) {
             return
         }
         errorBoundary.captureSync("overrideGate", {
             isSDKInitialized()
-            evaluator.overrideGate(gateName, gateValue)
+            evaluator.overrideGate(gateName, gateValue, null)
         }, { return@captureSync })
     }
 
@@ -949,7 +991,17 @@ private class StatsigServerImpl() :
         }
         errorBoundary.captureSync("removeGateOverride", {
             isSDKInitialized()
-            evaluator.removeGateOverride(gateName)
+            evaluator.removeGateOverride(gateName, null)
+        }, { return@captureSync })
+    }
+
+    override fun removeGateOverride(gateName: String, forID: String?) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        errorBoundary.captureSync("removeGateOverride", {
+            isSDKInitialized()
+            evaluator.removeGateOverride(gateName, forID)
         }, { return@captureSync })
     }
 
@@ -959,7 +1011,17 @@ private class StatsigServerImpl() :
         }
         errorBoundary.captureSync("overrideConfig", {
             isSDKInitialized()
-            evaluator.overrideConfig(configName, configValue)
+            evaluator.overrideConfig(configName, configValue, null)
+        }, { return@captureSync })
+    }
+
+    override fun overrideConfig(configName: String, configValue: Map<String, Any>, forID: String?) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        errorBoundary.captureSync("overrideConfig", {
+            isSDKInitialized()
+            evaluator.overrideConfig(configName, configValue, forID)
         }, { return@captureSync })
     }
 
@@ -969,7 +1031,17 @@ private class StatsigServerImpl() :
         }
         errorBoundary.captureSync("removeConfigOverride", {
             isSDKInitialized()
-            evaluator.removeConfigOverride(configName)
+            evaluator.removeConfigOverride(configName, null)
+        }, { return@captureSync })
+    }
+
+    override fun removeConfigOverride(configName: String, forID: String?) {
+        if (!isSDKInitialized()) {
+            return
+        }
+        errorBoundary.captureSync("removeConfigOverride", {
+            isSDKInitialized()
+            evaluator.removeConfigOverride(configName, forID)
         }, { return@captureSync })
     }
 

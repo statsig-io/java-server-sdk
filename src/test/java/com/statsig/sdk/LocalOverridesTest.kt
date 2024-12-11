@@ -40,6 +40,42 @@ class LocalOverridesTest {
     }
 
     @Test
+    fun testGateOverridesWithUsers() = runBlocking {
+        assertFalse(Statsig.checkGate(userA, "override_me"))
+
+        Statsig.overrideGate("override_me", true, userA.userID)
+        assertTrue(Statsig.checkGate(userA, "override_me"))
+        assertFalse(Statsig.checkGate(userB, "override_me"))
+
+        Statsig.overrideGate("override_me", true, "user-b")
+        assertTrue(Statsig.checkGate(userB, "override_me"))
+
+        Statsig.removeGateOverride("override_me")
+        assertTrue(Statsig.checkGate(userA, "override_me"))
+        assertTrue(Statsig.checkGate(userB, "override_me"))
+
+        Statsig.removeGateOverride("override_me", userA.userID)
+        Statsig.removeGateOverride("override_me", "user-b")
+        assertFalse(Statsig.checkGate(userA, "override_me"))
+        assertFalse(Statsig.checkGate(userB, "override_me"))
+    }
+
+    @Test
+    fun testConfigOverridesWithUsers() = runBlocking {
+        val emptyMap = mapOf<String, Any>()
+
+        assertEquals(Statsig.getConfig(userB, "override_me").value, emptyMap)
+
+        val overriddenValue = mapOf("hello" to "its me")
+        Statsig.overrideConfig("override_me", overriddenValue, "user-b")
+        assertEquals(Statsig.getConfig(userB, "override_me").value, overriddenValue)
+        assertEquals(Statsig.getConfig(userA, "override_me").value, emptyMap)
+
+        Statsig.removeConfigOverride("override_me", "user-b")
+        assertEquals(Statsig.getConfig(userB, "override_me").value, emptyMap)
+    }
+
+    @Test
     fun testConfigOverrides() = runBlocking {
         users.forEach { user -> testConfigOverridesHelper(user) }
     }
@@ -48,12 +84,32 @@ class LocalOverridesTest {
 
         assertEquals(Statsig.getConfig(user, "override_me").value, emptyMap)
 
-        var overriddenValue = mapOf("hello" to "its me")
+        val overriddenValue = mapOf("hello" to "its me")
         Statsig.overrideConfig("override_me", overriddenValue)
         assertEquals(Statsig.getConfig(user, "override_me").value, overriddenValue)
 
         Statsig.removeConfigOverride("override_me")
         assertEquals(Statsig.getConfig(user, "override_me").value, emptyMap)
+    }
+
+    @Test
+    fun testLayerOverridesWithUsers() = runBlocking {
+        val emptyMap = mapOf<String, Any>()
+
+        assertEquals(Statsig.getLayer(userA, "override_me").value, emptyMap)
+
+        val overriddenValue = mapOf("hello" to "its me")
+        Statsig.overrideLayer("override_me", overriddenValue, userA.userID)
+        assertEquals(Statsig.getLayer(userA, "override_me").value, overriddenValue)
+        assertEquals(Statsig.getLayer(userB, "override_me").value, emptyMap)
+
+        Statsig.overrideLayer("override_me", overriddenValue, "user-b")
+        assertEquals(Statsig.getLayer(userB, "override_me").value, overriddenValue)
+
+        Statsig.removeLayerOverride("override_me", userA.userID)
+        Statsig.removeLayerOverride("override_me", "user-b")
+        assertEquals(Statsig.getLayer(userA, "override_me").value, emptyMap)
+        assertEquals(Statsig.getLayer(userB, "override_me").value, emptyMap)
     }
 
     @Test

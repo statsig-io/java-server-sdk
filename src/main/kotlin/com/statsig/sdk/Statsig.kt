@@ -256,11 +256,13 @@ class Statsig {
          *
          * @param layerName the layer to override
          * @param value the json value to override the config to
+         * @param forID userID or customIDs of the user to override
          */
         @JvmStatic
-        fun overrideLayer(layerName: String, value: Map<String, Any>) {
+        @JvmOverloads
+        fun overrideLayer(layerName: String, value: Map<String, Any>, forID: String? = null) {
             if (checkInitialized()) {
-                statsigServer.overrideLayer(layerName, value)
+                statsigServer.overrideLayer(layerName, value, forID)
             }
         }
 
@@ -268,11 +270,13 @@ class Statsig {
          * Removes the given layer override
          *
          * @param layerName
+         * @param forID userID or customIDs of the user to remove override
          */
         @JvmStatic
-        fun removeLayerOverride(layerName: String) {
+        @JvmOverloads
+        fun removeLayerOverride(layerName: String, forID: String? = null) {
             if (checkInitialized()) {
-                statsigServer.removeLayerOverride(layerName)
+                statsigServer.removeLayerOverride(layerName, forID)
             }
         }
 
@@ -291,24 +295,28 @@ class Statsig {
          *
          * @param gateName The name of the gate to be overridden
          * @param gateValue The value that will be returned
+         * @param forID userID or customIDs of the user to override
          */
         @JvmStatic
-        fun overrideGate(gateName: String, gateValue: Boolean) {
+        @JvmOverloads
+        fun overrideGate(gateName: String, gateValue: Boolean, forID: String? = null) {
             if (!checkInitialized()) {
                 return
             }
-            statsigServer.overrideGate(gateName, gateValue)
+            statsigServer.overrideGate(gateName, gateValue, forID)
         }
 
         /**
          * Removes the given gate override
          *
          * @param gateName
+         * @param forID userID or customIDs of the user to remove override
          */
         @JvmStatic
-        fun removeGateOverride(gateName: String) {
+        @JvmOverloads
+        fun removeGateOverride(gateName: String, forID: String? = null) {
             if (checkInitialized()) {
-                statsigServer.removeGateOverride(gateName)
+                statsigServer.removeGateOverride(gateName, forID)
             }
         }
 
@@ -317,24 +325,28 @@ class Statsig {
          *
          * @param configName The name of the dynamic config or experiment to be overridden
          * @param configValue The value that will be returned
+         * @param forID userID or customIDs of the user to override
          */
         @JvmStatic
-        fun overrideConfig(configName: String, configValue: Map<String, Any>) {
+        @JvmOverloads
+        fun overrideConfig(configName: String, configValue: Map<String, Any>, forID: String? = null) {
             if (!checkInitialized()) {
                 return
             }
-            statsigServer.overrideConfig(configName, configValue)
+            statsigServer.overrideConfig(configName, configValue, forID)
         }
 
         /**
          * Removes the given config override
          *
          * @param configName
+         * @param forID userID or customIDs of the user to remove override
          */
         @JvmStatic
-        fun removeConfigOverride(configName: String) {
+        @JvmOverloads
+        fun removeConfigOverride(configName: String, forID: String? = null) {
             if (checkInitialized()) {
-                statsigServer.removeConfigOverride(configName)
+                statsigServer.removeConfigOverride(configName, forID)
             }
         }
 

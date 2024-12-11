@@ -59,9 +59,9 @@ public class LocalOverridesTestJava {
        assertFalse(instance2.checkGateSync(userA, "override_me", null));
 
 
-       evaluator.overrideGate("override_me", true);
-       evaluator1.overrideGate("override_me", true);
-       evaluator2.overrideGate("override_me", true);
+       evaluator.overrideGate("override_me", true, null);
+       evaluator1.overrideGate("override_me", true, null);
+       evaluator2.overrideGate("override_me", true, null);
        assertTrue(driver.checkGateAsync(userA, "override_me").get());
        assertTrue(driver.checkGateAsync(userB, "override_me").get());
        assertTrue(driver.checkGateSync(userA, "override_me", null));
@@ -78,9 +78,9 @@ public class LocalOverridesTestJava {
        assertTrue(instance2.checkGateSync(userA, "override_me", null));
        assertTrue(instance2.checkGateSync(userB, "override_me", null));
 
-       evaluator.overrideGate("override_me", false);
-       evaluator1.overrideGate("override_me", false);
-       evaluator2.overrideGate("override_me", false);
+       evaluator.overrideGate("override_me", false, null);
+       evaluator1.overrideGate("override_me", false, null);
+       evaluator2.overrideGate("override_me", false, null);
        assertFalse(driver.checkGateAsync(userB, "override_me").get());
        assertFalse(driver.checkGateSync(userA, "override_me", null));
        assertFalse(driver.checkGateSync(userB, "override_me", new CheckGateOptions()));
@@ -113,9 +113,9 @@ public class LocalOverridesTestJava {
 
        Map<String, String> overriddenValue = new HashMap<>();
        overriddenValue.put("hello", "its me");
-       evaluator.overrideConfig("override_me", overriddenValue);
-       evaluator1.overrideConfig("override_me", overriddenValue);
-       evaluator2.overrideConfig("override_me", overriddenValue);
+       evaluator.overrideConfig("override_me", overriddenValue, null);
+       evaluator1.overrideConfig("override_me", overriddenValue, null);
+       evaluator2.overrideConfig("override_me", overriddenValue, null);
 
        assertEquals(driver.getConfigAsync(userA, "override_me").get().getValue(), overriddenValue);
        assertEquals(driver.getConfigSync(userA, "override_me", null).getValue(), overriddenValue);
@@ -123,9 +123,9 @@ public class LocalOverridesTestJava {
        assertEquals(driver.getConfigSync(userA, "override_me", new GetConfigOptions(true)).getValue(), overriddenValue);
 
        overriddenValue.put("hello", "its no longer me");
-       evaluator.overrideConfig("override_me", overriddenValue);
-       evaluator1.overrideConfig("override_me", overriddenValue);
-       evaluator2.overrideConfig("override_me", overriddenValue);
+       evaluator.overrideConfig("override_me", overriddenValue, null);
+       evaluator1.overrideConfig("override_me", overriddenValue, null);
+       evaluator2.overrideConfig("override_me", overriddenValue, null);
 
        assertEquals(driver.getConfigAsync(userB, "override_me").get().getValue(), overriddenValue);
        assertEquals(driver.getConfigSync(userB, "override_me", new GetConfigOptions()).getValue(), overriddenValue);
@@ -134,9 +134,9 @@ public class LocalOverridesTestJava {
        assertEquals(instance2.getConfigAsync(userB, "override_me").get().getValue(), overriddenValue);
        assertEquals(instance2.getConfigSync(userB, "override_me", null).getValue(), overriddenValue);
 
-       evaluator.overrideConfig("override_me", emptyMap);
-       evaluator1.overrideConfig("override_me", emptyMap);
-       evaluator2.overrideConfig("override_me", emptyMap);
+       evaluator.overrideConfig("override_me", emptyMap, null);
+       evaluator1.overrideConfig("override_me", emptyMap, null);
+       evaluator2.overrideConfig("override_me", emptyMap, null);
 
        assertEquals(driver.getConfigAsync(userB, "override_me").get().getValue(), emptyMap);
        assertEquals(driver.getConfigSync(userB, "override_me", null).getValue(), emptyMap);
