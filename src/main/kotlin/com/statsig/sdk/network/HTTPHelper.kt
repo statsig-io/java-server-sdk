@@ -16,7 +16,6 @@ internal class HTTPHelper(
     private var diagnostics: Diagnostics? = null
     private val logger = options.customLogger
 
-    private val gson = Utils.getGson()
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
 
     fun setDiagnostics(diagnostics: Diagnostics) {
@@ -34,7 +33,7 @@ internal class HTTPHelper(
             val request = Request.Builder()
                 .url(url)
             if (body != null) {
-                val bodyJson = gson.toJson(body)
+                val bodyJson = Utils.GSON.toJson(body)
                 request.post(bodyJson.toRequestBody(json))
             }
             headers.forEach { (key, value) -> request.addHeader(key, value) }

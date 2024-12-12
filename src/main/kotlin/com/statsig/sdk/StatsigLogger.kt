@@ -54,7 +54,6 @@ internal class StatsigLogger(
             deduper.clear()
         }
     }
-    private val gson = Utils.getGson()
     internal var diagnostics: Diagnostics? = null
     private var eventQueueSize: Int? = null
     private val logger = statsigOptions.customLogger
@@ -181,8 +180,8 @@ internal class StatsigLogger(
         val event = StatsigEvent(DIAGNOSTICS_EVENT)
         event.eventMetadata = mapOf(
             "context" to context.toString().lowercase(),
-            "markers" to gson.toJson(markers),
-            "statsigOptions" to gson.toJson(statsigOptions.getLoggingCopy()),
+            "markers" to Utils.GSON.toJson(markers),
+            "statsigOptions" to Utils.GSON.toJson(statsigOptions.getLoggingCopy()),
         )
         log(event)
     }
@@ -198,7 +197,7 @@ internal class StatsigLogger(
         val event = StatsigEvent(DIAGNOSTICS_EVENT)
         event.eventMetadata = mapOf(
             "context" to context.name.lowercase(),
-            "markers" to gson.toJson(markers),
+            "markers" to Utils.GSON.toJson(markers),
         )
         if (statsigOptions.disableAllLogging) {
             return

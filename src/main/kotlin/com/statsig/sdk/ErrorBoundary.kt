@@ -1,6 +1,5 @@
 package com.statsig.sdk
 
-import com.google.gson.Gson
 import kotlinx.coroutines.*
 import okhttp3.Call
 import okhttp3.Callback
@@ -93,7 +92,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 if (safeInfo.length > maxInfoLength) {
                     safeInfo = safeInfo.substring(0, maxInfoLength)
                 }
-                val optionsCopy = Gson().toJson(options.getLoggingCopy())
+                val optionsCopy = Utils.PLAIN_GSON.toJson(options.getLoggingCopy())
                 val body = """{
                 "tag": "$tag",
                 "exception": "${ex.javaClass.name}",

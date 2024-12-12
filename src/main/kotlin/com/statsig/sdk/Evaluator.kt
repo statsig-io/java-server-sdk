@@ -42,7 +42,6 @@ internal class Evaluator(
     private var configOverrides: MutableMap<String, MutableMap<String?, Map<String, Any>>> = HashMap()
     private var layerOverrides: MutableMap<String, MutableMap<String?, Map<String, Any>>> = HashMap()
     private var hashLookupTable: MutableMap<String, ULong> = HashMap()
-    private val gson = Utils.getGson()
     private val logger = options.customLogger
 
     private val calendarOne = Calendar.getInstance()

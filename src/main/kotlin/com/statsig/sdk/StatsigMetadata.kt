@@ -18,7 +18,6 @@ internal data class StatsigMetadata(@SerializedName("sdkType") var sdkType: Stri
         VERSION
     }
     fun asJson(): String {
-        val gson = Utils.getGson()
-        return gson.toJson(this)
+        return Utils.GSON.toJson(this)
     }
 }
