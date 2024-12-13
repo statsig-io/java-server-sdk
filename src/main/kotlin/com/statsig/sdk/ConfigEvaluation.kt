@@ -14,6 +14,8 @@ class ConfigEvaluation(
     var evaluationDetails: EvaluationDetails? = null,
     var isExperimentGroup: Boolean = false,
     var configVersion: Long? = null,
+    var forwardAllExposures: Boolean = false,
+    var samplingRate: Long? = null,
 ) {
     internal var isDelegate: Boolean = false
 

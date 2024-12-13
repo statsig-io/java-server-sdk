@@ -58,6 +58,7 @@ class SpecStoreTests {
             "",
             null,
             null,
+            forwardAllExposures = null,
         )
     }
 }

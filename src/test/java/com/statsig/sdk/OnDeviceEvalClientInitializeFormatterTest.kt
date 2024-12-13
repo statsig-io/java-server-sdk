@@ -96,6 +96,7 @@ class OnDeviceEvalClientInitializeFormatterTest {
             "",
             null,
             null,
+            forwardAllExposures = null,
         )
     }
 }

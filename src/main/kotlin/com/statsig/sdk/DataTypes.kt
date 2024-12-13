@@ -40,6 +40,7 @@ internal data class APIConfig(
     @SerializedName("hasSharedParams") val hasSharedParams: Boolean?,
     @SerializedName("targetAppIDs") val targetAppIDs: Array<String>? = null,
     @SerializedName("version") val version: Long? = 0,
+    @SerializedName("forwardAllExposures") val forwardAllExposures: Boolean?,
 )
 
 internal data class APIRule(
@@ -53,6 +54,7 @@ internal data class APIRule(
     @SerializedName("groupName") val groupName: String?,
     @SerializedName("configDelegate") val configDelegate: String?,
     @SerializedName("isExperimentGroup") val isExperimentGroup: Boolean?,
+    @SerializedName("samplingRate") val samplingRate: Long?,
 ) {
     fun isTargetingRule(): Boolean {
         return id == "targetingGate" || id == "inlineTargetingRules"

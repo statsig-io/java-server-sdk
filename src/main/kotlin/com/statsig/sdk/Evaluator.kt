@@ -192,6 +192,7 @@ internal class Evaluator(
             ctx.evaluation = this.getUnrecognizedEvaluation()
             return
         }
+        ctx.apiConfig = config
         this.evaluateConfig(ctx, config)
     }
 
@@ -261,6 +262,9 @@ internal class Evaluator(
     }
 
     private fun finalizeEvaluation(ctx: EvaluationContext) {
+        ctx.apiConfig?.forwardAllExposures?.let {
+            ctx.evaluation.forwardAllExposures = it
+        }
         if (!ctx.isNested) {
             ctx.evaluation.secondaryExposures = cleanExposures(ctx.evaluation.secondaryExposures)
             ctx.evaluation.undelegatedSecondaryExposures = cleanExposures(ctx.evaluation.undelegatedSecondaryExposures)
@@ -302,6 +306,7 @@ internal class Evaluator(
             logger.debug("Layer not found: $layerName, returning unrecognized evaluation")
             return
         }
+        ctx.apiConfig = layer
         this.evaluateLayer(ctx, layer)
     }
 
@@ -331,6 +336,7 @@ internal class Evaluator(
             ctx.evaluation = this.getUnrecognizedEvaluation()
             return
         }
+        ctx.apiConfig = gate
         this.evaluate(ctx, gate)
         this.finalizeEvaluation(ctx)
     }
@@ -516,6 +522,7 @@ internal class Evaluator(
 
             if (ctx.evaluation.booleanValue) {
                 if (this.evaluateDelegate(ctx, rule)) {
+                    ctx.evaluation.samplingRate = rule.samplingRate
                     // if it's not null
                     return
                 }
@@ -539,6 +546,7 @@ internal class Evaluator(
                     ctx.evaluation.jsonValue = config.defaultValue
                 }
 
+                ctx.evaluation.samplingRate = rule.samplingRate
                 ctx.evaluation.booleanValue = pass
                 ctx.evaluation.isExperimentGroup = rule.isExperimentGroup ?: false
                 return

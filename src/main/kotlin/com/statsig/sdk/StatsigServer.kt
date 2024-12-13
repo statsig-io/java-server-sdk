@@ -292,6 +292,7 @@ private class StatsigServerImpl() :
     private lateinit var statsigJob: CompletableJob
     private lateinit var statsigScope: CoroutineScope
     private lateinit var transport: StatsigTransport
+    private lateinit var samplingKeySet: HashSetWithTTL
     private lateinit var logger: StatsigLogger
     private lateinit var evaluator: Evaluator
     private lateinit var diagnostics: Diagnostics
@@ -1304,7 +1305,7 @@ private class StatsigServerImpl() :
                         ),
                     )
                 } else {
-                    logLayerExposureImpl(user, metadata)
+                    logLayerExposureImpl(user, metadata, layerName, context.evaluation)
                 }
             }
         }, {
@@ -1333,13 +1334,20 @@ private class StatsigServerImpl() :
         var metadata = createLayerExposureMetadata(layer, paramName, context.evaluation)
         metadata.isManualExposure = "true"
 
-        logLayerExposureImpl(user, metadata)
+        logLayerExposureImpl(user, metadata, layerName, context.evaluation)
     }
 
-    private fun logLayerExposureImpl(user: StatsigUser, metadata: LayerExposureMetadata) {
+    private fun logLayerExposureImpl(
+        user: StatsigUser,
+        metadata: LayerExposureMetadata,
+        layerName: String,
+        configEvaluation: ConfigEvaluation,
+    ) {
         logger.logLayerExposure(
             user,
             metadata,
+            layerName,
+            configEvaluation
         )
     }
 

@@ -1,8 +1,10 @@
 package com.statsig.sdk
 
 import com.google.gson.Gson
+import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.Base64
+import kotlin.math.absoluteValue
 
 enum class HashAlgo {
     SHA256,
@@ -31,6 +33,18 @@ class Hashing {
             val value = input.toByteArray(Charsets.UTF_8)
             val bytes = md.digest(value)
             return Base64.getEncoder().encodeToString(bytes)
+        }
+
+        fun sha256ToLong(input: String): Long {
+            val md = MessageDigest.getInstance("SHA-256")
+            val hashBytes = md.digest(input.toByteArray(Charsets.UTF_8))
+            // Combine more bytes to increase randomness
+            val buffer = ByteBuffer.wrap(hashBytes)
+            val high = buffer.long // First 8 bytes
+            val low = buffer.long // Next 8 bytes
+
+            // Combine high and low parts to get better entropy
+            return (high xor low).absoluteValue
         }
     }
 }

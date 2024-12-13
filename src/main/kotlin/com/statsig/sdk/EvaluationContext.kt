@@ -5,6 +5,7 @@ import com.statsig.sdk.persistent_storage.UserPersistedValues
 internal class EvaluationContext(
     var user: StatsigUser,
     var evaluation: ConfigEvaluation = ConfigEvaluation(),
+    var apiConfig: APIConfig? = null,
     var clientSDKKey: String? = null,
     var hash: HashAlgo = HashAlgo.SHA256,
     var isNested: Boolean = false,
@@ -18,6 +19,7 @@ internal class EvaluationContext(
 
     constructor(ctx: EvaluationContext) : this(
         user = ctx.user,
+        apiConfig = ctx.apiConfig,
         evaluation = ctx.evaluation,
         clientSDKKey = ctx.clientSDKKey,
         hash = ctx.hash,

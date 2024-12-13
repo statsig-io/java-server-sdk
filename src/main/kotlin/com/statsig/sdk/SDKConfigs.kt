@@ -17,4 +17,8 @@ internal class SDKConfigs() {
     fun getConfigNumValue(config: String): Number? {
         return configs[config] as? Number
     }
+
+    fun getConfigsStrValue(config: String): String? {
+        return configs[config] as? String
+    }
 }

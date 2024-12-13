@@ -6,7 +6,15 @@ import java.util.UUID
 
 private const val VERSION = "1.33.0"
 
-internal data class StatsigMetadata(@SerializedName("sdkType") var sdkType: String = "java-server", @SerializedName("sessionID") var sessionID: String = UUID.randomUUID().toString(), @SerializedName("languageVersion") var languageVersion: String = System.getProperty("java.version"), @SerializedName("exposureLoggingDisabled") var exposureLoggingDisabled: Boolean? = null) {
+internal data class StatsigMetadata(
+    @SerializedName("sdkType") var sdkType: String = "java-server",
+    @SerializedName("sessionID") var sessionID: String = UUID.randomUUID().toString(),
+    @SerializedName("languageVersion") var languageVersion: String = System.getProperty("java.version"),
+    @SerializedName("exposureLoggingDisabled") var exposureLoggingDisabled: Boolean? = null,
+    @SerializedName("samplingRate") var samplingRate: Long? = null,
+    @SerializedName("samplingMode") var samplingMode: String? = null,
+    @SerializedName("shadowLogged") var samplingStatus: String? = null,
+) {
     @SerializedName("sdkVersion")
     var sdkVersion: String = try {
         val properties = Properties()

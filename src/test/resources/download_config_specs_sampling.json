@@ -1,0 +1,780 @@
+{
+  "dynamic_configs": [
+    {
+      "name": "sampled_no_exposure",
+      "type": "dynamic_config",
+      "salt": "7dbdd6e0-32a5-4bf5-a589-e7a2cd41729f",
+      "enabled": true,
+      "defaultValue": {},
+      "rules": [
+        {
+          "name": "3J4mf8EUuugmpZc0s0McaF",
+          "passPercentage": 55,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {},
+          "id": "3J4mf8EUuugmpZc0s0McaF",
+          "salt": "df076170-00f0-467e-9ae2-6220d51837c9",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "dynamic_config",
+      "version": 2
+    },
+    {
+      "name": "sampled_disabled_config",
+      "type": "dynamic_config",
+      "salt": "5cb2a332-c7ba-4cde-8296-27cbc04bab10",
+      "enabled": false,
+      "defaultValue": {},
+      "rules": [
+        {
+          "name": "47RgNQsRr3HcUYOWS8HL7u",
+          "passPercentage": 55,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {},
+          "id": "47RgNQsRr3HcUYOWS8HL7u",
+          "salt": "91a0f8fe-fabe-4ec8-b134-6375f58114f2",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "dynamic_config",
+      "version": 3
+    },
+    {
+      "name": "sampled_tgate_fail",
+      "type": "dynamic_config",
+      "salt": "fc8bb2f0-0bfc-4ef5-877a-2dd9cb7cfc49",
+      "enabled": true,
+      "defaultValue": {},
+      "rules": [
+        {
+          "name": "layerAssignment",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_bucket",
+              "targetValue": [
+                -1
+              ],
+              "operator": "any",
+              "field": null,
+              "additionalValues": {
+                "salt": "7074fceb-eaa0-40c7-88d6-53cd38508ad9"
+              },
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {},
+          "id": "layerAssignment",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        },
+        {
+          "name": "inlineTargetingRules",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "fail_gate",
+              "targetValue": "segment:sampled_tgate_fail",
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {},
+          "id": "inlineTargetingRules",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        },
+        {
+          "name": "29ygcY5WAid7gtiJS05OAL",
+          "groupName": "Control",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_bucket",
+              "targetValue": 500,
+              "operator": "lt",
+              "field": null,
+              "additionalValues": {
+                "salt": "fc8bb2f0-0bfc-4ef5-877a-2dd9cb7cfc49"
+              },
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {
+            "hi": "hi"
+          },
+          "id": "29ygcY5WAid7gtiJS05OAL",
+          "salt": "29ygcY5WAid7gtiJS05OAL",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "isExperimentGroup": true
+        },
+        {
+          "name": "29ygcZKZ2AmBzSQFt81rTN",
+          "groupName": "Test",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_bucket",
+              "targetValue": 1000,
+              "operator": "lt",
+              "field": null,
+              "additionalValues": {
+                "salt": "fc8bb2f0-0bfc-4ef5-877a-2dd9cb7cfc49"
+              },
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {
+            "hi": "hello"
+          },
+          "id": "29ygcZKZ2AmBzSQFt81rTN",
+          "salt": "29ygcZKZ2AmBzSQFt81rTN",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "isExperimentGroup": true
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "experiment",
+      "version": 6,
+      "isActive": true,
+      "hasSharedParams": false
+    },
+    {
+      "name": "sampled_not_started",
+      "type": "dynamic_config",
+      "salt": "46c5a690-0ebe-4b6a-9d1b-0c41b9fe4f05",
+      "enabled": true,
+      "defaultValue": {},
+      "rules": [
+        {
+          "name": "prestart",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {},
+          "id": "prestart",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "experiment",
+      "version": 1,
+      "isActive": false,
+      "hasSharedParams": false
+    },
+    {
+      "name": "sampled_launched_exp",
+      "type": "dynamic_config",
+      "salt": "cfb0000f-7fb0-42d4-a362-2afa0aa2dba8",
+      "enabled": true,
+      "defaultValue": {},
+      "rules": [
+        {
+          "name": "launchedGroup",
+          "groupName": "Control",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {
+            "hi": "hi"
+          },
+          "id": "launchedGroup",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "experiment",
+      "version": 4,
+      "isActive": false,
+      "hasSharedParams": false
+    },
+    {
+      "name": "analytical_exp",
+      "type": "dynamic_config",
+      "salt": "47ae6816-e2db-44bf-9433-a21de23fae4e",
+      "enabled": true,
+      "defaultValue": {},
+      "rules": [
+        {
+          "name": "layerAssignment",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_bucket",
+              "targetValue": [
+                -1
+              ],
+              "operator": "any",
+              "field": null,
+              "additionalValues": {
+                "salt": "6d36f61a-4162-4995-be57-4826b4ee739b"
+              },
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {},
+          "id": "layerAssignment",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        },
+        {
+          "name": "inlineTargetingRules",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "fail_gate",
+              "targetValue": "segment:analytical_exp",
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {},
+          "id": "inlineTargetingRules",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        },
+        {
+          "name": "2IT9Q2mZgvONMilIVdZtpZ",
+          "groupName": "Control",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_bucket",
+              "targetValue": 500,
+              "operator": "lt",
+              "field": null,
+              "additionalValues": {
+                "salt": "47ae6816-e2db-44bf-9433-a21de23fae4e"
+              },
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {
+            "hi": false
+          },
+          "id": "2IT9Q2mZgvONMilIVdZtpZ",
+          "salt": "2IT9Q2mZgvONMilIVdZtpZ",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "isExperimentGroup": true
+        },
+        {
+          "name": "2IT9Q421INYi5HTEwlV6J1",
+          "groupName": "Test",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_bucket",
+              "targetValue": 1000,
+              "operator": "lt",
+              "field": null,
+              "additionalValues": {
+                "salt": "47ae6816-e2db-44bf-9433-a21de23fae4e"
+              },
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": {
+            "hi": false
+          },
+          "id": "2IT9Q421INYi5HTEwlV6J1",
+          "salt": "2IT9Q421INYi5HTEwlV6J1",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "isExperimentGroup": true
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "experiment",
+      "version": 3,
+      "isActive": true,
+      "hasSharedParams": false
+    }
+  ],
+  "feature_gates": [
+    {
+      "name": "sampled_metric_lifts_disabled",
+      "type": "feature_gate",
+      "salt": "b93773e8-df01-46ca-bcbb-cc33e9ef030c",
+      "enabled": true,
+      "defaultValue": false,
+      "rules": [
+        {
+          "name": "5bCrStrK6E6IS5Gq1IghY8:55.00:1",
+          "passPercentage": 55,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "5bCrStrK6E6IS5Gq1IghY8:55.00:1",
+          "salt": "a1239927-aa43-4901-b1d1-64ddd747c310",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "feature_gate",
+      "version": 3
+    },
+    {
+      "name": "sampled_disabled_gate",
+      "type": "feature_gate",
+      "salt": "07c3e36a-7c7b-421d-80c4-461f89481094",
+      "enabled": false,
+      "defaultValue": false,
+      "rules": [
+        {
+          "name": "4N2ZK1f8mRBilGsVYB902M",
+          "passPercentage": 55,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "4N2ZK1f8mRBilGsVYB902M",
+          "salt": "858797e8-22d8-44a9-976b-73e2aafb0060",
+          "isDeviceBased": false,
+          "idType": "userID"
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "feature_gate",
+      "version": 3
+    },
+    {
+      "name": "analytical_gate",
+      "type": "feature_gate",
+      "salt": "4a283a07-8af9-4dd3-acf1-e7f14e46c65a",
+      "enabled": true,
+      "defaultValue": false,
+      "rules": [
+        {
+          "name": "1TmLuOlvNQxOZuv74zgaAA",
+          "passPercentage": 55,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "1TmLuOlvNQxOZuv74zgaAA",
+          "salt": "8b4b6be4-bf26-4e16-b9cc-c699515017ab",
+          "isDeviceBased": false,
+          "idType": "userID"
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "feature_gate",
+      "version": 2
+    },
+    {
+      "name": "sampled_default_gate",
+      "type": "feature_gate",
+      "salt": "b98c6336-bd0a-4471-8961-6243703a43c3",
+      "enabled": true,
+      "defaultValue": false,
+      "rules": [
+        {
+          "name": "3Y8u0vLttAEBAyj3JtbRpF",
+          "passPercentage": 0,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "3Y8u0vLttAEBAyj3JtbRpF",
+          "salt": "598fb0bb-8b65-48a2-bf0a-2a66aa47bf82",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "feature_gate",
+      "forwardAllExposures": true,
+      "_comment": "The above field is being added manually",
+      "version": 2
+    },
+    {
+      "name": "analytical_overriden_gate",
+      "type": "feature_gate",
+      "salt": "9df56ec0-edb5-413a-a69b-e313ff766b0c",
+      "enabled": true,
+      "defaultValue": false,
+      "rules": [
+        {
+          "name": "pass:all:id_override",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_field",
+              "targetValue": [
+                "user-1",
+                "user-2",
+                "user-3",
+                "user-4",
+                "user-5",
+                "user-6",
+                "user-7",
+                "user-8",
+                "user-9",
+                "user-10",
+                "user-11",
+                "user-12",
+                "user-13",
+                "user-14",
+                "user-15",
+                "user-16",
+                "user-17",
+                "user-18",
+                "user-19",
+                "user-20",
+                "user-21",
+                "user-22",
+                "user-23",
+                "user-24",
+                "user-25",
+                "user-26",
+                "user-27",
+                "user-28",
+                "user-29",
+                "user-30",
+                "user-31",
+                "user-32",
+                "user-33",
+                "user-34",
+                "user-35",
+                "user-36",
+                "user-37",
+                "user-38",
+                "user-39",
+                "user-40",
+                "user-41",
+                "user-42",
+                "user-43",
+                "user-44",
+                "user-45",
+                "user-46",
+                "user-47",
+                "user-48",
+                "user-49",
+                "user-50",
+                "user-51",
+                "user-52",
+                "user-53",
+                "user-54",
+                "user-55",
+                "user-56",
+                "user-57",
+                "user-58",
+                "user-59",
+                "user-60",
+                "user-61",
+                "user-62",
+                "user-63",
+                "user-64",
+                "user-65",
+                "user-66",
+                "user-67",
+                "user-68",
+                "user-69",
+                "user-70",
+                "user-71",
+                "user-72",
+                "user-73",
+                "user-74",
+                "user-75",
+                "user-76",
+                "user-77",
+                "user-78",
+                "user-79",
+                "user-80",
+                "user-81",
+                "user-82",
+                "user-83",
+                "user-84",
+                "user-85",
+                "user-86",
+                "user-87",
+                "user-88",
+                "user-89",
+                "user-90",
+                "user-91",
+                "user-92",
+                "user-93",
+                "user-94",
+                "user-95",
+                "user-96",
+                "user-97",
+                "user-98",
+                "user-99",
+                "user-100",
+                "user-101"
+              ],
+              "operator": "any",
+              "field": "userID",
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "pass:all:id_override",
+          "salt": "",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        },
+        {
+          "name": "2u7c8hqSqrfl1pZhYU9PRU",
+          "passPercentage": 0,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "2u7c8hqSqrfl1pZhYU9PRU",
+          "salt": "5b213d30-5a15-4777-8ccf-2abca0270925",
+          "isDeviceBased": false,
+          "idType": "userID",
+          "samplingRate": 101
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "feature_gate",
+      "version": 5
+    },
+    {
+      "name": "segment:sampled_tgate_fail",
+      "type": "feature_gate",
+      "salt": "fc8bb2f0-0bfc-4ef5-877a-2dd9cb7cfc49",
+      "enabled": true,
+      "defaultValue": false,
+      "rules": [
+        {
+          "name": "6UtSMUcOB3DQy3o1pQaCdV",
+          "groupName": "Employees",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "user_field",
+              "targetValue": [
+                "statsig.com"
+              ],
+              "operator": "str_contains_any",
+              "field": "email",
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "6UtSMUcOB3DQy3o1pQaCdV",
+          "salt": "516a5c62-dbe8-40dc-95b6-c541d51f0f57",
+          "isDeviceBased": false,
+          "idType": "userID"
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "segment",
+      "version": 6
+    },
+    {
+      "name": "segment:analytical_exp",
+      "type": "feature_gate",
+      "salt": "47ae6816-e2db-44bf-9433-a21de23fae4e",
+      "enabled": true,
+      "defaultValue": false,
+      "rules": [
+        {
+          "name": "3bcgqYuXslwZthrD1Nbxjh",
+          "groupName": "Inline Targeting Rule 1",
+          "passPercentage": 100,
+          "conditions": [
+            {
+              "type": "public",
+              "targetValue": null,
+              "operator": null,
+              "field": null,
+              "additionalValues": {},
+              "isDeviceBased": false,
+              "idType": "userID"
+            }
+          ],
+          "returnValue": true,
+          "id": "3bcgqYuXslwZthrD1Nbxjh",
+          "salt": "2e793f0c-2113-4e8f-8669-b7c731c7e25e",
+          "isDeviceBased": false,
+          "idType": "userID"
+        }
+      ],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "segment",
+      "version": 3
+    }
+  ],
+  "layers": {
+    "a_layer": []
+  },
+  "layer_configs": [
+    {
+      "name": "a_layer",
+      "type": "dynamic_config",
+      "salt": "90e730d9-8866-4aa7-a322-3777d8c1fec0",
+      "enabled": true,
+      "defaultValue": {
+        "param": "hello"
+      },
+      "rules": [],
+      "isDeviceBased": false,
+      "idType": "userID",
+      "entity": "layer",
+      "version": 2
+    }
+  ],
+  "has_updates": true,
+  "time": 1734072680056,
+  "company_id": "0hvs4NGLhUeQfnKs8Zl8o",
+  "response_format": "dcs-v1",
+  "default_environment": "production",
+  "id_lists": {},
+  "diagnostics": {
+    "initialize": 10000,
+    "dcs": 1000,
+    "download_config_specs": 1000,
+    "idlist": 100,
+    "get_id_list": 100,
+    "get_id_list_sources": 100,
+    "log": 100,
+    "log_event": 100,
+    "api_call": 100
+  },
+  "sdk_flags": {},
+  "sdk_configs": {
+    "event_queue_size": 1000,
+    "sampling_mode": "on",
+    "special_case_sampling_rate": 101
+  }
+}

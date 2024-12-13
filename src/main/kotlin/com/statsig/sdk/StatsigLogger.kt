@@ -14,11 +14,25 @@ const val DEFAULT_MAX_EVENTS: Int = 1000
 const val MAX_DEDUPER_SIZE: Int = 10000
 const val FLUSH_TIMER_MS: Long = 60000
 const val CLEAR_DEDUPER_MS: Long = 60 * 1000
+const val SAMPLING_SET_RESET_INTERVAL_IN_MS = 60 * 1000L
 
 const val CONFIG_EXPOSURE_EVENT = "statsig::config_exposure"
 const val LAYER_EXPOSURE_EVENT = "statsig::layer_exposure"
 const val GATE_EXPOSURE_EVENT = "statsig::gate_exposure"
 const val DIAGNOSTICS_EVENT = "statsig::diagnostics"
+
+data class SamplingDecision(
+    val shouldSendExposure: Boolean, // Whether the exposure event should still be send
+    val samplingRate: Long?, // The sampling rate applied (if any)
+    val samplingStatus: String?, // The sampling logged status: "logged", "dropped", or null
+    val samplingMode: String?, // The sampling mode applied (if any)
+)
+
+enum class EntityType {
+    GATE,
+    CONFIG,
+    LAYER
+}
 
 internal fun safeAddEvaluationToEvent(evaluationDetails: EvaluationDetails?, metadata: MutableMap<String, String>) {
     if (evaluationDetails == null) {
@@ -38,7 +52,9 @@ internal class StatsigLogger(
     private val statsigOptions: StatsigOptions,
     private val sdkConfigs: SDKConfigs,
 ) {
+    private val SAMPLING_SPECIAL_CASE_RULES = listOf("disabled", "default", "")
 
+    private val samplingKeySet = HashSetWithTTL(SAMPLING_SET_RESET_INTERVAL_IN_MS)
     private val executor = Executors.newSingleThreadExecutor()
     private var events = ConcurrentQueue<StatsigEvent>()
     private val flushTimer = coroutineScope.launch {
@@ -75,6 +91,12 @@ internal class StatsigLogger(
         result: ConfigEvaluation,
         isManualExposure: Boolean = false,
     ) {
+        val sampling = getSamplingDecisionAndDetails(user, gateName, result, null, EntityType.GATE)
+
+        if (!sampling.shouldSendExposure) {
+            return
+        }
+
         if (!isUniqueExposure(
                 user,
                 gateName,
@@ -97,14 +119,17 @@ internal class StatsigLogger(
             metadata["configVersion"] = result.configVersion.toString()
         }
 
+        val statsigMetadataWithSampling = statsigMetadata.copy()
+
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
             eventValue = null,
             metadata,
             user,
-            statsigMetadata,
+            statsigMetadataWithSampling,
             result.secondaryExposures,
         )
+        addSamplingDetailsToEvent(sampling, event)
         log(event)
     }
 
@@ -114,6 +139,12 @@ internal class StatsigLogger(
         result: ConfigEvaluation,
         isManualExposure: Boolean,
     ) {
+        val sampling = getSamplingDecisionAndDetails(user, configName, result, null, EntityType.GATE)
+
+        if (!sampling.shouldSendExposure) {
+            return
+        }
+
         if (!isUniqueExposure(
                 user,
                 configName,
@@ -131,22 +162,33 @@ internal class StatsigLogger(
             metadata["configVersion"] = result.configVersion.toString()
         }
 
+        val statsigMetadataWithSampling = statsigMetadata.copy()
+
         val event = StatsigEvent(
             CONFIG_EXPOSURE_EVENT,
             eventValue = null,
             metadata,
             user,
-            statsigMetadata,
+            statsigMetadataWithSampling,
             result.secondaryExposures,
         )
+        addSamplingDetailsToEvent(sampling, event)
         log(event)
     }
 
     fun logLayerExposure(
         user: StatsigUser?,
         layerExposureMetadata: LayerExposureMetadata,
+        layerName: String,
+        result: ConfigEvaluation,
         isManualExposure: Boolean = false,
     ) {
+        val sampling = getSamplingDecisionAndDetails(user, layerName, result, layerExposureMetadata.parameterName, EntityType.LAYER)
+
+        if (!sampling.shouldSendExposure) {
+            return
+        }
+
         if (isManualExposure) {
             layerExposureMetadata.isManualExposure = "true"
         }
@@ -163,14 +205,17 @@ internal class StatsigLogger(
         val metadata = layerExposureMetadata.toStatsigEventMetadataMap()
         safeAddEvaluationToEvent(layerExposureMetadata.evaluationDetails, metadata)
 
+        val statsigMetadataWithSampling = statsigMetadata.copy()
+
         val event = StatsigEvent(
             LAYER_EXPOSURE_EVENT,
             eventValue = null,
             metadata,
             user,
-            statsigMetadata,
+            statsigMetadataWithSampling,
             layerExposureMetadata.secondaryExposures,
         )
+        addSamplingDetailsToEvent(sampling, event)
         log(event)
     }
 
@@ -225,7 +270,83 @@ internal class StatsigLogger(
         clearDeduperTimer.cancel()
         // Order matters!  Shutdown the executor after posting the final batch
         flush()
+        samplingKeySet.shutdown()
         executor.shutdown()
+    }
+
+    private fun getSamplingDecisionAndDetails(
+        user: StatsigUser?,
+        configName: String,
+        evalResult: ConfigEvaluation,
+        layerParamsName: String?,
+        entityType: EntityType
+    ): SamplingDecision {
+        if (shouldSkipSampling(evalResult)) {
+            return SamplingDecision(
+                shouldSendExposure = true,
+                samplingRate = null,
+                samplingStatus = null,
+                samplingMode = null
+            )
+        }
+
+        val samplingKey = "${configName}_${evalResult.ruleID}"
+        if (!samplingKeySet.contains(samplingKey)) {
+            samplingKeySet.add(samplingKey)
+            return SamplingDecision(
+                shouldSendExposure = true,
+                samplingRate = null,
+                samplingStatus = null,
+                samplingMode = null
+            )
+        }
+
+        var shouldSendExposures = true
+        var samplingRate: Long? = null
+        val samplingMode = sdkConfigs.getConfigsStrValue("sampling_mode")
+        val specialCaseSamplingRate = sdkConfigs.getConfigNumValue("special_case_sampling_rate")
+
+        val exposureKey: String = when (entityType) {
+            EntityType.GATE, EntityType.CONFIG -> computeSamplingKeyForGateOrConfig(configName, evalResult.ruleID, evalResult.booleanValue, user?.userID, user?.customIDs)
+            EntityType.LAYER -> computeSamplingKeyForLayer(configName, evalResult.configDelegate ?: "", layerParamsName ?: "", evalResult.ruleID, user?.userID, user?.customIDs)
+        }
+
+        if (SAMPLING_SPECIAL_CASE_RULES.contains(evalResult.ruleID) && specialCaseSamplingRate != null) {
+            shouldSendExposures = isHashInSamplingRate(exposureKey, specialCaseSamplingRate.toLong())
+            samplingRate = specialCaseSamplingRate.toLong()
+        } else {
+            evalResult.samplingRate?.let {
+                shouldSendExposures = isHashInSamplingRate(exposureKey, it)
+                samplingRate = it
+            }
+        }
+
+        val samplingStatus = when {
+            samplingRate == null -> null
+            shouldSendExposures -> "logged"
+            else -> "dropped"
+        }
+
+        return when (samplingMode) {
+            "on" -> SamplingDecision(
+                shouldSendExposure = shouldSendExposures,
+                samplingRate = samplingRate,
+                samplingStatus = samplingStatus,
+                samplingMode = "on"
+            )
+            "shadow" -> SamplingDecision(
+                shouldSendExposure = true, // Always send events in shadow mode
+                samplingRate = samplingRate,
+                samplingStatus = samplingStatus,
+                samplingMode = "shadow"
+            )
+            else -> SamplingDecision(
+                shouldSendExposure = true,
+                samplingRate = null,
+                samplingStatus = null,
+                samplingMode = null
+            )
+        }
     }
 
     private fun getEventQueueCap(): Int {
@@ -249,6 +370,86 @@ internal class StatsigLogger(
         }
         val customIDKeys = "${user.customIDs?.keys?.joinToString()}:${user.customIDs?.values?.joinToString()}"
         val dedupeKey = "${user.userID}:$customIDKeys:$configName:$ruleID:$value:$allocatedExperiment"
+
         return deduper.add(dedupeKey)
+    }
+
+    //  ----------------
+    //  Sampling helper
+    //  ----------------
+    private fun addSamplingDetailsToEvent(samplingDecision: SamplingDecision, event: StatsigEvent) {
+        if (samplingDecision.samplingRate != null) {
+            event.statsigMetadata?.samplingRate = samplingDecision.samplingRate
+        }
+        if (samplingDecision.samplingStatus != null) {
+            event.statsigMetadata?.samplingStatus = samplingDecision.samplingStatus
+        }
+        if (samplingDecision.samplingMode != null) {
+            event.statsigMetadata?.samplingMode = samplingDecision.samplingMode
+        }
+    }
+
+    private fun computeSamplingKeyForGateOrConfig(
+        gateName: String,
+        ruleId: String,
+        value: Boolean,
+        userId: String?,
+        customIds: Map<String, String>?
+    ): String {
+        val userKey = computeUserKey(userId, customIds)
+        return "n:$gateName;u:$userKey;r:$ruleId;v:$value"
+    }
+
+    private fun computeSamplingKeyForLayer(
+        layerName: String,
+        experimentName: String,
+        parameterName: String,
+        ruleId: String,
+        userId: String?,
+        customIds: Map<String, String>?
+    ): String {
+        val userKey = computeUserKey(userId, customIds)
+        return "n:$layerName;e:$experimentName;p:$parameterName;u:$userKey;r:$ruleId"
+    }
+
+    private fun computeUserKey(userId: String?, customIds: Map<String, String>?): String {
+        var userKey = "u:$userId;"
+
+        if (customIds != null) {
+            for ((key, value) in customIds) {
+                userKey += "$key:$value;"
+            }
+        }
+
+        return userKey
+    }
+
+    private fun shouldSkipSampling(
+        evalResult: ConfigEvaluation,
+    ): Boolean {
+        val samplingMode = sdkConfigs.getConfigsStrValue("sampling_mode")
+        if (samplingMode.isNullOrEmpty() || samplingMode.equals("none")) {
+            return true
+        }
+
+        val tier = statsigOptions.getEnvironment()?.get("tier") ?: "production" // if its null, then default to prod
+        if (!tier.equals("production", ignoreCase = true)) {
+            return true
+        }
+
+        if (evalResult.forwardAllExposures) {
+            return true
+        }
+
+        if (evalResult.ruleID.endsWith(":override") || evalResult.ruleID.endsWith(":id_override")) {
+            return true
+        }
+
+        return false
+    }
+
+    private fun isHashInSamplingRate(key: String, samplingRate: Long): Boolean {
+        val hashValue = Hashing.sha256ToLong(key)
+        return hashValue % samplingRate == 0L
     }
 }
