@@ -1,6 +1,6 @@
 package com.statsig.sdk
 
-import com.statsig.sdk.persistent_storage.UserPersistedValues
+import com.statsig.sdk.persistent_storage.PersistedValues
 
 internal class EvaluationContext(
     var user: StatsigUser,
@@ -9,7 +9,7 @@ internal class EvaluationContext(
     var clientSDKKey: String? = null,
     var hash: HashAlgo = HashAlgo.SHA256,
     var isNested: Boolean = false,
-    var userPersistedValues: UserPersistedValues? = null,
+    var persistedValues: PersistedValues? = null,
     var persistentAssignmentOptions: PersistentAssignmentOptions? = null,
     var onlyEvaluateTargeting: Boolean = false,
     var onlyEvaluateOverrides: Boolean = false,
@@ -24,7 +24,7 @@ internal class EvaluationContext(
         clientSDKKey = ctx.clientSDKKey,
         hash = ctx.hash,
         isNested = ctx.isNested,
-        userPersistedValues = ctx.userPersistedValues,
+        persistedValues = ctx.persistedValues,
         persistentAssignmentOptions = ctx.persistentAssignmentOptions,
         onlyEvaluateTargeting = ctx.onlyEvaluateTargeting,
         onlyEvaluateOverrides = ctx.onlyEvaluateOverrides,

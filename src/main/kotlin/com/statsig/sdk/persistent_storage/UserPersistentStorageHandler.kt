@@ -1,14 +1,26 @@
 package com.statsig.sdk.persistent_storage
 
+import com.statsig.sdk.APIConfig
 import com.statsig.sdk.StatsigUser
 
-class UserPersistentStorageHandler(private val provider: IUserPersistentStorage?) {
-    suspend fun load(user: StatsigUser, idType: String): UserPersistedValues? {
+internal class UserPersistentStorageHandler(private val provider: IUserPersistentStorage?) {
+    suspend fun loadSingleIDType(user: StatsigUser, idType: String): PersistedValues? {
         if (provider == null) {
             return null
         }
         val key = getStorageKey(user, idType)
-        return provider.load(key)
+        return mapOf(key to provider.load(key))
+    }
+
+    suspend fun loadMultipleIDTypes(user: StatsigUser, experiments: List<APIConfig>): PersistedValues? {
+        if (provider == null) {
+            return null
+        }
+        val experimentsByIDType = experiments.groupBy { it.idType }
+        return experimentsByIDType.map { (key, value) ->
+            val key = getStorageKey(user, key)
+            key to provider.load(key, value.map { it.name })
+        }.toMap()
     }
 
     fun save(user: StatsigUser, idType: String, name: String, data: StickyValues) {
