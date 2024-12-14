@@ -1,6 +1,6 @@
 package com.statsig.sdk
 
-import com.statsig.sdk.persistent_storage.PersistedValues
+import com.statsig.sdk.persistent_storage.UserPersistedValues
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 
@@ -362,30 +362,11 @@ class Statsig {
         suspend fun getUserPersistedValues(
             user: StatsigUser,
             idType: String,
-        ): PersistedValues {
+        ): UserPersistedValues {
             if (!checkInitialized()) {
                 return emptyMap()
             }
             return statsigServer.getUserPersistedValues(user, idType)
-        }
-
-        /**
-         * Load persisted values for a list of experiments/layers and their respective ID types
-         *
-         * @param user The StatsigUser object used for evaluation
-         * @param names A list of experiment or layer names
-         *
-         * @return A map of persisted evaluations for select experiments, with each user defined by the ID types of each experiment
-         */
-        @JvmStatic
-        suspend fun getFilteredPersistedValues(
-            user: StatsigUser,
-            names: List<String>,
-        ): PersistedValues {
-            if (!checkInitialized()) {
-                return emptyMap()
-            }
-            return statsigServer.getFilteredPersistedValues(user, names)
         }
 
         /**

@@ -1,7 +1,7 @@
 package com.statsig.sdk
 
 import com.statsig.sdk.network.StatsigTransport
-import com.statsig.sdk.persistent_storage.PersistedValues
+import com.statsig.sdk.persistent_storage.UserPersistedValues
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.sync.Mutex
@@ -104,10 +104,7 @@ sealed class StatsigServer {
     abstract fun removeConfigOverride(configName: String)
 
     @JvmSynthetic
-    abstract suspend fun getUserPersistedValues(user: StatsigUser, idType: String): PersistedValues
-
-    @JvmSynthetic
-    abstract suspend fun getFilteredPersistedValues(user: StatsigUser, names: List<String>): PersistedValues
+    abstract suspend fun getUserPersistedValues(user: StatsigUser, idType: String): UserPersistedValues
 
     abstract fun getClientInitializeResponse(
         user: StatsigUser,
@@ -641,7 +638,7 @@ private class StatsigServerImpl() :
             val normalizedUser = normalizeUser(user)
             val context = EvaluationContext(
                 user,
-                persistedValues = options?.userPersistedValues,
+                userPersistedValues = options?.userPersistedValues,
                 persistentAssignmentOptions = options?.persistentAssignmentOptions,
             )
             evaluator.getConfig(context, experimentName)
@@ -769,18 +766,10 @@ private class StatsigServerImpl() :
         }, configName = layerName)
     }
 
-    override suspend fun getUserPersistedValues(user: StatsigUser, idType: String): PersistedValues {
+    override suspend fun getUserPersistedValues(user: StatsigUser, idType: String): UserPersistedValues {
         return this.errorBoundary.capture(
             "getUserPersistedValues",
             { return@capture this.evaluator.getUserPersistedValues(user, idType) },
-            { return@capture mapOf() },
-        )
-    }
-
-    override suspend fun getFilteredPersistedValues(user: StatsigUser, names: List<String>): PersistedValues {
-        return this.errorBoundary.capture(
-            "getFilteredPersistedValues",
-            { return@capture this.evaluator.getFilteredPersistedValues(user, names) },
             { return@capture mapOf() },
         )
     }
@@ -1286,7 +1275,7 @@ private class StatsigServerImpl() :
 
             val context = EvaluationContext(
                 user,
-                persistedValues = options?.userPersistedValues,
+                userPersistedValues = options?.userPersistedValues,
                 persistentAssignmentOptions = options?.persistentAssignmentOptions,
             )
             evaluator.getLayer(context, layerName)
