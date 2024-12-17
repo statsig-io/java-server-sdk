@@ -1,7 +1,7 @@
 package com.statsig.sdk
 
 import com.statsig.sdk.network.StatsigTransport
-import com.statsig.sdk.persistent_storage.UserPersistedValues
+import com.statsig.sdk.persistent_storage.PersistedValues
 import com.statsig.sdk.persistent_storage.UserPersistentStorageHandler
 import ip3country.CountryLookup
 import kotlinx.coroutines.CoroutineScope
@@ -196,8 +196,15 @@ internal class Evaluator(
         this.evaluateConfig(ctx, config)
     }
 
-    suspend fun getUserPersistedValues(user: StatsigUser, idType: String): UserPersistedValues {
-        return this.persistentStore.load(user, idType) ?: mapOf()
+    suspend fun getUserPersistedValues(user: StatsigUser, idType: String): PersistedValues {
+        return this.persistentStore.loadSingleIDType(user, idType) ?: mapOf()
+    }
+
+    suspend fun getFilteredPersistedValues(user: StatsigUser, names: List<String>): PersistedValues {
+        val configs = this.specStore.getAllConfigs()
+            .plus(this.specStore.getAllLayerConfigs()).values
+            .filter { names.contains(it.name) }
+        return this.persistentStore.loadMultipleIDTypes(user, configs) ?: mapOf()
     }
 
     fun getOnDeviceEvalInitializeResponse(
@@ -357,14 +364,15 @@ internal class Evaluator(
     }
 
     private fun evaluateConfigImpl(ctx: EvaluationContext, config: APIConfig) {
-        val userPersistedValues = ctx.userPersistedValues
-        if (userPersistedValues == null || !config.isActive) {
+        val persistedValues = ctx.persistedValues
+        if (persistedValues == null || !config.isActive) {
             this.persistentStore.delete(ctx.user, config.idType, config.name)
             this.evaluate(ctx, config)
             return
         }
 
-        val stickyValues = userPersistedValues[config.name]
+        val userPersistedValues = persistedValues[UserPersistentStorageHandler.getStorageKey(ctx.user, config.idType)]
+        val stickyValues = userPersistedValues?.get(config.name)
         if (stickyValues != null) {
             logger.debug("Sticky Evaluation found for experiment: ${config.name} with value: $stickyValues")
             val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
@@ -423,13 +431,15 @@ internal class Evaluator(
     }
 
     private fun evaluateLayerImpl(ctx: EvaluationContext, config: APIConfig) {
-        val userPersistedValues = ctx.userPersistedValues
-        if (userPersistedValues == null) {
+        val persistedValues = ctx.persistedValues
+        if (persistedValues == null) {
             this.persistentStore.delete(ctx.user, config.idType, config.name)
             this.evaluate(ctx, config)
             return
         }
-        val stickyValues = userPersistedValues[config.name]
+
+        val userPersistedValues = persistedValues[UserPersistentStorageHandler.getStorageKey(ctx.user, config.idType)]
+        val stickyValues = userPersistedValues?.get(config.name)
         if (stickyValues != null) {
             logger.debug("Sticky Evaluation found for layer: ${config.name} with value: $stickyValues")
             val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())

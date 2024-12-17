@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 import com.statsig.sdk.datastore.IDataStore
 import com.statsig.sdk.network.STATSIG_API_URL_BASE
 import com.statsig.sdk.persistent_storage.IUserPersistentStorage
-import com.statsig.sdk.persistent_storage.UserPersistedValues
+import com.statsig.sdk.persistent_storage.PersistedValues
 import java.io.InputStream
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -262,7 +262,7 @@ data class PersistentAssignmentOptions(
 
 data class GetLayerOptions(
     var disableExposureLogging: Boolean = false,
-    var userPersistedValues: UserPersistedValues? = null,
+    var userPersistedValues: PersistedValues? = null,
     var persistentAssignmentOptions: PersistentAssignmentOptions? = null,
 ) {
     constructor() : this(false)
@@ -270,7 +270,7 @@ data class GetLayerOptions(
 
 data class GetExperimentOptions(
     var disableExposureLogging: Boolean = false,
-    var userPersistedValues: UserPersistedValues? = null,
+    var userPersistedValues: PersistedValues? = null,
     var persistentAssignmentOptions: PersistentAssignmentOptions? = null,
 ) {
     constructor() : this(false)
