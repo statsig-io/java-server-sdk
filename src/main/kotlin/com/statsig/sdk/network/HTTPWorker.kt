@@ -67,6 +67,7 @@ internal class HTTPWorker(
 
     init {
         val clientBuilder = OkHttpClient.Builder()
+        clientBuilder.retryOnConnectionFailure(false)
 
         clientBuilder.addInterceptor(
             Interceptor {
