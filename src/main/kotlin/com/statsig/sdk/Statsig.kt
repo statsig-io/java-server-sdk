@@ -811,5 +811,18 @@ class Statsig {
             }
             return initialized
         }
+
+        @JvmStatic
+        fun batchGetExperimentsAsync(
+            user: StatsigUser, 
+            experimentNames: List<String>
+        ): CompletableFuture<Map<String, DynamicConfig>> {
+            if (!checkInitialized()) {
+                return CompletableFuture.completedFuture(
+                    experimentNames.associateWith { DynamicConfig.empty(it) }
+                )
+            }
+            return statsigServer.batchGetExperimentsAsync(user, experimentNames)
+        }
     }
 }
