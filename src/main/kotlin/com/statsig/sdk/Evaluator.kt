@@ -511,14 +511,16 @@ internal class Evaluator(
         if (ctx.onlyEvaluateTargeting) {
             rules = rules.filter { it.isTargetingRule() }.toTypedArray()
             if (rules.isEmpty()) {
-                ctx.evaluation = ConfigEvaluation(true)
+                // No targeting rules means user passes targeting, which means false evaluation
+                ctx.evaluation = ConfigEvaluation(false)
                 return
             }
         }
         if (ctx.onlyEvaluateOverrides) {
             rules = rules.filter { it.isOverrideRule() }.toTypedArray()
             if (rules.isEmpty()) {
-                ctx.evaluation = ConfigEvaluation(true)
+                // No override rules means user is not overridden, which means false evaluation
+                ctx.evaluation = ConfigEvaluation(false)
                 return
             }
         }
