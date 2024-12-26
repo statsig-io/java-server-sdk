@@ -378,8 +378,10 @@ internal class Evaluator(
             val stickyEvaluation = ConfigEvaluation.fromStickyValues(stickyValues, this.specStore.getInitTime())
             if (this.evaluateShouldReturnSticky(ctx, config)) {
                 ctx.evaluation = stickyEvaluation
-                return
+            } else {
+                this.evaluate(ctx, config)
             }
+            return
         }
 
         this.evaluate(ctx, config)
@@ -448,13 +450,14 @@ internal class Evaluator(
             if (delegateSpec != null && delegateSpec.isActive) {
                 if (this.evaluateShouldReturnSticky(ctx, delegateSpec)) {
                     ctx.evaluation = stickyEvaluation
-                    return
+                } else {
+                    this.evaluate(ctx, config)
                 }
             } else {
                 this.persistentStore.delete(ctx.user, config.idType, config.name)
                 this.evaluate(ctx, config)
-                return
             }
+            return
         }
 
         this.evaluate(ctx, config)
