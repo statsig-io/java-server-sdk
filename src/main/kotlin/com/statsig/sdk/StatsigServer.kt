@@ -103,10 +103,8 @@ sealed class StatsigServer {
 
     abstract fun removeConfigOverride(configName: String)
 
-    @JvmSynthetic
     abstract suspend fun getUserPersistedValues(user: StatsigUser, idType: String): PersistedValues
 
-    @JvmSynthetic
     abstract suspend fun getFilteredPersistedValues(user: StatsigUser, names: List<String>): PersistedValues
 
     abstract fun getClientInitializeResponse(
