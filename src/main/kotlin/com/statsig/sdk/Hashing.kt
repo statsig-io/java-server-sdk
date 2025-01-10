@@ -14,6 +14,10 @@ enum class HashAlgo {
 
 class Hashing {
     companion object {
+        private val threadLocalDigest: ThreadLocal<MessageDigest> = ThreadLocal.withInitial {
+            MessageDigest.getInstance("SHA-256")
+        }
+
         fun djb2(input: String): String {
             var hash = 0
             for (element in input) {
@@ -36,7 +40,8 @@ class Hashing {
         }
 
         fun sha256ToLong(input: String): Long {
-            val md = MessageDigest.getInstance("SHA-256")
+            val md = threadLocalDigest.get()
+            md.reset()
             val hashBytes = md.digest(input.toByteArray(Charsets.UTF_8))
             // Combine more bytes to increase randomness
             val buffer = ByteBuffer.wrap(hashBytes)
