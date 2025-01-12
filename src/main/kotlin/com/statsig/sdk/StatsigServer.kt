@@ -324,6 +324,9 @@ private class StatsigServerImpl() :
             // noop swallow and let other part handle error
             options.customLogger.warn("Failed to setup sdk")
             options.customLogger.warn(e.stackTraceToString())
+            if (options.setupFailThrowError) {
+                throw e
+            }
         }
     }
 
