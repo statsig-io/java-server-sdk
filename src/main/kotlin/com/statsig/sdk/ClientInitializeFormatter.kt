@@ -51,6 +51,7 @@ internal data class ClientConfig(
     @SerializedName("is_device_based") var isDeviceBased: Boolean? = null,
     @SerializedName("group_name") var group_name: String? = null,
     @SerializedName("id_type") var idType: String? = null,
+    @SerializedName("passed") var passed: Boolean? = null,
 ) {
     fun toMap(): Map<String, Any?> {
         val map = mutableMapOf<String, Any?>()
@@ -72,6 +73,9 @@ internal data class ClientConfig(
         if (group_name != null) map["group_name"] = group_name
         if (idType != null) {
             map["id_type"] = idType
+        }
+        if (passed != null) {
+            map["passed"] = passed
         }
         return map
     }
@@ -239,6 +243,7 @@ internal class ClientInitializeFormatter(
         )
         val category = configSpec.type
         val entityType = configSpec.entity
+
         if (category == "feature_gate") {
             result.value = evalContext.evaluation.booleanValue
             result.idType = configSpec.idType
@@ -252,6 +257,10 @@ internal class ClientInitializeFormatter(
             }
             if (entityType != "layer") {
                 result.idType = configSpec.idType
+            }
+
+            if (entityType == "dynamic_config") {
+                result.passed = evalContext.evaluation.booleanValue
             }
 
             if (entityType == "experiment") {
