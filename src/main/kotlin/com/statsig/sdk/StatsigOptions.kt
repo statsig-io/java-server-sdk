@@ -9,6 +9,8 @@ import java.io.InputStream
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 
 private const val TIER_KEY: String = "tier"
 private const val DEFAULT_INIT_TIME_OUT_MS: Long = 3000L
@@ -141,17 +143,24 @@ class StatsigOptions(
     }
 
     fun getLoggingCopy(): Map<String, Any> {
-        return mapOf(
-            "api" to (api ?: "DEFAULT"),
-            "initTimeoutMs" to initTimeoutMs,
-            "localMode" to localMode,
-            "disableDiagnostics" to disableDiagnostics,
-            "rulesetsSyncIntervalMs" to rulesetsSyncIntervalMs,
-            "idListsSyncIntervalMs" to idListsSyncIntervalMs,
-            "setDataStore" to (dataStore != null),
-            "setBootstrapValues" to (bootstrapValues != null),
-            "disableAllLogging" to disableAllLogging,
-        )
+        val loggingCopy = mutableMapOf<String, Any>()
+
+        for (property in StatsigOptions::class.declaredMemberProperties) {
+            property.isAccessible = true
+            val value = property.get(this)
+
+            when (value) {
+                is Number, is Boolean -> loggingCopy[property.name] = value
+                is String -> loggingCopy[property.name] = if (value.length < 50) value else "SET"
+                else -> {
+                    if (value != null) {
+                        loggingCopy[property.name] = "SET"
+                    } // If value is null, skip
+                }
+            }
+        }
+
+        return loggingCopy
     }
 }
 
