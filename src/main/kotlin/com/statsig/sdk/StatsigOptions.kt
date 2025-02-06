@@ -34,33 +34,6 @@ enum class LogLevel(val value: Int) {
     }
 }
 
-object OutputLogger {
-    var logLevel: LogLevel = LogLevel.WARN
-
-    fun error(message: String) {
-        logMessage(LogLevel.ERROR, message)
-    }
-
-    fun warn(message: String) {
-        logMessage(LogLevel.WARN, message)
-    }
-
-    fun info(message: String) {
-        logMessage(LogLevel.INFO, message)
-    }
-
-    fun debug(message: String) {
-        logMessage(LogLevel.DEBUG, message)
-    }
-
-    private fun logMessage(level: LogLevel, message: String) {
-        if (level.value < logLevel.value) return
-
-        val timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.MILLIS))
-        println("$timestamp ${level.getLevelString()} [Statsig] $message")
-    }
-}
-
 // Example Logger Interface you might use
 interface LoggerInterface {
     fun error(message: String)
@@ -71,25 +44,36 @@ interface LoggerInterface {
 }
 
 // Example implementation of LoggerInterface
-private val defaultLogger = object : LoggerInterface {
+internal val defaultLogger = object : LoggerInterface {
+    private var logLevel: LogLevel = LogLevel.WARN
+
     override fun error(message: String) {
-        OutputLogger.error(message)
+        logMessage(LogLevel.ERROR, message)
     }
 
     override fun warn(message: String) {
-        OutputLogger.warn(message)
+        logMessage(LogLevel.WARN, message)
     }
 
     override fun info(message: String) {
-        OutputLogger.info(message)
+        logMessage(LogLevel.INFO, message)
     }
 
     override fun debug(message: String) {
-        OutputLogger.debug(message)
+        logMessage(LogLevel.DEBUG, message)
     }
 
     override fun setLogLevel(level: LogLevel) {
-        OutputLogger.logLevel = LogLevel.WARN
+        logLevel = level
+    }
+
+    private fun logMessage(level: LogLevel, message: String) {
+        if (level.value < logLevel.value) {
+            return
+        }
+
+        val timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.MILLIS))
+        println("$timestamp ${level.getLevelString()} $message")
     }
 }
 
@@ -132,6 +116,7 @@ class StatsigOptions(
     var fallbackToStatsigAPI: Boolean = false,
     var disableIPResolution: Boolean = false,
     var userPersistentStorage: IUserPersistentStorage? = null,
+    var logLevel: LogLevel? = null,
 ) {
     constructor(api: String) : this(api, DEFAULT_INIT_TIME_OUT_MS)
     constructor(initTimeoutMs: Long) : this(STATSIG_API_URL_BASE, initTimeoutMs)

@@ -35,6 +35,7 @@ internal class SpecStore(
 
     private var layerConfigs: Map<String, APIConfig> = emptyMap()
     private var experimentToLayer: Map<String, String> = emptyMap()
+    private val logger = options.customLogger
 
     private var specUpdater = SpecUpdater(transport, options, statsigMetadata, statsigScope, errorBoundary, diagnostics, sdkConfigs, serverSecret)
     init {
@@ -81,9 +82,11 @@ internal class SpecStore(
 
     fun setDownloadedConfigs(downloadedConfig: APIDownloadedConfigs, isFromBootstrap: Boolean = false): Boolean {
         if (!downloadedConfig.hasUpdates) {
+            logger.debug("[StatsigSpecStore] Downloaded config specs has no updates.")
             return false
         }
         if (downloadedConfig.time < specUpdater.lastUpdateTime) {
+            logger.debug("[StatsigSpecStore] No need to update since last update time is greater than dcs time.")
             return false
         }
         if (options.dataStore == null && !isFromBootstrap) {
@@ -126,6 +129,7 @@ internal class SpecStore(
         if (options.dataStore == null && !isFromBootstrap) {
             diagnostics.markEnd(KeyType.DOWNLOAD_CONFIG_SPECS, true, StepType.PROCESS)
         }
+        logger.debug("[StatsigSpecStore] Successfully set spec store using the newer download config specs.")
         return true
     }
 
@@ -206,7 +210,7 @@ internal class SpecStore(
             configString = gson.toJson(configSpecs)
         } catch (e: Exception) {
             errorBoundary.logException("fireRulesUpdatedCallback", e)
-            options.customLogger.error("An exception was caught when fire callback:  $e")
+            logger.error("An exception was caught when fire callback:  $e")
         }
 
         if (configString.isEmpty()) {

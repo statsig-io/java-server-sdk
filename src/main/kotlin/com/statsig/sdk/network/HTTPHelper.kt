@@ -47,10 +47,10 @@ internal class HTTPHelper(
                 null,
                 response,
             )
-            logger.info("Received response with status code: ${response.code}")
+            logger.info("[StatsigHTTPHelper] Received response with status code: ${response.code}")
             return Pair(response, null)
         } catch (e: Exception) {
-            logger.warn("An exception was caught: $e")
+            logger.warn("[StatsigHTTPHelper] An exception was caught: $e")
             if (e is JsonParseException) {
                 errorBoundary.logException("postImpl", e)
             }

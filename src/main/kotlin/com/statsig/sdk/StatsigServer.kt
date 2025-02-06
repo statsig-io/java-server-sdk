@@ -318,12 +318,13 @@ private class StatsigServerImpl() :
             statsigScope = CoroutineScope(statsigJob + coroutineExceptionHandler)
             transport = StatsigTransport(serverSecret, options, statsigMetadata, statsigScope, errorBoundary, sdkConfigs)
             logger = StatsigLogger(statsigScope, transport, statsigMetadata, options, sdkConfigs)
-            options.customLogger.also { outputLogger = it }
+            outputLogger = options.customLogger
+            options.logLevel?.let { outputLogger.setLogLevel(it) }
             this.options = options
         } catch (e: Throwable) {
             // noop swallow and let other part handle error
-            options.customLogger.warn("Failed to setup sdk")
-            options.customLogger.warn(e.stackTraceToString())
+            outputLogger.warn("[StatsigServer] Failed to setup sdk")
+            outputLogger.warn("[StatsigServer] " + e.stackTraceToString())
         }
     }
 
@@ -341,7 +342,7 @@ private class StatsigServerImpl() :
             {
                 mutex.withLock { // Prevent multiple coroutines from calling this at once.
                     if (this::evaluator.isInitialized && evaluator.isInitialized) {
-                        outputLogger.warn("Cannot re-initialize server that has shutdown. Please recreate the server connection.")
+                        outputLogger.warn("[StatsigServer] Cannot re-initialize server that has shutdown. Please recreate the server connection.")
                         throw StatsigIllegalStateException(
                             "Cannot re-initialize server that has shutdown. Please recreate the server connection.",
                         )
@@ -363,7 +364,7 @@ private class StatsigServerImpl() :
                         dataStoreSetUp()
                     }
                     endInitDiagnostics(failureDetails == null)
-                    outputLogger.info("Statsig Server has been successfully initialized.")
+                    outputLogger.info("[StatsigServer] Statsig Server has been successfully initialized.")
                     return@capture InitializationDetails(
                         System.currentTimeMillis() - setupStartTime,
                         isSDKReady = true,
@@ -373,7 +374,7 @@ private class StatsigServerImpl() :
                 }
             },
             {
-                outputLogger.warn("Statsig Server has not been successfully initialized.")
+                outputLogger.warn("[StatsigServer] Statsig Server has not been successfully initialized.")
                 return@capture InitializationDetails(
                     System.currentTimeMillis() - setupStartTime,
                     false,
@@ -1370,15 +1371,15 @@ private class StatsigServerImpl() :
 
     private fun isSDKInitialized(): Boolean {
         if (!isInitialized()) { // for multi-instance, if the server has not been initialized
-            getCustomLogger().warn("Call and wait for initialize StatsigServer to complete before calling SDK methods.")
+            getCustomLogger().warn("[StatsigServer] Call and wait for initialize StatsigServer to complete before calling SDK methods.")
             return false
         }
         if (statsigJob.isCancelled || statsigJob.isCompleted) {
-            outputLogger.info("StatsigServer was shutdown.")
+            outputLogger.info("[StatsigServer] StatsigServer was shutdown.")
             return false
         }
         if (!this::evaluator.isInitialized || !evaluator.isInitialized) { // If the server was never initialized
-            outputLogger.warn("Must initialize a server before calling other APIs.")
+            outputLogger.warn("[StatsigServer] Must initialize a server before calling other APIs.")
             return false
         }
         return true
@@ -1432,7 +1433,7 @@ private class StatsigServerImpl() :
                 throw e
             }
             server.getCustomLogger()
-                .info("Shutting down Statsig because of unhandled exception from your server")
+                .info("[StatsigServer] Shutting down Statsig because of unhandled exception from your server")
             server.shutdown()
             throw e
         }

@@ -256,7 +256,7 @@ internal class StatsigLogger(
             addDiagnostics(ContextType.API_CALL)
             addDiagnostics(ContextType.GET_CLIENT_INITIALIZE_RESPONSE)
             if (events.size() == 0) {
-                logger.debug("Event queue is empty.")
+                logger.debug("[StatsigLogger] Event queue is empty.")
                 return@withContext
             }
 

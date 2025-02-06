@@ -132,7 +132,7 @@ internal class HTTPWorker(
         )
         response?.use {
             if (!response.isSuccessful) {
-                logger.warn("Failed to download config specification, HTTP Response ${response.code} received from server")
+                logger.warn("[StatsigHTTPWorker] Failed to download config specification, HTTP Response ${response.code} received from server")
                 return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
             return Pair(response.body?.string(), null)
@@ -164,7 +164,7 @@ internal class HTTPWorker(
         )
         response?.use {
             if (!response.isSuccessful) {
-                logger.warn("Failed to download config specification, HTTP Response ${response.code} received from server")
+                logger.warn("[StatsigHTTPWorker] Failed to download config specification, HTTP Response ${response.code} received from server")
                 return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
             return Pair(response.body?.string(), null)
@@ -215,7 +215,7 @@ internal class HTTPWorker(
 
     private fun setUpProxyAgent(clientBuilder: OkHttpClient.Builder, proxyConfig: ProxyConfig) {
         if (proxyConfig.proxyHost.isBlank() || proxyConfig.proxyPort !in 1..65535) {
-            logger.warn("Invalid proxy configuration: Host is blank or port is out of range")
+            logger.warn("[StatsigHTTPWorker] Invalid proxy configuration: Host is blank or port is out of range")
         }
 
         val proxyAddress = InetSocketAddress(proxyConfig.proxyHost, proxyConfig.proxyPort)
@@ -302,15 +302,15 @@ internal class HTTPWorker(
                         if (response.isSuccessful) {
                             return@coroutineScope
                         } else if (!retryCodes.contains(response.code) || currRetry == 0) {
-                            logger.warn("Network request failed with status code: ${response.code}")
+                            logger.warn("[StatsigHTTPWorker] Network request failed with status code: ${response.code}")
                             logPostLogFailure(eventsCount)
                             return@coroutineScope
                         } else if (retryCodes.contains(response.code) && currRetry > 0) {
-                            logger.info("Retrying network request. Retry count: $currRetry. Response code: ${response.code}")
+                            logger.info("[StatsigHTTPWorker] Retrying network request. Retry count: $currRetry. Response code: ${response.code}")
                         }
                     }
                 } catch (e: Exception) {
-                    logger.warn("An exception was caught: $e")
+                    logger.warn("[StatsigHTTPWorker] An exception was caught: $e")
                     if (e is JsonParseException) {
                         errorBoundary.logException("retryPostLogs", e)
                     }

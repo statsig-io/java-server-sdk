@@ -57,14 +57,21 @@ internal class SpecUpdater(
 
     fun startListening() {
         if (backgroundDownloadConfigs == null) {
-            val flow = if (transport.downloadConfigSpecWorker.isPullWorker) { pollForConfigSpecs() } else {
+            logger.debug("[StatsigSpecUpdater] Initializing new background polling job")
+            val flow = if (transport.downloadConfigSpecWorker.isPullWorker) {
+                logger.debug("[StatsigSpecUpdater] Using pull worker for config specs syncing")
+                pollForConfigSpecs()
+            } else {
+                logger.debug("[StatsigSpecUpdater] Using streaming for config specs syncing.")
                 transport.configSpecsFlow().map(::parseConfigSpecs).map { Pair(it.first, DataSource.NETWORK) }
             }
 
             backgroundDownloadConfigs = statsigScope.launch {
                 flow.collect { response ->
                     val spec = response.first
-                    spec?.let { configSpecCallback(spec, response.second) }
+                    spec?.let {
+                        configSpecCallback(spec, response.second)
+                    }
                 }
             }
         }
@@ -150,24 +157,28 @@ internal class SpecUpdater(
             return Pair(gson.fromJson(specs, APIDownloadedConfigs::class.java), null)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseConfigSpecs", e)
-            logger.error("An exception was caught when parsing config specs:  $e")
+            logger.error("[StatsigSpecUpdater] An exception was caught when parsing config specs:  $e")
             return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
         }
     }
 
     private fun parseConfigsFromNetwork(response: Pair<String?, FailureDetails?>): Pair<APIDownloadedConfigs?, FailureDetails?> {
+        logger.debug("[StatsigSpecUpdater] Start parsing config specs")
         if (response.first == null) {
+            logger.debug("[StatsigSpecUpdater] Empty config specs, exiting parseConfigsFromNetwork work.")
             return Pair(null, response.second)
         }
         try {
             val configs = gson.fromJson(response.first, APIDownloadedConfigs::class.java)
             if (configs.hashedSDKKeyUsed != null && configs.hashedSDKKeyUsed != Hashing.djb2(serverSecret)) {
+                logger.debug("[StatsigSpecUpdater] Invalidating config specs because sdk key mismatched")
                 return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR))
             }
+            logger.debug("[StatsigSpecUpdater] Parsed config specs successfully and returning")
             return Pair(configs, null)
         } catch (e: Exception) {
             errorBoundary.logException("downloadConfigSpecs", e)
-            logger.warn("An exception was caught:  $e")
+            logger.warn("[StatsigSpecUpdater] An exception was caught:  $e")
             return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
         }
     }
@@ -180,7 +191,7 @@ internal class SpecUpdater(
             return gson.fromJson<Map<String, IDList>>(lists)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseIDLists", e)
-            logger.warn("An exception was caught when parsing ID lists:  $e")
+            logger.warn("[StatsigSpecUpdater] An exception was caught when parsing ID lists:  $e")
         }
         return null
     }
@@ -190,11 +201,14 @@ internal class SpecUpdater(
             while (true) {
                 delay(options.rulesetsSyncIntervalMs)
                 for (source in getConfigSyncSources()) {
+                    logger.debug("[StatsigSpecUpdater] Trying fetching config specs from source: $source")
                     val config = getConfigSpecs(source).first
                     if (config != null) {
+                        logger.debug("[StatsigSpecUpdater] Successfully fetched config specs from source: $source")
                         emit(Pair(config, source))
                     }
                 }
+                logger.debug("[StatsigSpecUpdater] Not successfully fetched config specs from source")
             }
         }
         return configFlow
