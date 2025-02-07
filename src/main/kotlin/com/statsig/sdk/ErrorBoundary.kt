@@ -89,6 +89,8 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 seen.add(ex.javaClass.name)
 
                 val info = ex.stackTraceToString()
+                options.customLogger.debug("Statsig Caught Exception: $tag: ${ex.javaClass.name}\n $info ")
+
                 var safeInfo = URLEncoder.encode(info, StandardCharsets.UTF_8.toString())
                 if (safeInfo.length > maxInfoLength) {
                     safeInfo = safeInfo.substring(0, maxInfoLength)
