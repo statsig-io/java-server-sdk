@@ -125,7 +125,7 @@ internal class HTTPWorker(
     }
 
     override suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
-        var (response, exception) = get(
+        val (response, exception) = get(
             "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
             emptyMap(),
             options.initTimeoutMs,
@@ -157,7 +157,7 @@ internal class HTTPWorker(
     }
 
     suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long): Pair<String?, FailureDetails?> {
-        var (response, exception) = get(
+        val (response, exception) = get(
             "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
             emptyMap(),
             options.initTimeoutMs,
@@ -261,6 +261,7 @@ internal class HTTPWorker(
         url: String,
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
+        urlForLogging: String? = null,
     ): Pair<Response?, Exception?> {
         return httpHelper.request(
             statsigHttpClient.newBuilder().callTimeout(

@@ -30,6 +30,7 @@ internal class HTTPHelper(
         headers: Map<String, String> = emptyMap(),
     ): Pair<Response?, Exception?> {
         val diagnosticsKey = diagnostics?.getDiagnosticKeyFromURL(url)
+        val urlForLogging = getUrlForLogging(url)
         try {
             val request = Request.Builder()
                 .url(url)
@@ -47,15 +48,33 @@ internal class HTTPHelper(
                 null,
                 response,
             )
-            logger.info("[StatsigHTTPHelper] Received response with status code: ${response.code}")
+            logger.info("[StatsigHTTPHelper] Received response with status code: ${response.code} and with URL: $urlForLogging")
             return Pair(response, null)
         } catch (e: Exception) {
-            logger.warn("[StatsigHTTPHelper] An exception was caught: $e")
+            logger.warn("[StatsigHTTPHelper] An exception was caught: $e when hitting $urlForLogging")
             if (e is JsonParseException) {
-                errorBoundary.logException("postImpl", e)
+                errorBoundary.logException(
+                    "postImpl",
+                    e,
+                    extraInfo = urlForLogging
+                )
             }
             diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, NetworkProtocol.HTTP, false, e.message, null)
             return Pair(null, e)
+        }
+    }
+
+    private fun getUrlForLogging(
+        url: String,
+    ): String {
+        return url.replace(Regex("/download_config_specs/([^/]+)\\.json")) { matchResult ->
+            val secretKey = matchResult.groupValues[1]
+            val maskedKey = if (secretKey.length > 13) {
+                "${secretKey.take(6)}****"
+            } else {
+                "REDACTED"
+            }
+            "/download_config_specs/$maskedKey.json"
         }
     }
 }
