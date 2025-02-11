@@ -501,6 +501,7 @@ internal class Evaluator(
     private fun evaluate(ctx: EvaluationContext, config: APIConfig) {
         ctx.evaluation.evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
         ctx.evaluation.configVersion = config.version
+        ctx.evaluation.isActive = config.isActive
 
         if (!config.enabled) {
             logger.debug("${config.name} is not enabled.")

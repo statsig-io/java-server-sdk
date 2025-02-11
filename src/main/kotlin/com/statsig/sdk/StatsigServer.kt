@@ -1300,6 +1300,7 @@ private class StatsigServerImpl() :
                 context.evaluation.secondaryExposures,
                 context.evaluation.configDelegate,
                 context.evaluation.evaluationDetails,
+                context.evaluation.isActive,
             ) exposureFun@{ layer, paramName ->
                 val metadata = createLayerExposureMetadata(layer, paramName, context.evaluation)
                 if (options?.disableExposureLogging == true) {
@@ -1410,6 +1411,7 @@ private class StatsigServerImpl() :
             result.groupName,
             result.secondaryExposures,
             result.evaluationDetails,
+            result.isActive,
         )
     }
 

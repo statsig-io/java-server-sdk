@@ -16,6 +16,7 @@ class ConfigEvaluation(
     var configVersion: Long? = null,
     var forwardAllExposures: Boolean = false,
     var samplingRate: Long? = null,
+    var isActive: Boolean = false,
 ) {
     internal var isDelegate: Boolean = false
 
@@ -59,6 +60,7 @@ class ConfigEvaluation(
                 configDelegate = stickyValues.configDelegate,
                 isExperimentGroup = true,
                 evaluationDetails = evalDetail,
+                isActive = true,
             )
         }
     }
