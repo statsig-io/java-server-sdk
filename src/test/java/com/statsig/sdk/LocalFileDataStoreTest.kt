@@ -30,7 +30,7 @@ class LocalFileDataStoreTest {
         downloadConfigSpecsResponse = StatsigE2ETest::class.java.getResource("/download_config_specs.json")?.readText() ?: ""
 
         mockServer = MockWebServer()
-        mockServer.start(8899)
+        mockServer.start(9988)
         mockServer.apply {
             dispatcher = object : Dispatcher() {
                 @Throws(InterruptedException::class)

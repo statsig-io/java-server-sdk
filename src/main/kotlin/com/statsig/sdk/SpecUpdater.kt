@@ -4,14 +4,13 @@ import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import com.statsig.sdk.network.StatsigTransport
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+
+private const val HEALTH_CHECK_INTERVAL_MS = 60_000L
 
 internal class SpecUpdater(
     private var transport: StatsigTransport,
@@ -25,6 +24,7 @@ internal class SpecUpdater(
 ) {
     var lastUpdateTime: Long = 0
 
+    private val monitorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var configSpecCallback: suspend (config: APIDownloadedConfigs, source: DataSource) -> Unit = { _, _ -> }
     private var idListCallback: suspend (config: Map<String, IDList>) -> Unit = { }
     private var backgroundDownloadConfigs: Job? = null
@@ -56,36 +56,28 @@ internal class SpecUpdater(
     }
 
     fun startListening() {
-        if (backgroundDownloadConfigs == null) {
-            logger.debug("[StatsigSpecUpdater] Initializing new background polling job")
-            val flow = if (transport.downloadConfigSpecWorker.isPullWorker) {
-                logger.debug("[StatsigSpecUpdater] Using pull worker for config specs syncing")
-                pollForConfigSpecs()
-            } else {
-                logger.debug("[StatsigSpecUpdater] Using streaming for config specs syncing.")
-                transport.configSpecsFlow().map(::parseConfigSpecs).map { Pair(it.first, DataSource.NETWORK) }
-            }
+        startBackgroundDcsPolling()
+        startBackgroundIDListPolling()
+        startPeriodicHealthCheck()
+    }
 
-            backgroundDownloadConfigs = statsigScope.launch {
-                flow.collect { response ->
-                    val spec = response.first
-                    spec?.let {
-                        configSpecCallback(spec, response.second)
-                    }
+    private fun startPeriodicHealthCheck() {
+        monitorScope.launch {
+            while (true) {
+                delay(HEALTH_CHECK_INTERVAL_MS) // Check every 60 seconds by default
+
+                if (backgroundDownloadConfigs?.isActive != true) {
+                    logger.debug("[StatsigPeriodicHealthCheck] Background polling is inactive. Restarting...")
+                    startBackgroundDcsPolling()
+                }
+
+                if (backgroundDownloadIDLists?.isActive != true) {
+                    logger.debug("[StatsigPeriodicHealthCheck] ID list polling is inactive. Restarting...")
+                    startBackgroundIDListPolling()
                 }
             }
         }
-        if (backgroundDownloadIDLists == null) {
-            val idListFlow = if (transport.getIDListsWorker.isPullWorker) {
-                pollForIDLists()
-            } else transport.idListsFlow().map(::parseIDLists).filterNotNull()
-
-            backgroundDownloadIDLists = statsigScope.launch {
-                idListFlow.collect { idListCallback(it) }
-            }
-        }
     }
-
     fun getInitializeOrder(): List<DataSource> {
         val optionsOrder = options.initializeSources
         if (optionsOrder != null) return optionsOrder
@@ -147,6 +139,49 @@ internal class SpecUpdater(
     }
     suspend fun getConfigSpecsFromNetwork(): Pair<APIDownloadedConfigs?, FailureDetails?> {
         return parseConfigsFromNetwork(this.transport.downloadConfigSpecs(this.lastUpdateTime))
+    }
+
+    /**
+     * Starts background polling for config specs.
+     * If already running, it will not create a duplicate.
+     */
+    private fun startBackgroundDcsPolling() {
+        if (backgroundDownloadConfigs?.isActive == true) {
+            return
+        }
+
+        logger.debug("[StatsigSpecUpdater] Initializing new background polling job")
+
+        val flow = if (transport.downloadConfigSpecWorker.isPullWorker) {
+            logger.debug("[StatsigSpecUpdater] Using pull worker for config specs syncing")
+            pollForConfigSpecs()
+        } else {
+            logger.debug("[StatsigSpecUpdater] Using streaming for config specs syncing.")
+            transport.configSpecsFlow().map(::parseConfigSpecs).map { Pair(it.first, DataSource.NETWORK) }
+        }
+
+        backgroundDownloadConfigs = statsigScope.launch {
+            flow.collect { response ->
+                val spec = response.first
+                spec?.let {
+                    configSpecCallback(spec, response.second)
+                }
+            }
+        }
+    }
+
+    private fun startBackgroundIDListPolling() {
+        if (backgroundDownloadIDLists?.isActive == true) {
+            return
+        }
+
+        val idListFlow = if (transport.getIDListsWorker.isPullWorker) {
+            pollForIDLists()
+        } else transport.idListsFlow().map(::parseIDLists).filterNotNull()
+
+        backgroundDownloadIDLists = statsigScope.launch {
+            idListFlow.collect { idListCallback(it) }
+        }
     }
 
     private fun parseConfigSpecs(specs: String?): Pair<APIDownloadedConfigs?, FailureDetails?> {
