@@ -7,7 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 const val DEFAULT_MAX_EVENTS: Int = 1000
@@ -63,7 +63,7 @@ internal class StatsigLogger(
             flush()
         }
     }
-    private var deduper = Collections.synchronizedSet<String>(mutableSetOf())
+    private var deduper = ConcurrentHashMap.newKeySet<String>()
     private val clearDeduperTimer = coroutineScope.launch {
         while (coroutineScope.isActive) {
             delay(CLEAR_DEDUPER_MS)
