@@ -135,7 +135,8 @@ internal class HTTPWorker(
                 logger.warn("[StatsigHTTPWorker] Failed to download config specification, HTTP Response ${response.code} received from server")
                 return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
-            return Pair(response.body?.string(), null)
+            val responseBody = withContext(Dispatchers.IO) { response.body?.string() } // Safe non-blocking read
+            return Pair(responseBody, null)
         }
         return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = exception))
     }
@@ -151,7 +152,8 @@ internal class HTTPWorker(
             if (!it.isSuccessful) {
                 return null
             }
-            return it.body?.string()
+            val responseBody = withContext(Dispatchers.IO) { it.body?.string() } // Safe non-blocking read
+            return responseBody
         }
         return null
     }
@@ -167,7 +169,8 @@ internal class HTTPWorker(
                 logger.warn("[StatsigHTTPWorker] Failed to download config specification, HTTP Response ${response.code} received from server")
                 return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, statusCode = response.code))
             }
-            return Pair(response.body?.string(), null)
+            val responseBody = withContext(Dispatchers.IO) { response.body?.string() } // Safe non-blocking read
+            return Pair(responseBody, null)
         }
         return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = exception))
     }
@@ -184,7 +187,8 @@ internal class HTTPWorker(
             if (!it.isSuccessful) {
                 return null
             }
-            return it.body?.string()
+            val responseBody = withContext(Dispatchers.IO) { it.body?.string() } // Safe non-blocking read
+            return responseBody
         }
         return null
     }
@@ -261,7 +265,6 @@ internal class HTTPWorker(
         url: String,
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
-        urlForLogging: String? = null,
     ): Pair<Response?, Exception?> {
         return httpHelper.request(
             statsigHttpClient.newBuilder().callTimeout(
