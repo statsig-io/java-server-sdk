@@ -67,12 +67,12 @@ internal class SpecUpdater(
                 delay(HEALTH_CHECK_INTERVAL_MS) // Check every 60 seconds by default
 
                 if (backgroundDownloadConfigs?.isActive != true) {
-                    logger.debug("[StatsigPeriodicHealthCheck] Background polling is inactive. Restarting...")
+                    logger.warn("[StatsigPeriodicHealthCheck] Background polling is inactive. Restarting...")
                     startBackgroundDcsPolling()
                 }
 
                 if (backgroundDownloadIDLists?.isActive != true) {
-                    logger.debug("[StatsigPeriodicHealthCheck] ID list polling is inactive. Restarting...")
+                    logger.warn("[StatsigPeriodicHealthCheck] ID list polling is inactive. Restarting...")
                     startBackgroundIDListPolling()
                 }
             }
@@ -243,7 +243,6 @@ internal class SpecUpdater(
                         emit(Pair(config, source))
                     }
                 }
-                logger.debug("[StatsigSpecUpdater] Not successfully fetched config specs from source")
             }
         }
         return configFlow

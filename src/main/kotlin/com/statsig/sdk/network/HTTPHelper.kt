@@ -70,7 +70,7 @@ internal class HTTPHelper(
         return url.replace(Regex("/download_config_specs/([^/]+)\\.json")) { matchResult ->
             val secretKey = matchResult.groupValues[1]
             val maskedKey = if (secretKey.length > 13) {
-                "${secretKey.take(6)}****"
+                "${secretKey.take(13)}****"
             } else {
                 "REDACTED"
             }
