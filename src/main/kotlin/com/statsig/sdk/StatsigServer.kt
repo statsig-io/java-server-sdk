@@ -323,8 +323,8 @@ private class StatsigServerImpl() :
             this.options = options
         } catch (e: Throwable) {
             // noop swallow and let other part handle error
-            outputLogger.warn("[StatsigServer] Failed to setup sdk")
-            outputLogger.warn("[StatsigServer] " + e.stackTraceToString())
+            options.customLogger.warn("[StatsigServer] Failed to setup sdk")
+            options.customLogger.warn("[StatsigServer] " + e.stackTraceToString())
         }
     }
 
@@ -374,7 +374,7 @@ private class StatsigServerImpl() :
                 }
             },
             {
-                outputLogger.warn("[StatsigServer] Statsig Server has not been successfully initialized.")
+                options.customLogger.warn("[StatsigServer] Statsig Server has not been successfully initialized.")
                 return@capture InitializationDetails(
                     System.currentTimeMillis() - setupStartTime,
                     false,
