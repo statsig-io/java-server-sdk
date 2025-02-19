@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 import java.util.Properties
 import java.util.UUID
 
-private const val VERSION = "1.36.0"
+private const val VERSION = "1.36.1"
 
 internal data class StatsigMetadata(
     @SerializedName("sdkType") var sdkType: String = "java-server",
