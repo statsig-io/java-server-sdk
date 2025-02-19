@@ -19,9 +19,20 @@ jobs:
         with:
           distribution: 'adopt'
           java-version: '11'
+
       - name: Lint
         run: ./gradlew --continue ktlintCheck
+
       - name: Test
         run: ./gradlew test --scan
         env:
           test_api_key: ${{ secrets.SDK_CONSISTENCY_TEST_COMPANY_API_KEY }}
+
+      - name: Build
+        run: ./gradlew shadowJar
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: statsig-java-sdk
+          path: build/libs/*.jar
