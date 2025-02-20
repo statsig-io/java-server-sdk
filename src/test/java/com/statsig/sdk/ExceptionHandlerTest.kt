@@ -26,7 +26,7 @@ class ExceptionHandlerTest {
         user = StatsigUser("abc")
         eventLogInputCompletable = CompletableDeferred()
 
-        val mockGateResponse = APIFeatureGate("a_gate", true, "ruleID", arrayListOf(), EvaluationReason.DEFAULT, null)
+        val mockGateResponse = APIFeatureGate("a_gate", true, "ruleID", arrayListOf(), EvaluationReason.DEFAULT, null, null)
         val mockResponseBody = gson.toJson(mockGateResponse)
 
         val downloadConfigSpecsResponse =

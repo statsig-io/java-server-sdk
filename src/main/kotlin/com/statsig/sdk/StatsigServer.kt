@@ -430,7 +430,7 @@ private class StatsigServerImpl() :
 
     override fun getFeatureGate(user: StatsigUser, gateName: String): APIFeatureGate {
         if (!isSDKInitialized()) {
-            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED, null)
+            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED, null, null)
         }
         return errorBoundary.captureSync(
             "getFeatureGate",
@@ -444,16 +444,17 @@ private class StatsigServerImpl() :
                     result.secondaryExposures,
                     result.evaluationDetails?.reason,
                     result.evaluationDetails,
+                    result.idType
                 )
             },
-            { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null) },
+            { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null, null) },
             configName = gateName,
         )
     }
 
     override fun getFeatureGate(user: StatsigUser, gateName: String, option: GetFeatureGateOptions?): APIFeatureGate {
         if (!isSDKInitialized()) {
-            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED, null)
+            return APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.UNINITIALIZED, null, null)
         }
         return errorBoundary.captureSync(
             "getFeatureGate",
@@ -469,9 +470,10 @@ private class StatsigServerImpl() :
                     result.secondaryExposures,
                     result.evaluationDetails?.reason,
                     result.evaluationDetails,
+                    result.idType
                 )
             },
-            { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null) },
+            { return@captureSync APIFeatureGate(gateName, false, null, arrayListOf(), EvaluationReason.DEFAULT, null, null) },
             configName = gateName,
         )
     }

@@ -39,7 +39,7 @@ public class ExposureLoggingTestJava {
         user = new StatsigUser("abc");
         eventLogInputCompletable = new CompletableFuture();
 
-        APIFeatureGate mockGateResponse = new APIFeatureGate("a_gate", true, "ruleID", new ArrayList<>(), EvaluationReason.DEFAULT, null);
+        APIFeatureGate mockGateResponse = new APIFeatureGate("a_gate", true, "ruleID", new ArrayList<>(), EvaluationReason.DEFAULT, null, null);
         String mockResponseBody = gson.toJson(mockGateResponse);
 
         String downloadConfigSpecsResponse =

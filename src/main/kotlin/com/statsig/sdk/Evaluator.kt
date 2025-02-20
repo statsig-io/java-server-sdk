@@ -502,6 +502,7 @@ internal class Evaluator(
         ctx.evaluation.evaluationDetails = createEvaluationDetails(specStore.getEvaluationReason())
         ctx.evaluation.configVersion = config.version
         ctx.evaluation.isActive = config.isActive
+        ctx.evaluation.idType = config.idType
 
         if (!config.enabled) {
             logger.debug("${config.name} is not enabled.")
@@ -573,6 +574,7 @@ internal class Evaluator(
         ctx.evaluation.jsonValue = config.defaultValue
         ctx.evaluation.ruleID = Const.DEFAULT
         ctx.evaluation.groupName = null
+        ctx.evaluation.idType = config.idType
     }
 
     private fun evaluateDelegate(

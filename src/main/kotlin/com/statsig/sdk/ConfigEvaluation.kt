@@ -17,6 +17,7 @@ class ConfigEvaluation(
     var forwardAllExposures: Boolean = false,
     var samplingRate: Long? = null,
     var isActive: Boolean = false,
+    var idType: String = Const.EMPTY_STR,
 ) {
     internal var isDelegate: Boolean = false
 

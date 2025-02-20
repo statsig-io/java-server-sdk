@@ -82,6 +82,7 @@ data class APIFeatureGate(
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val reason: EvaluationReason?,
     val evaluationDetails: EvaluationDetails?,
+    @SerializedName("id_type") val idType: String?,
 )
 
 internal data class APIDynamicConfig(
