@@ -13,6 +13,7 @@ class DynamicConfig(
     val secondaryExposures: ArrayList<Map<String, String>> = arrayListOf(),
     val evaluationDetails: EvaluationDetails? = null,
     val isActive: Boolean = false, // Will only be true for experiments
+    val idType: String? = null,
 ) {
     companion object {
         fun empty(name: String = ""): DynamicConfig {

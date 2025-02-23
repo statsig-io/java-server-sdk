@@ -1414,6 +1414,7 @@ private class StatsigServerImpl() :
             result.secondaryExposures,
             result.evaluationDetails,
             result.isActive,
+            result.idType
         )
     }
 
