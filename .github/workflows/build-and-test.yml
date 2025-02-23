@@ -24,7 +24,7 @@ jobs:
         run: ./gradlew --continue ktlintCheck
 
       - name: Test
-        run: ./gradlew test --scan
+        run: ./gradlew test
         env:
           test_api_key: ${{ secrets.SDK_CONSISTENCY_TEST_COMPANY_API_KEY }}
 

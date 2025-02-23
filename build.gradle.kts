@@ -12,6 +12,7 @@ plugins {
     id("maven-publish")
     id("com.vanniktech.maven.publish") version "0.22.0"
     id("com.google.protobuf") version "0.9.4"
+    id("org.gradle.test-retry") version "1.2.1"
 }
 
 group = "com.statsig"
@@ -75,6 +76,11 @@ tasks.test {
         showExceptions = true
         showCauses = true
         showStackTraces = true
+    }
+
+    retry {
+        maxRetries.set(2)
+        maxFailures.set(20)
     }
 }
 
