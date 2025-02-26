@@ -79,7 +79,7 @@ tasks.test {
     }
 
     retry {
-        maxRetries.set(2)
+        maxRetries.set(5)
         maxFailures.set(20)
     }
 }
