@@ -1097,10 +1097,10 @@ internal class Evaluator(
             var c1 = 0
             var c2 = 0
             if (i < parts1.size) {
-                c1 = parts1[i].toInt()
+                c1 = parts1[i].trim().toInt()
             }
             if (i < parts2.size) {
-                c2 = parts2[i].toInt()
+                c2 = parts2[i].trim().toInt()
             }
             if (c1 < c2) {
                 return -1
