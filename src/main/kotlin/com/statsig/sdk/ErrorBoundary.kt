@@ -102,7 +102,7 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 "info": "$safeInfo",
                 "statsigMetadata": ${statsigMetadata.asJson()},
                 "configName": "$configName",
-                "setupOptions": $optionsCopy,
+                "statsigOptions": $optionsCopy,
                 "extra": $extraInfo
             }
                 """.trimIndent()

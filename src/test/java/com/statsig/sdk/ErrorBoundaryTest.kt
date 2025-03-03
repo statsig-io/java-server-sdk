@@ -84,7 +84,7 @@ class ErrorBoundaryTest {
 
         val body = Gson().fromJson(server.takeRequest().body.readUtf8(), Map::class.java)
         assertEquals(body["statsigMetadata"], Gson().fromJson(statsigMetadata.asJson(), Map::class.java))
-        assertEquals(Gson().fromJson(Gson().toJson(options.getLoggingCopy()), Map::class.java), body["setupOptions"])
+        assertEquals(Gson().fromJson(Gson().toJson(options.getLoggingCopy()), Map::class.java), body["statsigOptions"])
     }
 
     @Test
