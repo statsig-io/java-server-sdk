@@ -441,6 +441,10 @@ internal class StatsigLogger(
             return true
         }
 
+        if (evalResult.hasSeenAnalyticalGates) {
+            return true
+        }
+
         if (evalResult.ruleID.endsWith(":override") || evalResult.ruleID.endsWith(":id_override")) {
             return true
         }

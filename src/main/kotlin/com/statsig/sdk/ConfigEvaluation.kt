@@ -18,6 +18,7 @@ class ConfigEvaluation(
     var samplingRate: Long? = null,
     var isActive: Boolean = false,
     var idType: String = Const.EMPTY_STR,
+    var hasSeenAnalyticalGates: Boolean = false,
 ) {
     internal var isDelegate: Boolean = false
 

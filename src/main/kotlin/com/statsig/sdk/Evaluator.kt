@@ -658,6 +658,9 @@ internal class Evaluator(
                             "ruleID" to nestedCtx.evaluation.ruleID,
                         )
                     ctx.evaluation.addSecondaryExposure(newExposure)
+                    if (nestedCtx.evaluation.samplingRate == null && !name.startsWith("segment:")) {
+                        ctx.evaluation.hasSeenAnalyticalGates = true
+                    }
                     return if (conditionEnum == ConfigCondition.PASS_GATE) nestedCtx.evaluation.booleanValue else !nestedCtx.evaluation.booleanValue
                 }
 
