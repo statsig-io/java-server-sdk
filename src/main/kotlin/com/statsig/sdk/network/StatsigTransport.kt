@@ -65,6 +65,9 @@ internal class StatsigTransport(
                     (downloadConfigSpecWorker as GRPCWebsocketWorker).streamingFallback = StreamingFallback(statsigScope, getDcsFn, options.rulesetsSyncIntervalMs)
                 }
             }
+            else -> {
+                // do nothing
+            }
         }
     }
 

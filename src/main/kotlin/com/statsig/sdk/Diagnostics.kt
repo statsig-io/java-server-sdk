@@ -58,11 +58,17 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
                     marker.idListCount = additionalMarker?.idListCount
                 }
             }
+            else -> {
+                // No additional action needed for other KeyType values
+            }
         }
         when (contextType) {
             ContextType.API_CALL -> {
                 marker.configName = additionalMarker?.configName
                 marker.markerID = additionalMarker?.markerID
+            }
+            else -> {
+                // No additional action needed for other ContextType values
             }
         }
         if (contextType == ContextType.API_CALL || contextType == ContextType.GET_CLIENT_INITIALIZE_RESPONSE) {
@@ -117,6 +123,9 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
             KeyType.OVERALL -> {
                 marker.reason = additionalMarker?.reason
             }
+            else -> {
+                // No additional action needed for other KeyType values
+            }
         }
         when (contextType) {
             ContextType.API_CALL -> {
@@ -125,6 +134,9 @@ internal class Diagnostics(private var isDisabled: Boolean, private var logger: 
             }
             ContextType.GET_CLIENT_INITIALIZE_RESPONSE -> {
                 marker.markerID = additionalMarker?.markerID
+            }
+            else -> {
+                // No additional action needed for other ContextType values
             }
         }
         this.addMarker(marker, contextType)
