@@ -37,7 +37,7 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("io.mockk:mockk:1.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
-    testImplementation("io.grpc:grpc-testing:1.66.0")
+    testImplementation("io.grpc:grpc-testing:1.71.0")
     implementation("com.google.code.gson:gson:2.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
@@ -47,8 +47,8 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     // GRPC Dependencies
-    implementation("io.grpc:grpc-netty-shaded:1.66.0")
-    implementation("io.grpc:grpc-stub:1.66.0")
+    implementation("io.grpc:grpc-netty-shaded:1.71.0")
+    implementation("io.grpc:grpc-stub:1.71.0")
     implementation("io.grpc:grpc-protobuf:1.71.0")
     implementation("org.apache.tomcat:annotations-api:6.0.53")
 }
@@ -109,7 +109,7 @@ protobuf {
     }
     plugins {
         id("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.66.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.71.0"
         }
     }
     generateProtoTasks {
