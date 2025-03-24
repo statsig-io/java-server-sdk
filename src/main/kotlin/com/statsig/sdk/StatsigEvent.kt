@@ -8,7 +8,7 @@ internal data class StatsigEvent(
     @SerializedName("value") val eventValue: Any? = null,
     @SerializedName("metadata") var eventMetadata: Map<String, String>? = null,
     @SerializedName("user") var user: StatsigUser? = null,
-    @SerializedName("statsigMetadata") val statsigMetadata: StatsigMetadata? = null,
+    @SerializedName("statsigMetadata") val statsigMetadata: Map<String, Any>? = null,
     @SerializedName("secondaryExposures") val secondaryExposures: ArrayList<Map<String, String>>? = arrayListOf(),
     @SerializedName("time") val time: Long? = Utils.getTimeInMillis(),
 ) {

@@ -66,6 +66,15 @@ class TestUtil {
             return@runBlocking events
         }
 
+        internal fun captureStatsigMetadata(
+            eventLogInputCompletable: CompletableDeferred<LogEventInput>
+        ): StatsigMetadata = runBlocking {
+            val logs = withTimeout(TEST_TIMEOUT) {
+                eventLogInputCompletable.await()
+            }
+            return@runBlocking logs.statsigMetadata
+        }
+
         private fun getEvaluatorFromStatsigServer(driver: StatsigServer): Evaluator {
             val privateEvaluatorField = driver.javaClass.getDeclaredField("evaluator")
             privateEvaluatorField.isAccessible = true
@@ -86,6 +95,7 @@ class TestUtil {
             } else {
                 logBody = request.body.readUtf8()
             }
+
             eventLogInputCompletable.complete(Gson().fromJson(logBody, LogEventInput::class.java))
             return MockResponse().setResponseCode(200)
         }

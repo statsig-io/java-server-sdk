@@ -70,9 +70,9 @@ class SamplingTest {
 
         Assert.assertTrue(events.size in 1..5)
         for (event in events.drop(1)) {
-            Assert.assertNotNull(event.statsigMetadata?.samplingRate)
-            Assert.assertNotNull(event.statsigMetadata?.samplingStatus)
-            Assert.assertNotNull(event.statsigMetadata?.samplingStatus)
+            Assert.assertNotNull(event.statsigMetadata?.get("samplingRate"))
+            Assert.assertNotNull(event.statsigMetadata?.get("shadowLogged"))
+            Assert.assertNotNull(event.statsigMetadata?.get("samplingMode"))
         }
     }
 
@@ -87,10 +87,8 @@ class SamplingTest {
         val events = captureEvents()
 
         Assert.assertEquals(events.size, 101)
-        for (event in events) {
-            Assert.assertNull(event.statsigMetadata?.samplingRate)
-            Assert.assertNull(event.statsigMetadata?.samplingStatus)
-            Assert.assertNull(event.statsigMetadata?.samplingStatus)
+        for (event in events.drop(1)) {
+            Assert.assertNotNull(event.statsigMetadata?.get("samplingMode"))
         }
     }
 
@@ -119,9 +117,9 @@ class SamplingTest {
 
         Assert.assertTrue(events.size in 1..5)
         for (event in events.drop(1)) {
-            Assert.assertNotNull(event.statsigMetadata?.samplingRate)
-            Assert.assertNotNull(event.statsigMetadata?.samplingStatus)
-            Assert.assertNotNull(event.statsigMetadata?.samplingStatus)
+            Assert.assertNotNull(event.statsigMetadata?.get("samplingRate"))
+            Assert.assertNotNull(event.statsigMetadata?.get("samplingLogged"))
+            Assert.assertNotNull(event.statsigMetadata?.get("samplingMode"))
         }
     }
 

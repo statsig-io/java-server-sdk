@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.annotations.SerializedName
 import com.statsig.sdk.TestUtil.Companion.captureEvents
+import com.statsig.sdk.TestUtil.Companion.captureStatsigMetadata
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -19,6 +20,7 @@ import org.junit.Test
 
 internal data class LogEventInput(
     @SerializedName("events") var events: Array<StatsigEvent>,
+    @SerializedName("statsigMetadata") var statsigMetadata: StatsigMetadata
 )
 
 private const val TEST_TIMEOUT = 100L
@@ -329,8 +331,8 @@ class StatsigE2ETest {
         assert(events[0].eventMetadata!!["config"].equals("test_config"))
         assert(events[0].eventMetadata!!["ruleID"].equals("1kNmlB23wylPFZi1M0Divl"))
         assert(events[0].time!! / 1000 == now / 1000)
-        val statsigMetadata = events[0].statsigMetadata!!
-        assert(statsigMetadata != null)
+
+        val statsigMetadata = captureStatsigMetadata(eventLogInputCompletable)
         assert(statsigMetadata.languageVersion != null)
         assert(statsigMetadata.sdkType == "java-server")
         assert(statsigMetadata.sessionID != null)

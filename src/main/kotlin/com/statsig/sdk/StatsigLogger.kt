@@ -119,17 +119,15 @@ internal class StatsigLogger(
             metadata["configVersion"] = result.configVersion.toString()
         }
 
-        val statsigMetadataWithSampling = statsigMetadata.copy()
-
         val event = StatsigEvent(
             GATE_EXPOSURE_EVENT,
             eventValue = null,
             metadata,
             user,
-            statsigMetadataWithSampling,
+            addSamplingDetailsToStatsigMetadata(sampling),
             result.secondaryExposures,
         )
-        addSamplingDetailsToEvent(sampling, event)
+
         log(event)
     }
 
@@ -162,17 +160,15 @@ internal class StatsigLogger(
             metadata["configVersion"] = result.configVersion.toString()
         }
 
-        val statsigMetadataWithSampling = statsigMetadata.copy()
-
         val event = StatsigEvent(
             CONFIG_EXPOSURE_EVENT,
             eventValue = null,
             metadata,
             user,
-            statsigMetadataWithSampling,
+            addSamplingDetailsToStatsigMetadata(sampling),
             result.secondaryExposures,
         )
-        addSamplingDetailsToEvent(sampling, event)
+
         log(event)
     }
 
@@ -205,17 +201,15 @@ internal class StatsigLogger(
         val metadata = layerExposureMetadata.toStatsigEventMetadataMap()
         safeAddEvaluationToEvent(layerExposureMetadata.evaluationDetails, metadata)
 
-        val statsigMetadataWithSampling = statsigMetadata.copy()
-
         val event = StatsigEvent(
             LAYER_EXPOSURE_EVENT,
             eventValue = null,
             metadata,
             user,
-            statsigMetadataWithSampling,
+            addSamplingDetailsToStatsigMetadata(sampling),
             layerExposureMetadata.secondaryExposures,
         )
-        addSamplingDetailsToEvent(sampling, event)
+
         log(event)
     }
 
@@ -377,15 +371,11 @@ internal class StatsigLogger(
     //  ----------------
     //  Sampling helper
     //  ----------------
-    private fun addSamplingDetailsToEvent(samplingDecision: SamplingDecision, event: StatsigEvent) {
-        if (samplingDecision.samplingRate != null) {
-            event.statsigMetadata?.samplingRate = samplingDecision.samplingRate
-        }
-        if (samplingDecision.samplingStatus != null) {
-            event.statsigMetadata?.samplingStatus = samplingDecision.samplingStatus
-        }
-        if (samplingDecision.samplingMode != null) {
-            event.statsigMetadata?.samplingMode = samplingDecision.samplingMode
+    private fun addSamplingDetailsToStatsigMetadata(samplingDecision: SamplingDecision): Map<String, Any> {
+        return mutableMapOf<String, Any>().apply {
+            samplingDecision.samplingRate?.let { put("samplingRate", it) }
+            samplingDecision.samplingStatus?.let { put("shadowLogged", it) }
+            samplingDecision.samplingMode?.let { put("samplingMode", it) }
         }
     }
 
