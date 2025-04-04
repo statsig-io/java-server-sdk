@@ -422,20 +422,11 @@ internal class StatsigLogger(
             return true
         }
 
-        val tier = statsigOptions.getEnvironment()?.get("tier") ?: "production" // if its null, then default to prod
-        if (!tier.equals("production", ignoreCase = true)) {
-            return true
-        }
-
         if (evalResult.forwardAllExposures) {
             return true
         }
 
         if (evalResult.hasSeenAnalyticalGates) {
-            return true
-        }
-
-        if (evalResult.ruleID.endsWith(":override") || evalResult.ruleID.endsWith(":id_override")) {
             return true
         }
 

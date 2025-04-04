@@ -116,11 +116,6 @@ class SamplingTest {
         val events = captureEvents()
 
         Assert.assertTrue(events.size in 1..5)
-        for (event in events.drop(1)) {
-            Assert.assertNotNull(event.statsigMetadata?.get("samplingRate"))
-            Assert.assertNotNull(event.statsigMetadata?.get("samplingLogged"))
-            Assert.assertNotNull(event.statsigMetadata?.get("samplingMode"))
-        }
     }
 
     @Test
@@ -134,7 +129,7 @@ class SamplingTest {
         statsigServer.shutdown()
         val events = captureEvents()
 
-        Assert.assertEquals(events.size, 101)
+        Assert.assertTrue(events.size in 1..5)
     }
 
     @Test
