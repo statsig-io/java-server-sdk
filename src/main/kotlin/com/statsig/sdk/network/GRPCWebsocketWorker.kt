@@ -201,7 +201,7 @@ internal class GRPCWebsocketWorker(
         }
         if (shouldRetry) {
             logger.warn("grpcWebSocket: connection error: $throwable")
-            errorBoundary.logException("grpcWebSocket: connection error", throwable ?: Exception("connection closed"), bypassDedupe = true)
+            errorBoundary.logException("grpcWebSocket: connection error", throwable ?: Exception("connection closed"))
             streamConfigSpecWithBackoff()
             connected = false
         } else {
@@ -209,7 +209,6 @@ internal class GRPCWebsocketWorker(
             errorBoundary.logException(
                 "grpcWebSocket: retry exhausted",
                 Exception("Remaining retry is $remainingRetries, exception is ${throwable?.message}"),
-                bypassDedupe = true,
             )
         }
     }
@@ -220,7 +219,6 @@ internal class GRPCWebsocketWorker(
                 "grpcWebSocket: Reconnected",
                 Exception("${response.lastUpdated}"),
                 extraInfo = "{\"retryAttempt\": ${retryLimit - remainingRetries}}",
-                bypassDedupe = true,
             )
             streamingFallback?.cancelBackup()
         }
@@ -235,7 +233,6 @@ internal class GRPCWebsocketWorker(
                     "grpcWebSocket: Failed to emit response",
                     Exception("${response.lastUpdated}"),
                     extraInfo = "{\"retryAttempt\": ${retryLimit - remainingRetries}}",
-                    bypassDedupe = true,
                 )
             }
         }
