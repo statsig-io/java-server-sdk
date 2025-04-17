@@ -215,6 +215,7 @@ internal class GRPCWebsocketWorker(
 
     private fun processStreamResponse(response: ConfigSpecResponse) {
         if (!connected) {
+            logger.warn("grpcWebSocket: Reconnected")
             errorBoundary.logException(
                 "grpcWebSocket: Reconnected",
                 Exception("${response.lastUpdated}"),
