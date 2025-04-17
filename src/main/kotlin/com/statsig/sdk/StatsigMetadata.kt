@@ -16,17 +16,22 @@ internal data class StatsigMetadata(
     @SerializedName("shadowLogged") var samplingStatus: String? = null,
 ) {
     @SerializedName("sdkVersion")
-    var sdkVersion: String = try {
-        val properties = Properties()
-        properties.load(
-            StatsigMetadata::class.java.getResourceAsStream("/statsigsdk.properties"),
-        )
-        properties.getProperty("version")
-    } catch (e: Exception) {
-        VERSION
-    }
+    var sdkVersion: String = SDK_VERSION
+
     fun asJson(): String {
         val gson = Utils.getGson()
         return gson.toJson(this)
+    }
+
+    companion object {
+        internal val SDK_VERSION: String = try {
+            val properties = Properties()
+            properties.load(
+                StatsigMetadata::class.java.getResourceAsStream("/statsigsdk.properties"),
+            )
+            properties.getProperty("version") ?: VERSION
+        } catch (e: Exception) {
+            VERSION
+        }
     }
 }

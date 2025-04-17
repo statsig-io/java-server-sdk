@@ -128,8 +128,6 @@ internal class ClientInitializeFormatter(
             }
         }
 
-        val metadata = StatsigMetadata()
-
         return ClientInitializeResponse(
             mapFn(gates),
             mapFn(configs),
@@ -141,8 +139,8 @@ internal class ClientInitializeFormatter(
             this.hash.toString().lowercase(),
             user.toMapForLogging(),
             mutableMapOf<String, String>().apply {
-                this["sdkType"] = metadata.sdkType
-                this["sdkVersion"] = metadata.sdkVersion
+                this["sdkType"] = "java-server"
+                this["sdkVersion"] = StatsigMetadata.SDK_VERSION
             },
         )
     }
