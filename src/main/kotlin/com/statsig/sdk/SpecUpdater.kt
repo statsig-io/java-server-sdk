@@ -241,6 +241,7 @@ internal class SpecUpdater(
                     if (config != null) {
                         logger.debug("[StatsigSpecUpdater] Successfully fetched config specs from source: $source")
                         emit(Pair(config, source))
+                        break
                     }
                 }
             }
