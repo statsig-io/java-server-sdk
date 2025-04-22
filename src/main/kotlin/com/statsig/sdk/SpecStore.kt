@@ -437,7 +437,29 @@ internal class SpecStore(
         for (value in values) {
             specName = value.name
             parsed[specName] = value
+            preProcessSegmentWithIDLists(value)
         }
         return parsed
+    }
+
+    private fun preProcessSegmentWithIDLists(configSpec: APIConfig) {
+        for (rule in configSpec.rules) {
+            if (rule.name == "id_list") {
+                for (condition in rule.conditions) {
+                    if ((condition.operator == "any" || condition.operator == "none") && condition.type == "unit_id") {
+                        val targetList = condition.targetValue as? List<*> ?: continue
+
+                        val idSet = targetList.mapNotNull {
+                            when (it) {
+                                is String -> it.lowercase()
+                                else -> null
+                            }
+                        }.toSet()
+
+                        condition.segmentIdSet = idSet
+                    }
+                }
+            }
+        }
     }
 }

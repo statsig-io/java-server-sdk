@@ -72,6 +72,8 @@ internal data class APICondition(
     @SerializedName("field") val field: String?,
     @SerializedName("additionalValues") val additionalValues: Map<String, Any>?,
     @SerializedName("idType") val idType: String,
+    @Transient
+    var segmentIdSet: Set<String>? = null
 )
 
 data class APIFeatureGate(

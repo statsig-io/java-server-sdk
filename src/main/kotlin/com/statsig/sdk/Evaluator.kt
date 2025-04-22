@@ -793,12 +793,20 @@ internal class Evaluator(
                 }
 
                 Const.ANY -> {
+                    val strValue = getValueAsString(value) ?: return false
+                    condition.segmentIdSet?.let {
+                        return it.contains(strValue.lowercase())
+                    }
                     return matchStringInArray(value, condition.targetValue) { a, b ->
                         a.equals(b, true)
                     }
                 }
 
                 Const.NONE -> {
+                    val strValue = getValueAsString(value) ?: return true
+                    condition.segmentIdSet?.let {
+                        return !it.contains(strValue.lowercase())
+                    }
                     return !matchStringInArray(value, condition.targetValue) { a, b ->
                         a.equals(b, true)
                     }
