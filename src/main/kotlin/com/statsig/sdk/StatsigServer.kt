@@ -275,6 +275,12 @@ sealed class StatsigServer {
     @JvmSynthetic
     internal abstract fun getCustomLogger(): LoggerInterface
 
+
+    abstract fun batchGetExperimentsAsync(
+        user: StatsigUser,
+        experimentNames: List<String>
+    ): CompletableFuture<Map<String, DynamicConfig>>
+
     companion object {
 
         @JvmStatic
@@ -1441,6 +1447,23 @@ private class StatsigServerImpl() :
                 .info("[StatsigServer] Shutting down Statsig because of unhandled exception from your server")
             server.shutdown()
             throw e
+        }
+    }
+
+    override fun batchGetExperimentsAsync(
+        user: StatsigUser,
+        experimentNames: List<String>
+    ): CompletableFuture<Map<String, DynamicConfig>> {
+        if (!isSDKInitialized()) {
+            return CompletableFuture.completedFuture(
+                experimentNames.associateWith { DynamicConfig.empty(it) }
+            )
+        }
+        
+        return statsigScope.future {
+            experimentNames.associateWith { experimentName ->
+                getExperiment(user, experimentName)
+            }
         }
     }
 }
