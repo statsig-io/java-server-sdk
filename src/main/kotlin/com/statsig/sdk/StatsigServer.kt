@@ -307,8 +307,13 @@ private class StatsigServerImpl() :
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
         try {
+          try {
             Thread.setDefaultUncaughtExceptionHandler(MainThreadExceptionHandler(this, Thread.currentThread()))
-            setupStartTime = System.currentTimeMillis()
+          } catch (_: SecurityException) {
+              options.customLogger.warn("[StatsigServer] Failed to set defaultUncaughtExceptionHandler, " +
+               "not using MainThreadExceptionHandler")
+          }
+          setupStartTime = System.currentTimeMillis()
             errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
             coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
                 // no-op - supervisor job should not throw when a child fails
