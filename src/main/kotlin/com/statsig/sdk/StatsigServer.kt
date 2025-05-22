@@ -307,8 +307,7 @@ private class StatsigServerImpl() :
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
         try {
-            Thread.setDefaultUncaughtExceptionHandler(MainThreadExceptionHandler(this, Thread.currentThread()))
-            setupStartTime = System.currentTimeMillis()
+          setupStartTime = System.currentTimeMillis()
             errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
             coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
                 // no-op - supervisor job should not throw when a child fails
@@ -1429,18 +1428,5 @@ private class StatsigServerImpl() :
         diagnostics?.markEnd(KeyType.OVERALL, success)
         diagnostics?.logDiagnostics(ContextType.INITIALIZE)
         diagnostics.diagnosticsContext = ContextType.CONFIG_SYNC
-    }
-
-    class MainThreadExceptionHandler(val server: StatsigServer, val currentThread: Thread) :
-        Thread.UncaughtExceptionHandler {
-        override fun uncaughtException(t: Thread, e: Throwable) {
-            if (!t.name.equals(currentThread.name)) {
-                throw e
-            }
-            server.getCustomLogger()
-                .info("[StatsigServer] Shutting down Statsig because of unhandled exception from your server")
-            server.shutdown()
-            throw e
-        }
     }
 }
