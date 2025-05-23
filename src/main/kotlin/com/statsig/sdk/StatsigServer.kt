@@ -307,7 +307,7 @@ private class StatsigServerImpl() :
 
     override fun setup(serverSecret: String, options: StatsigOptions) {
         try {
-          setupStartTime = System.currentTimeMillis()
+            setupStartTime = System.currentTimeMillis()
             errorBoundary = ErrorBoundary(serverSecret, options, statsigMetadata)
             coroutineExceptionHandler = CoroutineExceptionHandler { _, ex ->
                 // no-op - supervisor job should not throw when a child fails
