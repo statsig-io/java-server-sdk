@@ -513,7 +513,7 @@ internal class Evaluator(
         }
 
         var rules = config.rules
-        if (ctx.onlyEvaluateTargeting) {
+        if (ctx.onlyEvaluateTargeting && !ctx.isNested) {
             rules = rules.filter { it.isTargetingRule() }.toTypedArray()
             if (rules.isEmpty()) {
                 // No targeting rules means user passes targeting, which means false evaluation
@@ -521,7 +521,7 @@ internal class Evaluator(
                 return
             }
         }
-        if (ctx.onlyEvaluateOverrides) {
+        if (ctx.onlyEvaluateOverrides && !ctx.isNested) {
             rules = rules.filter { it.isOverrideRule() }.toTypedArray()
             if (rules.isEmpty()) {
                 // No override rules means user is not overridden, which means false evaluation
