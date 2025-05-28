@@ -59,7 +59,7 @@ internal class HTTPWorker(
     private var diagnostics: Diagnostics? = null
     private val logger = options.customLogger
     val apiForDownloadConfigSpecs = options.endpointProxyConfigs[NetworkEndpoint.DOWNLOAD_CONFIG_SPECS]?.proxyAddress ?: options.apiForDownloadConfigSpecs ?: options.api ?: STATSIG_CDN_URL_BASE
-    val apiForGetIDLists = options.endpointProxyConfigs[NetworkEndpoint.GET_ID_LISTS]?.proxyAddress ?: options.apiForGetIdlists ?: options.api ?: STATSIG_API_URL_BASE
+    val apiForGetIDLists = options.endpointProxyConfigs[NetworkEndpoint.GET_ID_LISTS]?.proxyAddress ?: options.apiForGetIdlists ?: options.api ?: STATSIG_CDN_URL_BASE // Default to CDN if the user does not override the ID list API endpoint
     val apiForLogEvent = options.endpointProxyConfigs[NetworkEndpoint.LOG_EVENT]?.proxyAddress ?: options.api ?: STATSIG_API_URL_BASE
     private var eventsCount: String = ""
 
@@ -142,6 +142,9 @@ internal class HTTPWorker(
     }
 
     override suspend fun getIDLists(): String? {
+        if (apiForGetIDLists == STATSIG_CDN_URL_BASE) {
+            return getIDListsFromCDN()
+        }
         val response = post(
             "$apiForGetIDLists/get_id_lists",
             mapOf("statsigMetadata" to statsigMetadata),
@@ -207,6 +210,29 @@ internal class HTTPWorker(
         statsigHttpClient.dispatcher.executorService.shutdown()
         statsigHttpClient.connectionPool.evictAll()
         statsigHttpClient.cache?.close()
+    }
+
+    private suspend fun getIDListsFromCDN(): String? {
+        val (response, exception) = get(
+            "$STATSIG_CDN_URL_BASE/get_id_lists/$sdkKey.json",
+            emptyMap(),
+            options.initTimeoutMs,
+        )
+
+        if (exception != null) {
+            logger.warn("[StatsigHTTPWorker] Exception while getting ID lists from CDN: ${exception.message}")
+            return null
+        }
+
+        response?.use {
+            if (!it.isSuccessful) {
+                logger.warn("[StatsigHTTPWorker] Failed to get ID lists, HTTP ${it.code} received from CDN")
+                return null
+            }
+            return withContext(Dispatchers.IO) { it.body?.string() }
+        }
+
+        return null
     }
 
     private fun waitUntilAllRequestsAreFinished(dispatcher: okhttp3.Dispatcher) {

@@ -27,7 +27,7 @@ class DefaultAPITest {
             Statsig.shutdown()
         }
         val downloadConfigSpecsRequests = requests.filter { it.url.toString().contains("api.statsigcdn.com/v1/download_config_specs/") }
-        val getIdListsRequests = requests.filter { it.url.toString().contains("statsigapi.net/v1/get_id_lists") }
+        val getIdListsRequests = requests.filter { it.url.toString().contains("api.statsigcdn.com/v1/get_id_lists") }
         val logEventRequests = requests.filter { it.url.toString().contains("statsigapi.net/v1/log_event") }
 
         assert(downloadConfigSpecsRequests.size == 1) { "Expected one request to download_config_specs, but found ${downloadConfigSpecsRequests.size}" }
