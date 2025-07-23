@@ -125,8 +125,12 @@ internal class HTTPWorker(
     }
 
     override suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
+        var url = "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json"
+        if (sinceTime > 0) {
+            url = "$url?sinceTime=$sinceTime"
+        }
         val (response, exception) = get(
-            "$apiForDownloadConfigSpecs/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
+            url,
             emptyMap(),
             options.initTimeoutMs,
         )
