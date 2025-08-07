@@ -47,13 +47,17 @@ internal class SpecStore(
     private inline fun <reified T> Gson.fromJson(json: String) = fromJson<T>(json, object : TypeToken<T>() {}.type)
 
     suspend fun initialize(): FailureDetails? {
+        var failureDetails: FailureDetails? = null
         if (!options.localMode) {
-            specUpdater.initialize()
+            try {
+                specUpdater.initialize()
 
-            val failureDetails = this.initializeSpecs()
-            this.initTime = if (specUpdater.lastUpdateTime == 0L) -1 else specUpdater.lastUpdateTime
-
-            this.syncIdListsFromNetwork(specUpdater.updateIDLists())
+                failureDetails = this.initializeSpecs()
+                this.initTime = if (specUpdater.lastUpdateTime == 0L) -1 else specUpdater.lastUpdateTime
+                this.syncIdListsFromNetwork(specUpdater.updateIDLists())
+            } catch (e: Throwable) {
+                logger.warn("Failed to initialize spec store " + e.stackTraceToString())
+            }
             specUpdater.startListening()
 
             return failureDetails
