@@ -133,7 +133,7 @@ internal class SpecUpdater(
         return try {
             val response = transport.getIDLists() ?: return null
             gson.fromJson<Map<String, IDList>>(response)
-        } catch (e: JsonSyntaxException) {
+        } catch (e: Throwable) {
             null
         }
     }
