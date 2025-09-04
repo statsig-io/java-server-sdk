@@ -2,10 +2,11 @@
 import com.google.protobuf.gradle.*
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.9.20"
+    kotlin("jvm") version "2.2.10"
     idea
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("org.jlleitschuh.gradle.ktlint") version "11.0.0"
@@ -34,17 +35,17 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
 dependencies {
     protobuf(files("api-interface-definitions/protos/"))
     testImplementation("junit:junit:4.13.2")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.1.0")
     testImplementation("io.mockk:mockk:1.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
     testImplementation("io.grpc:grpc-testing:1.71.0")
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.1.0")
     implementation("com.github.ua-parser:uap-java:1.6.1")
     implementation("com.statsig:ip3country:0.1.5")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.1.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     // GRPC Dependencies
     implementation("io.grpc:grpc-netty-shaded:1.71.0")
@@ -86,7 +87,9 @@ inline fun <reified C> Project.configure(name: String, configuration: C.() -> Un
 }
 
 tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "1.8"
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_1_8)
+    }
 }
 
 java {
