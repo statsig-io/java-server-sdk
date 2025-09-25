@@ -1057,19 +1057,18 @@ internal class Evaluator(
     }
 
     private fun getEpoch(input: Any?): Long? {
-        var epoch =
-            when (input) {
-                is String -> parseLong(input)
-                is Number -> input.toLong()
-                else -> return null
-            }
-
-        if (epoch.toString().length < 11) {
-            // epoch in seconds (milliseconds would be before 1970)
-            epoch *= 1000
+        val epoch = when (input) {
+            is String -> input.toLong()
+            is Number -> input.toLong()
+            else -> return null
         }
-
-        return epoch
+    
+        return if (epoch < 100_000_000_000L) {
+             // epoch in seconds (milliseconds would be before 1970)
+            epoch * 1000
+        } else {
+            epoch
+        }
     }
 
     private fun parseISOTimestamp(input: Any?): Date? {
