@@ -1063,7 +1063,7 @@ internal class Evaluator(
             else -> return null
         }
     
-        return if (epoch < 100_000_000_000L) {
+        return if (epoch < 10_000_000_000L) {
              // epoch in seconds (milliseconds would be before 1970)
             epoch * 1000
         } else {
