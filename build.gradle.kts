@@ -51,7 +51,7 @@ dependencies {
     implementation("io.grpc:grpc-netty-shaded:1.71.0")
     implementation("io.grpc:grpc-stub:1.71.0")
     implementation("io.grpc:grpc-protobuf:1.71.0")
-    implementation("org.apache.tomcat:annotations-api:6.0.53")
+    implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
 }
 
 val sourcesJar by tasks.registering(Jar::class) {
@@ -109,7 +109,9 @@ protobuf {
     generateProtoTasks {
         all().forEach { task ->
             task.plugins {
-                id("grpc")
+                id("grpc") {
+                    option("@generated=omit")
+                }
             }
             task.doLast {
                 val outputPath = task.outputs.files.getAsPath()
