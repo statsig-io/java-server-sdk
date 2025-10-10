@@ -114,7 +114,15 @@ internal class StatsigTransport(
 
     private fun generateWorker(config: ForwardProxyConfig?): INetworkWorker? {
         val worker = when (config?.proxyProtocol) {
-            NetworkProtocol.HTTP -> httpWorker
+            NetworkProtocol.HTTP -> {
+                if (config.authenticationMode != AuthenticationMode.DISABLED) {
+                    // Need to regenerate the http here
+                    val worker = HTTPWorker(sdkKey, options, statsigMetadata, errorBoundary, sdkConfig, backoffMultiplier, httpHelper)
+                    worker.setupAuthentication(config)
+                    return worker
+                }
+                httpWorker
+            }
             NetworkProtocol.GRPC -> GRPCWorker(sdkKey, options, statsigMetadata, errorBoundary, config.proxyAddress)
             NetworkProtocol.GRPC_WEBSOCKET -> GRPCWebsocketWorker(sdkKey, options, statsigScope, errorBoundary, config)
             else -> null

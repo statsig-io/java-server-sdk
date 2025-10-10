@@ -93,6 +93,21 @@ public final class StatsigForwardProxyGrpc {
   }
 
   /**
+   * Creates a new blocking-style stub that supports all types of calls on the service
+   */
+  public static StatsigForwardProxyBlockingV2Stub newBlockingV2Stub(
+      io.grpc.Channel channel) {
+    io.grpc.stub.AbstractStub.StubFactory<StatsigForwardProxyBlockingV2Stub> factory =
+      new io.grpc.stub.AbstractStub.StubFactory<StatsigForwardProxyBlockingV2Stub>() {
+        @java.lang.Override
+        public StatsigForwardProxyBlockingV2Stub newStub(io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
+          return new StatsigForwardProxyBlockingV2Stub(channel, callOptions);
+        }
+      };
+    return StatsigForwardProxyBlockingV2Stub.newStub(factory, channel);
+  }
+
+  /**
    * Creates a new blocking-style stub that supports unary and streaming output calls on the service
    */
   public static StatsigForwardProxyBlockingStub newBlockingStub(
@@ -187,6 +202,39 @@ public final class StatsigForwardProxyGrpc {
 
   /**
    * A stub to allow clients to do synchronous rpc calls to service StatsigForwardProxy.
+   */
+  public static final class StatsigForwardProxyBlockingV2Stub
+      extends io.grpc.stub.AbstractBlockingStub<StatsigForwardProxyBlockingV2Stub> {
+    private StatsigForwardProxyBlockingV2Stub(
+        io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
+      super(channel, callOptions);
+    }
+
+    @java.lang.Override
+    protected StatsigForwardProxyBlockingV2Stub build(
+        io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
+      return new StatsigForwardProxyBlockingV2Stub(channel, callOptions);
+    }
+
+    /**
+     */
+    public grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecResponse getConfigSpec(grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetConfigSpecMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/10918")
+    public io.grpc.stub.BlockingClientCall<?, grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecResponse>
+        streamConfigSpec(grpc.generated.statsig_forward_proxy.StatsigForwardProxyOuterClass.ConfigSpecRequest request) {
+      return io.grpc.stub.ClientCalls.blockingV2ServerStreamingCall(
+          getChannel(), getStreamConfigSpecMethod(), getCallOptions(), request);
+    }
+  }
+
+  /**
+   * A stub to allow clients to do limited synchronous rpc calls to service StatsigForwardProxy.
    */
   public static final class StatsigForwardProxyBlockingStub
       extends io.grpc.stub.AbstractBlockingStub<StatsigForwardProxyBlockingStub> {

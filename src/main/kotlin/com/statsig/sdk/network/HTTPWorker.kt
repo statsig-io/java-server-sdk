@@ -54,7 +54,8 @@ internal class HTTPWorker(
     override fun initializeFlows() {}
 
     private val json: MediaType = "application/json; charset=utf-8".toMediaType()
-    private val statsigHttpClient: OkHttpClient
+    private var httpClient: OkHttpClient
+    private var statsigHttpClient: OkHttpClient // dedicated for fallback to network
     private val gson = Utils.getGson()
     private var diagnostics: Diagnostics? = null
     private val logger = options.customLogger
@@ -117,11 +118,14 @@ internal class HTTPWorker(
             },
         )
 
+        statsigHttpClient = clientBuilder.build()
+
+        // Below configuration should not apply to statsigHttpClient
         options.proxyConfig?.let {
             setUpProxyAgent(clientBuilder, it)
         }
 
-        statsigHttpClient = clientBuilder.build()
+        httpClient = clientBuilder.build()
     }
 
     override suspend fun downloadConfigSpecs(sinceTime: Long): Pair<String?, FailureDetails?> {
@@ -170,6 +174,7 @@ internal class HTTPWorker(
             "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
             emptyMap(),
             options.initTimeoutMs,
+            useStatsigClient = true
         )
         response?.use {
             if (!response.isSuccessful) {
@@ -188,6 +193,7 @@ internal class HTTPWorker(
             mapOf("statsigMetadata" to statsigMetadata),
             emptyMap(),
             this.options.initTimeoutMs,
+            true
         )
 
         response?.use {
@@ -209,6 +215,11 @@ internal class HTTPWorker(
     }
 
     override fun shutdown() {
+        waitUntilAllRequestsAreFinished(httpClient.dispatcher)
+        httpClient.dispatcher.cancelAll()
+        httpClient.dispatcher.executorService.shutdown()
+        httpClient.connectionPool.evictAll()
+        httpClient.cache?.close()
         waitUntilAllRequestsAreFinished(statsigHttpClient.dispatcher)
         statsigHttpClient.dispatcher.cancelAll()
         statsigHttpClient.dispatcher.executorService.shutdown()
@@ -279,9 +290,11 @@ internal class HTTPWorker(
         body: Map<String, Any> = emptyMap(),
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
+        useStatsigClient: Boolean = false,
     ): Response? {
+        val networkClient = if (useStatsigClient) statsigHttpClient else httpClient
         return httpHelper.request(
-            statsigHttpClient.newBuilder().callTimeout(
+            networkClient.newBuilder().callTimeout(
                 timeoutMs,
                 TimeUnit.MILLISECONDS,
             ).build(),
@@ -295,9 +308,11 @@ internal class HTTPWorker(
         url: String,
         headers: Map<String, String> = emptyMap(),
         timeoutMs: Long = 3000L,
+        useStatsigClient: Boolean = false,
     ): Pair<Response?, Exception?> {
+        val networkClient = if (useStatsigClient) statsigHttpClient else httpClient
         return httpHelper.request(
-            statsigHttpClient.newBuilder().callTimeout(
+            networkClient.newBuilder().callTimeout(
                 timeoutMs,
                 TimeUnit.MILLISECONDS,
             ).build(),
@@ -305,6 +320,42 @@ internal class HTTPWorker(
             null,
             headers,
         )
+    }
+
+    fun setupAuthentication(config: ForwardProxyConfig) {
+        when (config.authenticationMode) {
+            AuthenticationMode.DISABLED -> return
+            AuthenticationMode.TLS -> {
+                try {
+                    if (config.tlsCertChain == null) {
+                        logger.error("[StatsigHTTPWorker] TLS Cert Chain input stream must be given for TLS Verification")
+                        return
+                    }
+                    httpClient = httpHelper.createHttpClient(
+                        httpClient,
+                        caCertFile = config.tlsCertChain
+                    )
+                } catch (e: Exception) {
+                    logger.error("[StatsigHTTPWorker] Failed to handshake with TLS ${e.message}")
+                }
+            }
+            AuthenticationMode.MTLS -> {
+                try {
+                    if (config.tlsCertChain == null || config.tlsPrivateKey == null || config.tlsPrivateKeyPassword == null) {
+                        logger.error("TLS Cert Chain and TLS Private Key and TLS PrivateKey must be passed in")
+                        return
+                    }
+                    httpClient = httpHelper.createHttpClient(
+                        httpClient,
+                        caCertFile = config.tlsCertChain,
+                        clientCertChainFile = config.tlsPrivateKey,
+                        clientPrivateKeyFile = config.tlsPrivateKeyPassword
+                    )
+                } catch (e: Exception) {
+                    logger.error("Failed to handshake with TLS ${e.message}")
+                }
+            }
+        }
     }
 
     suspend fun retryPostLogs(
@@ -331,7 +382,7 @@ internal class HTTPWorker(
                 ensureActive() // Quick check to ensure the coroutine isn't cancelled
                 var response: Response? = null
                 try {
-                    response = statsigHttpClient.newCall(request).await()
+                    response = httpClient.newCall(request).await()
                     response.use {
                         if (response.isSuccessful) {
                             return@coroutineScope
