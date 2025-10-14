@@ -163,8 +163,12 @@ internal class HTTPWorker(
     }
 
     suspend fun downloadConfigSpecsFromStatsigAPI(sinceTime: Long): Pair<String?, FailureDetails?> {
+        var url = "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json"
+        if (sinceTime > 0) {
+            url = "$url?sinceTime=$sinceTime"
+        }
         val (response, exception) = get(
-            "$STATSIG_CDN_URL_BASE/download_config_specs/$sdkKey.json?sinceTime=$sinceTime",
+            url,
             emptyMap(),
             options.initTimeoutMs,
         )
