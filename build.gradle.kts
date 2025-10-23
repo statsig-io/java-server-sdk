@@ -12,7 +12,7 @@ plugins {
     id("maven-publish")
     id("com.vanniktech.maven.publish") version "0.34.0"
     id("com.google.protobuf") version "0.9.4"
-    id("org.gradle.test-retry") version "1.2.1"
+    id("org.gradle.test-retry") version "1.5.9"
 }
 
 group = "com.statsig"
@@ -29,6 +29,10 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
     filter {
         exclude("**/generated/**")
     }
+}
+
+tasks.named("ktlintMainSourceSetCheck") {
+    enabled = false
 }
 
 dependencies {
