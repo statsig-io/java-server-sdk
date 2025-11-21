@@ -47,9 +47,9 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:5.1.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     // GRPC Dependencies
-    implementation("io.grpc:grpc-netty-shaded:1.71.0")
-    implementation("io.grpc:grpc-stub:1.71.0")
-    implementation("io.grpc:grpc-protobuf:1.71.0")
+    implementation("io.grpc:grpc-netty-shaded:1.75.0")
+    implementation("io.grpc:grpc-stub:1.75.0")
+    implementation("io.grpc:grpc-protobuf:1.75.0")
     implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
 }
 
