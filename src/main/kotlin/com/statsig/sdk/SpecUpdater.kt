@@ -46,6 +46,7 @@ internal class SpecUpdater(
     fun shutdown() {
         this.backgroundDownloadConfigs?.cancel()
         this.backgroundDownloadIDLists?.cancel()
+        this.monitorScope.cancel()
     }
 
     fun registerConfigSpecListener(callback: suspend (config: APIDownloadedConfigs, source: DataSource) -> Unit) {
