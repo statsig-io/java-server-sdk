@@ -444,11 +444,12 @@ class Statsig {
             user: StatsigUser,
             hash: HashAlgo = HashAlgo.SHA256,
             clientSDKKey: String? = null,
+            useV2Format: Boolean = false,
         ): Map<String, Any> {
             if (!checkInitialized()) {
                 return emptyMap()
             }
-            return statsigServer.getEvaluationsForUser(user, hash, clientSDKKey)
+            return statsigServer.getEvaluationsForUser(user, hash, clientSDKKey, useV2Format)
         }
 
         /**

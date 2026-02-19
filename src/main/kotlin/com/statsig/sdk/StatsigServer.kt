@@ -121,6 +121,7 @@ sealed class StatsigServer {
         user: StatsigUser,
         hash: HashAlgo = HashAlgo.SHA256,
         clientSDKKey: String? = null,
+        useV2Format: Boolean = false,
     ): Map<String, Any>
 
     fun logEvent(user: StatsigUser?, eventName: String) {
@@ -838,6 +839,7 @@ private class StatsigServerImpl() :
         user: StatsigUser,
         hash: HashAlgo,
         clientSDKKey: String?,
+        useV2Format: Boolean,
     ): Map<String, Any> {
         if (!isSDKInitialized()) {
             return emptyMap()
@@ -850,7 +852,7 @@ private class StatsigServerImpl() :
                 ContextType.GET_EVALUATIONS_FOR_USER,
             )
             val normalizedUser = normalizeUser(user)
-            val response = evaluator.getEvaluationsForUser(normalizedUser, hash, clientSDKKey)
+            val response = evaluator.getEvaluationsForUser(normalizedUser, hash, clientSDKKey, useV2Format)
             diagnostics.markEnd(
                 KeyType.GET_EVALUATIONS_FOR_USER,
                 !response.isEmpty(),
@@ -858,7 +860,7 @@ private class StatsigServerImpl() :
                 ContextType.GET_EVALUATIONS_FOR_USER,
                 Marker(markerID = markerID),
             )
-            return@captureSync response.toMap()
+            return@captureSync response
         }, {
             diagnostics.markEnd(
                 KeyType.GET_EVALUATIONS_FOR_USER,

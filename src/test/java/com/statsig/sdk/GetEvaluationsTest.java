@@ -38,7 +38,7 @@ public class GetEvaluationsTest {
 
         StatsigUser user = new StatsigUser("123");
 
-        Map<String, Object> values = driver.getEvaluationsForUser(user, HashAlgo.DJB2, null);
+        Map<String, Object> values = driver.getEvaluationsForUser(user, HashAlgo.DJB2, null, false);
         assertTrue(values.containsKey("feature_gates"));
         assertTrue(values.containsKey("dynamic_configs"));
         assertTrue(values.containsKey("layer_configs"));

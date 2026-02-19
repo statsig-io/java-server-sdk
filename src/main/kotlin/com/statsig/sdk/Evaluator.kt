@@ -246,14 +246,36 @@ internal class Evaluator(
         user: StatsigUser,
         hash: HashAlgo = HashAlgo.SHA256,
         clientSDKKey: String? = null,
-    ): EvaluationsResponse {
+        useV2Format: Boolean = false,
+    ): Map<String, Any> {
         var context = EvaluationContext(user, clientSDKKey = clientSDKKey, hash = hash)
+
+        if (useV2Format) {
+            val response = ClientInitializeV2Formatter(
+                this.specStore,
+                this::evaluateConfig,
+                context,
+            ).getFormattedResponse().toMap()
+            if (response.isEmpty()) {
+                val extraInfo = """{
+                    "hash": "$hash",
+                    "clientKey": "$clientSDKKey"
+                    }
+                """.trimIndent()
+                errorBoundary.logException(
+                    "getEvaluationsForUser",
+                    IllegalStateException("getEvaluationsForUser returns empty for v2 format result: Possibly SDK failed to initialize"),
+                    extraInfo = extraInfo,
+                )
+            }
+            return response
+        }
         val response = EvaluationsFormatter(
             this.specStore,
             this::evaluateConfig,
             context,
-        ).getFormattedResponse()
-        if (response == null || response.isEmpty()) {
+        ).getFormattedResponse().toMap()
+        if (response.isEmpty()) {
             val extraInfo = """{
                 "hash": "$hash",
                 "clientKey": "$clientSDKKey"
