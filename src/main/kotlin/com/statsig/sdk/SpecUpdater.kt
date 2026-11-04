@@ -111,7 +111,7 @@ internal class SpecUpdater(
             }
         } catch (e: Exception) {
             errorBoundary.logException("getConfigSpec", e)
-            return Pair(null, FailureDetails(FailureReason.INTERNAL_ERROR, e))
+            return Pair(null, FailureDetails(FailureReason.INTERNAL_ERROR, errorBoundary.redactException(e)))
         }
     }
 
@@ -193,8 +193,8 @@ internal class SpecUpdater(
             return Pair(gson.fromJson(specs, APIDownloadedConfigs::class.java), null)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseConfigSpecs", e)
-            logger.error("[StatsigSpecUpdater] An exception was caught when parsing config specs:  $e")
-            return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
+            logger.error("[StatsigSpecUpdater] An exception was caught when parsing config specs:  ${errorBoundary.redactException(e)}")
+            return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = errorBoundary.redactException(e)))
         }
     }
 
@@ -214,8 +214,8 @@ internal class SpecUpdater(
             return Pair(configs, null)
         } catch (e: Exception) {
             errorBoundary.logException("downloadConfigSpecs", e)
-            logger.warn("[StatsigSpecUpdater] An exception was caught:  $e")
-            return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = e))
+            logger.warn("[StatsigSpecUpdater] An exception was caught:  ${errorBoundary.redactException(e)}")
+            return Pair(null, FailureDetails(FailureReason.PARSE_RESPONSE_ERROR, exception = errorBoundary.redactException(e)))
         }
     }
 
@@ -227,7 +227,7 @@ internal class SpecUpdater(
             return gson.fromJson<Map<String, IDList>>(lists)
         } catch (e: JsonSyntaxException) {
             errorBoundary.logException("parseIDLists", e)
-            logger.warn("[StatsigSpecUpdater] An exception was caught when parsing ID lists:  $e")
+            logger.warn("[StatsigSpecUpdater] An exception was caught when parsing ID lists:  ${errorBoundary.redactException(e)}")
         }
         return null
     }

@@ -44,15 +44,16 @@ internal class GRPCWorker(
             )
             return Pair(response.spec, null)
         } catch (e: StatusException) {
+            val safeException = errorBoundary.redactException(e)
             diagnostics?.endNetworkRequestDiagnostics(
                 KeyType.DOWNLOAD_CONFIG_SPECS,
                 NetworkProtocol.GRPC,
                 false,
-                e.message,
+                safeException.message,
                 null,
             )
-            logger.warn("An status exception was received from forward proxy: $e")
-            return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = e))
+            logger.warn("An status exception was received from forward proxy: $safeException")
+            return Pair(null, FailureDetails(FailureReason.CONFIG_SPECS_NETWORK_ERROR, exception = safeException))
         }
     }
 

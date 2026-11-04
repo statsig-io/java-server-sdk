@@ -39,7 +39,7 @@ internal class HTTPHelper(
         headers: Map<String, String> = emptyMap(),
     ): Pair<Response?, Exception?> {
         val diagnosticsKey = diagnostics?.getDiagnosticKeyFromURL(url)
-        val urlForLogging = getUrlForLogging(url)
+        val urlForLogging = errorBoundary.redact(getUrlForLogging(url))
         try {
             val request = Request.Builder()
                 .url(url)
@@ -60,7 +60,8 @@ internal class HTTPHelper(
             logger.info("[StatsigHTTPHelper] Received response with status code: ${response.code} and with URL: $urlForLogging")
             return Pair(response, null)
         } catch (e: Exception) {
-            logger.warn("[StatsigHTTPHelper] An exception was caught: $e when hitting $urlForLogging")
+            val safeException = errorBoundary.redactException(e)
+            logger.warn("[StatsigHTTPHelper] An exception was caught: $safeException when hitting $urlForLogging")
             if (e is JsonParseException) {
                 errorBoundary.logException(
                     "postImpl",
@@ -68,8 +69,8 @@ internal class HTTPHelper(
                     extraInfo = urlForLogging
                 )
             }
-            diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, NetworkProtocol.HTTP, false, e.message, null)
-            return Pair(null, e)
+            diagnostics?.endNetworkRequestDiagnostics(diagnosticsKey, NetworkProtocol.HTTP, false, safeException.message, null)
+            return Pair(null, safeException)
         }
     }
 

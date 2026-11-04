@@ -340,7 +340,7 @@ internal class HTTPWorker(
                         caCertFile = config.tlsCertChain
                     )
                 } catch (e: Exception) {
-                    logger.error("[StatsigHTTPWorker] Failed to handshake with TLS ${e.message}")
+                    logger.error("[StatsigHTTPWorker] Failed to handshake with TLS ${e.message?.let { errorBoundary.redact(it) }}")
                 }
             }
             AuthenticationMode.MTLS -> {
@@ -356,7 +356,7 @@ internal class HTTPWorker(
                         clientPrivateKeyFile = config.tlsPrivateKeyPassword
                     )
                 } catch (e: Exception) {
-                    logger.error("Failed to handshake with TLS ${e.message}")
+                    logger.error("Failed to handshake with TLS ${e.message?.let { errorBoundary.redact(it) }}")
                 }
             }
         }
@@ -399,7 +399,7 @@ internal class HTTPWorker(
                         }
                     }
                 } catch (e: Exception) {
-                    logger.warn("[StatsigHTTPWorker] An exception was caught: $e")
+                    logger.warn("[StatsigHTTPWorker] An exception was caught: ${errorBoundary.redactException(e)}")
                     if (e is JsonParseException) {
                         errorBoundary.logException("retryPostLogs", e)
                     }

@@ -46,6 +46,55 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
         return uri.toString()
     }
 
+    internal fun redact(value: String): String {
+        if (apiKey.isEmpty()) return redactCredentialPaths(value)
+        val encoded = URLEncoder.encode(apiKey, StandardCharsets.UTF_8.toString())
+        val jsonEncoded = Gson().toJson(apiKey).removeSurrounding("\"")
+        var result = value.replace(apiKey, "[REDACTED]")
+        result = result.replace(jsonEncoded, "[REDACTED]")
+        for (variant in listOf(encoded, encoded.replace("+", "%20"))) {
+            result = result.replace(Regex(Regex.escape(variant), RegexOption.IGNORE_CASE), "[REDACTED]")
+        }
+        return redactCredentialPaths(result)
+    }
+
+    private fun redactJson(value: com.google.gson.JsonElement): com.google.gson.JsonElement = when {
+        value.isJsonObject -> com.google.gson.JsonObject().also { result ->
+            value.asJsonObject.entrySet().forEach { (key, child) -> result.add(redact(key), redactJson(child)) }
+        }
+        value.isJsonArray -> com.google.gson.JsonArray().also { result ->
+            value.asJsonArray.forEach { result.add(redactJson(it)) }
+        }
+        value.isJsonPrimitive && value.asJsonPrimitive.isString -> com.google.gson.JsonPrimitive(redact(value.asString))
+        else -> value.deepCopy()
+    }
+
+    private fun redactCredentialPaths(value: String): String = value.replace(
+        Regex("(/download_config_specs/)[^/?\\s\"']+", RegexOption.IGNORE_CASE),
+        "$1[REDACTED]"
+    )
+
+    internal fun redactException(ex: Exception): Exception {
+        val message = ex.message?.let { redact(it) }
+        val safe = when (ex) {
+            is io.grpc.StatusException -> io.grpc.Status.fromCode(ex.status.code)
+                .withDescription(ex.status.description?.let { redact(it) }).asException()
+            is io.grpc.StatusRuntimeException -> io.grpc.Status.fromCode(ex.status.code)
+                .withDescription(ex.status.description?.let { redact(it) }).asRuntimeException()
+            is java.net.SocketTimeoutException -> java.net.SocketTimeoutException(message)
+            is java.net.ConnectException -> java.net.ConnectException(message)
+            is java.net.UnknownHostException -> java.net.UnknownHostException(message)
+            is java.io.InterruptedIOException -> java.io.InterruptedIOException(message)
+            is java.io.IOException -> java.io.IOException(message)
+            is IllegalArgumentException -> IllegalArgumentException(message)
+            else -> Exception("${redact(ex.javaClass.name)}: ${message ?: ""}")
+        }
+        safe.stackTrace = ex.stackTrace.map {
+            StackTraceElement(redact(it.className), redact(it.methodName), it.fileName?.let { name -> redact(name) }, it.lineNumber)
+        }.toTypedArray()
+        return safe
+    }
+
     private fun getNoopExceptionHandler(): CoroutineExceptionHandler {
         return CoroutineExceptionHandler { _, _ ->
             // No-op
@@ -88,24 +137,29 @@ internal class ErrorBoundary(private val apiKey: String, private val options: St
                 }
                 seen.add(ex.javaClass.name)
 
-                val info = ex.stackTraceToString()
-                options.customLogger.debug("Statsig Caught Exception: $tag: ${ex.javaClass.name}\n $info ")
+                val info = redact(ex.stackTraceToString())
+                options.customLogger.debug(redact("Statsig Caught Exception: $tag: ${ex.javaClass.name}\n $info "))
 
                 var safeInfo = URLEncoder.encode(info, StandardCharsets.UTF_8.toString())
                 if (safeInfo.length > maxInfoLength) {
                     safeInfo = safeInfo.substring(0, maxInfoLength)
                 }
-                val optionsCopy = Gson().toJson(options.getLoggingCopy())
-                val body = """{
-                "tag": "$tag",
-                "exception": "${ex.javaClass.name}",
-                "info": "$safeInfo",
-                "statsigMetadata": ${statsigMetadata.asJson()},
-                "configName": "$configName",
-                "statsigOptions": $optionsCopy,
-                "extra": $extraInfo
-            }
-                """.trimIndent()
+                val gson = Gson()
+                val bodyFields = com.google.gson.JsonObject().apply {
+                    addProperty("tag", redact(tag))
+                    addProperty("exception", redact(ex.javaClass.name))
+                    addProperty("info", safeInfo)
+                    add("statsigMetadata", redactJson(gson.fromJson(statsigMetadata.asJson(), com.google.gson.JsonElement::class.java)))
+                    addProperty("configName", redact(configName.toString()))
+                    add("statsigOptions", redactJson(gson.toJsonTree(options.getLoggingCopy())))
+                    val extra = try {
+                        if (extraInfo == null) com.google.gson.JsonNull.INSTANCE else gson.fromJson(extraInfo, com.google.gson.JsonElement::class.java)
+                    } catch (_: com.google.gson.JsonParseException) {
+                        com.google.gson.JsonPrimitive(extraInfo)
+                    }
+                    add("extra", redactJson(extra))
+                }
+                val body = gson.toJson(bodyFields)
                 val req =
                     Request.Builder()
                         .url(getUrl())
